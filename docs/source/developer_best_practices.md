@@ -566,7 +566,7 @@ The following are best practices that should be considered when reviewing pull r
   - Request changes as necessary and explain your reasoning
   - Remember that the PR submitter is ultimately responsible for the changes in the PR, not you, so give the PR review a good effort, but don't agonize over every detail. 
     - If reviewing a PR becomes too large of a chore, feel free to reach out to others on the team to be able to tackle the PR review jointly
-  - If necessary, make sure the [ReEDS documentation](https://pages.github.nrel.gov/ReEDS/ReEDS-2.0/index.html) was updated to reflect the code changes
+  - If necessary, make sure the [ReEDS documentation](https://reeds-model.github.io/ReEDS/index.html) was updated to reflect the code changes
     - Instructions for how to update the documentation can be found [here](#updating-the-reeds-documentation)
 
 

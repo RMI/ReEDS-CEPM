@@ -275,7 +275,6 @@ If you'd like practice with running a specific ReEDS scenario, you can walk thro
 Additional resources and learning:
 * [General information on ReEDS](https://www.nrel.gov/analysis/reeds/)
 * [ReEDS POC list](https://nrel.sharepoint.com/:w:/s/ReEDS/ES6GQTyzXo1DnnCPlnAhg5QB8cPY--_01HkQkiOnrPskxw?e=flEAtY)
-* [GitHub README](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/README.md)
 * [YouTube tutorials](https://www.youtube.com/playlist?list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC)
 * [GAMS language information](https://www.gams.com/latest/docs/UG_MAIN.html#UG_Language_Environment)
 * [Tips and tricks for the bash shell](https://nrel-my.sharepoint.com/:p:/r/personal/ssundar_nrel_gov/Documents/Microsoft%20Teams%20Chat%20Files/02062024_what_the_shell.pptx?d=wa7aea3514f814d51924bf2dfa737d414&csf=1&web=1&e=qr1YuP)

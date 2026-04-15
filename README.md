@@ -58,7 +58,7 @@ A step-by-step guide for getting started with ReEDS is available [here](https://
     5. Instantiate the Julia environment: `julia --project=. instantiate.jl`
     6. (Optional) Several large data files are hosted remotely.
     These files are downloaded automatically as needed during a ReEDS run, but to finish all the internet-requiring steps up front, you can download them all by running `python reeds/remote.py`.
-    Additional details on remote files and other topics can be found in the [user guide](https://pages.github.nrel.gov/ReEDS/ReEDS-2.0/user_guide.html#large-input-files).
+    Additional details on remote files and other topics can be found in the [user guide](https://reeds-model.github.io/ReEDS/user_guide.html#large-input-files).
 5. Run ReEDS on a test case from the root of the cloned repository:
     1. For interactive setup: `python runbatch.py`
     2. For one-line operation: `python runbatch.py -b v20250314_main -c test`.
