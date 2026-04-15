@@ -650,7 +650,7 @@ def get_switches(case=None, **kwargs):
     try:
         fpath_asw = os.path.join(
             (case if case is not None else reeds_path),
-            'ReEDS_Augur', 'augur_switches.csv',
+            'reeds', 'resource_adequacy', 'augur_switches.csv',
         )
         asw = pd.read_csv(fpath_asw, index_col='key')
         for i, row in asw.iterrows():
@@ -682,9 +682,9 @@ def get_switches(case=None, **kwargs):
     ### Get number of threads to use in PRAS
     opt_file = 'cplex.opt' if int(sw.GSw_gopt) == 1 else f'cplex.op{sw.GSw_gopt}'
     try:
-        threads = get_param_value(os.path.join(case, opt_file), "threads", dtype=int)
+        threads = get_param_value(os.path.join(case, 'reeds', 'solver', opt_file), "threads", dtype=int)
     except (FileNotFoundError, TypeError):
-        threads = get_param_value(os.path.join(reeds_path, opt_file), "threads", dtype=int)
+        threads = get_param_value(os.path.join(reeds_path, 'reeds', 'solver', opt_file), "threads", dtype=int)
     sw['threads'] = threads
     ### Determine whether run is on HPC
     sw['hpc'] = True if int(os.environ.get('REEDS_USE_SLURM', 0)) else False

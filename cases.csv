@@ -355,7 +355,7 @@ diagnose,Write A and B matrix of the model [0 = no diagnose ; 1 = diagnose ],0; 
 diagnose_year,Year in which to start report diagnose,N/A,2022,
 dump_alldata,switch to automatically dump data from final solve year into .gdx file,0; 1,0,
 file_replacements,"List of files to replace from run folder, e.g: inputs_case/national_gen_frac.csv << //nrelnas01/ReEDS/some proj/national_gen_frac.csv || c_supplymodel.gms << //nrelnas01/ReEDS/some proj/c_supplymodel.gms",N/A,none,
-input_processing_only,Only run input_processing scripts; stop before creating and solving model,0; 1,0,
+input_processing_only,Only run input-processing scripts; stop before creating and solving model,0; 1,0,
 keep_augur_files,Indicate whether to keep (1) or delete (0) Augur csv and h5 files after Augur finishes. If you plan to run PRAS via ReEDS2PRAS then set this switch to 1.,0; 1,0,
 keep_g00_files,Keep (1) or delete (0) .g00 files for completed solve years,0; 1,0,
 keep_run_terminal,"0=close run terminal, 1=keep run terminal open",0; 1,0,

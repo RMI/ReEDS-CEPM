@@ -33,7 +33,7 @@ Calculated using the [TSC](https://github.nrel.gov/pbrown/TSC) model as describe
     import reeds
     ## GSw_ZoneSet can be any of the supported zone resolutions listed in the `GSw_ZoneSet` row of `cases.csv`
     GSw_ZoneSet = 'z134'
-    reeds.inputs.get_itls(GSw_ZoneSet=GSw_ZoneSet)
+    reeds.parse.get_itls(GSw_ZoneSet=GSw_ZoneSet)
     ```
 
 - `rev_transmission_basecost.csv`: Base transmission costs (before terrain multipliers) used in reV.

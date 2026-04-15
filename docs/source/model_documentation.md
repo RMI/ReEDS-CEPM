@@ -1922,7 +1922,7 @@ import reeds
 # GSw_ZoneSet can be any of the supported values listed in the "Choices" column
 # for the `GSw_ZoneSet` switch in `cases.csv`
 GSw_ZoneSet = 'z132'
-reeds.inputs.get_itls(GSw_ZoneSet=GSw_ZoneSet)
+reeds.parse.get_itls(GSw_ZoneSet=GSw_ZoneSet)
 ```
 ```
 
@@ -3751,7 +3751,9 @@ For all ReEDS system cost results, we assume the operational costs for the nonmo
 The marginal electricity prices in ReEDS are taken as the shadow prices from the constraints in the model that are directly impacted by the need to serve electricity. These include the load balance constraint, the operating reserve requirement, the RPS and CES requirements, and the planning reserve margin requirement (applied either in stress periods or seasonally via capacity credits). Taken together, these values show the total marginal cost of serving electricity in a given region and time slice. Weighted average versions are also calculated to report national annual marginal electricity prices. These marginal prices are most analogous to wholesale electricity prices but within a model that has full coordination and foresight.
 
 ```{admonition} Marginal Price Outputs
-Marginal electricity price outputs are calculated with `reqt_price` in `e_report.gms` and are outputs in `reqt_price.csv`. The quantity required by the model is reported in the `reqt_quant.csv` output. These two taken together can be used to calculate a $/MWh electricity price, which is done in make of the ReEDS outputs and reported as "Bulk System Electricity Price" in bokehpivot HTML outputs and in other output locations.
+Marginal electricity price outputs are recorded in `reqt_price.csv`.
+The quantity required by the model is reported in `reqt_quant.csv`.
+These two can be combined to calculate a \$/MWh electricity price.
 ```
 
 

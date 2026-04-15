@@ -29,7 +29,7 @@ env:
 jobs:
   julia-setup:
     name: "Julia environment"
-    runs-on: ubuntu-latest
+    runs-on: reeds-runners
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
@@ -50,7 +50,7 @@ jobs:
 
   python-setup:
     name: "Python environment"
-    runs-on: ubuntu-latest
+    runs-on: reeds-runners
     permissions:
       contents: read
       actions: write
@@ -69,7 +69,7 @@ jobs:
     name: "Get Zenodo files"
     needs:
       - python-setup
-    runs-on: ubuntu-latest
+    runs-on: reeds-runners
     permissions:
       contents: read
       actions: write
@@ -116,7 +116,7 @@ jobs:
         run: python .github/scripts/download_test_zenodo_files.py
 
   run-ReEDS:
-    runs-on: ubuntu-latest
+    runs-on: reeds-runners
     needs:
       - julia-setup
       - python-setup
@@ -230,7 +230,7 @@ jobs:
         env:
           SCENARIO: ${{ matrix.scenario }}
         run: |
-          python runbatch.py -b "$batch" -c test -s "$SCENARIO"
+          python run.py -b "$batch" -c test -s "$SCENARIO"
           echo "RUN_FOLDER=$GITHUB_WORKSPACE/runs/${batch}_${SCENARIO}" >> "$GITHUB_ENV"
 
       - name: Print GAMS log

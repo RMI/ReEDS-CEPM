@@ -57,7 +57,7 @@ For existing coal plants, this is the code implementation:
     This is the emissions rate (metric tons CO<sub>2</sub> per MWh) equivalent to average emissions from a new coal-CCS plant, assuming 90% capture rate.
     The emissions rate from a new coal-CCS plant in ReEDS is 0.051956 metric tons CO<sub>2</sub> per MWh (see `emit_rate` parameter) which assumes 95% capture.
     For 90% capture, the emissions rate is double that or 0.1039 metric tons CO<sub>2</sub> per MWh, which we use as the standard.
-2. `input_processing/WriteHintage.py`
+2. `reeds/inputs/WriteHintage.py`
     - Coal plants are binned at the unit level if `GSw_Clean_Air_Act=1` so that each coal unit can independently choose to retire or upgrade.
     - Coal plants maintain their exogenous retirement assumption, except after 2032, when the Clean Air Act regulations begin and coal can retire endogenously.
     For example, if the NEMS data states that a plant will retire in 2029, we maintain that assumption and that plant will retire in 2029.

@@ -76,7 +76,7 @@ Include additional illustrative plots describing input data, methods, testing, a
 - [ ] No large data file(s) added/modified
 - [ ] No substantive impact on runtime for full-US reference case
 - [ ] No substantive impact on folder size for full-US reference case
-- [ ] No change to process flow (runbatch.py, d_solve_iterate.py)
+- [ ] No change to process flow (run.py, d_solve_iterate.py)
 - [ ] No change to code organization
 - [ ] No change to package requirements (environment.yml or Project.toml)
 

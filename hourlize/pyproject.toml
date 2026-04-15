@@ -1,0 +1,20 @@
+[tool.black]
+include = '''
+(
+    hourlize/tests/.*\.py?$
+    | hourlize/reeds_to_rev\.py?$
+)
+'''
+
+[project]
+name = "ReEDS"
+version = "2024.0.0"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx",
+    "myst-parser",
+]
+
+
+

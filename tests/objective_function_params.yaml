@@ -1,6 +1,6 @@
 ### Notes
 # This file holds parameters used in the objective function. These parameters
-# are checked using input_processing/check_inputs.py, which will identify missing
+# are checked using reeds/inputs/check_inputs.py, which will identify missing
 # values in the parameters if there are any.
 
 # Instructions:

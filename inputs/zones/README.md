@@ -56,7 +56,7 @@ Once you're happy with your zone and hierarchy level definitions, run the follow
     - Creates the `zonehash.csv` file
     - Rewrites the `itl_NARIS.csv` file (existing data in the file are preserved, so you should only see new rows added to the bottom of the file)
 1. Add the new zone definition to the choices for the `GSw_ZoneSet` switch in `cases.csv`
-1. To make sure it worked (or just to read the ITLs in general), you can run `import reeds` and then `reeds.inputs.get_itls(GSw_ZoneSet='your new zoneset name')` in Python with the `reeds2` conda environment activated.
+1. To make sure it worked (or just to read the ITLs in general), you can run `import reeds` and then `reeds.parse.get_itls(GSw_ZoneSet='your new zoneset name')` in Python with the `reeds2` conda environment activated.
 1. Try a ReEDS run.
     - The following checks will be performed; if any of them fail, the run will stop.
         - `b2b.csv`, `county2zone.csv`, `hierarchy.csv`, `zonehash.csv`, `interfaces_r.csv`, and `interfaces_transgrp.csv` should all be preset in the `inputs/zones/{GSw_ZoneSet}` folder

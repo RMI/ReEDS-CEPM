@@ -29,7 +29,7 @@ file_levels = {
         ## All the other outputs/*.csv files are duplicates of data in outputs.h5.
         os.path.join('outputs', r'^((?!(neue|health|h2_price_month)).)*csv$'),
     ],
-    ## Large input files. Would need to rerun input_processing to recreate.
+    ## Large input files. Would need to rerun input processing to recreate.
     2: [
         os.path.join('inputs_case', 'inputs.gdx'),
         os.path.join('inputs_case', 'unitdata.csv'),
@@ -52,7 +52,7 @@ file_levels = {
         'g00files',
         'ReEDS_Augur',
         ## The following regex matches the rep_{casename}.gdx file written by
-        ## e_report.gms (which contains the same data as outputs.h5)
+        ## report.gms (which contains the same data as outputs.h5)
         os.path.join('outputs', '^rep_.*\.gdx$'),
     ]
 }

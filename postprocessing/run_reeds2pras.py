@@ -104,9 +104,7 @@ def main(
         site.addsitedir(reeds_path)
     else:
         site.addsitedir(case)
-    import Augur
     import reeds
-    import ReEDS_Augur.prep_data as prep_data
 
     ### Get the switches, overwriting values as necessary
     sw = reeds.io.get_switches(case)
@@ -147,10 +145,10 @@ def main(
         any([not os.path.isfile(os.path.join(augur_data,f)) for f in files_expected])
         or overwrite
     ):
-        augur_csv, augur_h5 = prep_data.main(t, case)
+        augur_csv, augur_h5 = reeds.resource_adequacy.prep_data.main(t, case)
 
     ### Run ReEDS2PRAS
-    Augur.run_pras(
+    reeds.resource_adequacy.Augur.run_pras(
         case,
         t,
         iteration=iteration,

@@ -162,7 +162,7 @@ _Some exceptions to this might exist due to number scaling (e.g., emission rates
 
 * If preprocessing is needed to create an input file that is placed in the ReEDS repository, the preprocessing scripts or workbooks should be included in the [ReEDS_Input_Processing repository](https://github.com/ReEDS-Model/ReEDS_Input_Processing). Data from external sources should be downloaded programmatically when possible.
 
-* Any scripts that preprocess data after a ReEDS run is started should be placed in the input_processing folder.
+* Any scripts that preprocess data after a ReEDS run is started should be placed in the `reeds/inputs` folder.
   * Input processing scripts should start with a block of descriptive comments describing the purpose and methodology, and internal functions should use docstrings and liberal comments on functionality and assumptions.
 
 * Any costs read into b_inputs should already be in 2004$.  Cost adjustments in preprocessing scripts should rely on the deflator.csv file rather than have hard-coded conversions.
@@ -174,9 +174,9 @@ _Some exceptions to this might exist due to number scaling (e.g., emission rates
 * Data column headers should use the ReEDS set names when practical. 
   * Example: data that include regions should use "r" for the column name rather than "ba", "reeds_ba", or "region".
 
-* Preprocessing scripts in input_processing should not change the working directory or use relative filepaths; absolute filepaths should be used wherever possible.
+* Preprocessing scripts in `reeds/inputs` should not change the working directory or use relative filepaths; absolute filepaths should be used wherever possible.
 
-* When feasible, inputs used in the objective function (c_supplyobjective.gms) should be included in tests/objective_function_params.yaml. Inputs included in this .yaml file will be checked for missing values using input_processing/check_inputs.py.
+* When feasible, inputs used in the objective function (c_supplyobjective.gms) should be included in tests/objective_function_params.yaml. Inputs included in this .yaml file will be checked for missing values using `reeds/inputs/check_inputs.py`.
 
 #### Input Data
 
@@ -555,7 +555,7 @@ The following are best practices that should be considered when reviewing pull r
     
 - Check out the branch locally (optional)
   - You should check the branch out locally and run the test scenario (cases_test.csv) to ensure there are no issues 
-  - If there are a large amount of changes to one of the scripts or code files (ex. input_processing scripts or GAMS files), it could be helpful to run just that script and walk through it line by line with a debugging tool (ex. [pdb](https://docs.python.org/3/library/pdb.html)) to more deeply understand how the revised script functions and any issues we might face with the way that script is now written.
+  - If there are a large amount of changes to one of the scripts or code files (ex. input processing scripts or GAMS files), it could be helpful to run just that script and walk through it line by line with a debugging tool (ex. [pdb](https://docs.python.org/3/library/pdb.html)) to more deeply understand how the revised script functions and any issues we might face with the way that script is now written.
 
 **A few notes on reviewing pull requests:**
   - When reviewing PRs, be sure to provide constructive feedback and highlight positive aspects as well. Reviewing PRs is an opportunity to learn from one another and support each other's development as developers!
@@ -629,7 +629,7 @@ Additionally, if you want to re-run a given scenario without having to run all o
 * To avoid the prompts when kicking off a run, you can use the command line arguments: 
    * The following example runs the scenarios in cases_test.csv with the batch name '20240717_test'. The '-r -1' means that all cases will run simultaneously.  
    ```
-   python runbatch.py -c test -b 20240717_test -r -1
+   python run.py -c test -b 20240717_test -r -1
    ```
     * All options for command line arguments that can be used: 
         | Flag | |

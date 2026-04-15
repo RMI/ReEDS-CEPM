@@ -541,7 +541,7 @@ def add_classes(df_sc, class_path, class_bin, class_bin_col, class_bin_method, c
             df_sc
             .groupby(['class_orig'], sort=False)
             .apply(
-                reeds.inputs.get_bin,
+                reeds.parse.get_bin,
                 bin_col=class_bin_col,
                 bin_out_col='class_bin',
                 weight_col='capacity',

@@ -231,7 +231,7 @@ If that doesn't resolve the issue, the following may help:
 **Quick Start:**
 1. Navigate to the ReEDS directory from the command line
 2. Activate environment: `conda activate reeds2`
-3. Run the model: `python runbatch.py`
+3. Run the model: `python run.py`
 4. Follow the prompts for batch configuration
 5. Check for a successful run: 
    1. Look for CSV files in `runs/[batchname_scenario]/outputs` (a successful run should have 100+ csv files in the outputs folder)

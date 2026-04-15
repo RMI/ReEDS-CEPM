@@ -25,7 +25,7 @@ orphan: true
    - Open a new terminal and activate the reeds2 environment
 
 7. Start a new run
-   - `python runbatch.py`
+   - `python run.py`
    - when prompted for case file name, enter `examples`
    - when prompted for how many simultaneous runs you would like to execute, enter 2
    - The 'ERCOT_county' and 'ERCOT_BA' runs should start
@@ -74,7 +74,7 @@ Create an informal slide deck with the following results:
    - Open a new terminal and activate the reeds2 environment
 
 7. Start a new run
-   - `python runbatch.py`
+   - `python run.py`
    - when prompted for case file name, enter `examples`
    - The 'Western_BA_Decarb' run should start
 
