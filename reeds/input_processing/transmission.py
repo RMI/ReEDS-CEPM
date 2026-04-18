@@ -66,7 +66,7 @@ def get_trancap_init(case, networksource='NARIS2024', level='r'):
     """
     sw = reeds.io.get_switches(case)
     trancap_init_ac = (
-        reeds.parse.get_itls(case, level=level, GSw_ZoneSet=sw.GSw_ZoneSet)
+        reeds.inputs.get_itls(case, level=level, GSw_ZoneSet=sw.GSw_ZoneSet)
         [['r', 'rr', 'MW_forward', 'MW_reverse']]
         .assign(trtype='AC')
     )
@@ -91,8 +91,8 @@ def get_trancap_init(case, networksource='NARIS2024', level='r'):
     ### DC
     if level == 'r':
         ## transgrp capacity is only defined for AC
-        hvdc = reeds.parse.map_hvdc_lines_to_interfaces(case).assign(trtype='LCC')
-        b2b = reeds.parse.get_b2b(case).assign(trtype='B2B')
+        hvdc = reeds.inputs.map_hvdc_lines_to_interfaces(case).assign(trtype='LCC')
+        b2b = reeds.inputs.get_b2b(case).assign(trtype='B2B')
         ## DC capacity is only defined in one direction,
         ## so duplicate it for the opposite direction
         trancap_init_nonac_undup = pd.concat([hvdc, b2b])[['r', 'rr', 'trtype', 'MW']]

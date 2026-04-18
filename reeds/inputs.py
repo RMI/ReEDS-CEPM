@@ -87,7 +87,7 @@ def parse_yearset(yearset:str) -> list:
         "For formatting notes and examples, run the following commands:\n"
         "$ python\n"
         ">>> import reeds\n"
-        ">>> help(reeds.parse.parse_yearset)"
+        ">>> help(reeds.inputs.parse_yearset)"
     )
     if not re.match(pattern, yearset):
         err = f"Invalid yearset ({yearset}); must match {pattern}. {helper}"

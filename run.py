@@ -283,7 +283,7 @@ def check_compatibility(sw):
                 .format('\n'.join(err_switch_configs))
             )
 
-    reeds.parse.validate_zoneset(sw['GSw_ZoneSet'])
+    reeds.inputs.validate_zoneset(sw['GSw_ZoneSet'])
 
     ### Aggregation
     if (sw['GSw_RegionResolution'] != 'aggreg') and (int(sw['GSw_NumCSPclasses']) != 12):
@@ -422,7 +422,7 @@ def check_compatibility(sw):
                 f"resource_adequacy_years={sw['resource_adequacy_years']}"
             )
 
-    solveyears = reeds.parse.parse_yearset(sw['yearset'])
+    solveyears = reeds.inputs.parse_yearset(sw['yearset'])
     if int(sw['endyear']) not in solveyears:
         err = f"`endyear` = {sw['endyear']} but must be in `yearset`: {sw['yearset']}"
         raise ValueError(err)
@@ -523,7 +523,7 @@ def setup_sequential_year(
     if (cur_year >= min(solveyears)):
         ## solve one year
         OPATH.writelines(
-            reeds.parse.solvestring_sequential(
+            reeds.inputs.solvestring_sequential(
                 batch_case, caseSwitches,
                 cur_year, next_year, prev_year, restartfile,
                 toLogGamsString, hpc,
@@ -853,7 +853,7 @@ def setupEnvironment(
     else:
         cases_filename = f'cases_{cases_suffix}.csv'
 
-    df_cases = reeds.parse.parse_cases(
+    df_cases = reeds.inputs.parse_cases(
         cases_filename=cases_filename,
         single=single,
         skip_checks=skip_checks,
@@ -1192,7 +1192,7 @@ def write_batch_script(
     pd.Series(caseSwitches).to_csv(
         os.path.join(inputs_case,'switches.csv'), header=False)
 
-    solveyears = reeds.parse.parse_yearset(caseSwitches['yearset'])
+    solveyears = reeds.inputs.parse_yearset(caseSwitches['yearset'])
 
     # If start year is not in solveyears, start year is added into solveyears set
     startyear = int(caseSwitches['startyear'])

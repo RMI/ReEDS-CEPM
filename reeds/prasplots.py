@@ -339,7 +339,7 @@ def plot_pras_samples(
         reeds.io.get_last_iteration(case, t) if iteration in [None, 'last']
         else iteration
     )
-    rs = reeds.parse.parse_regions(region, case)
+    rs = reeds.inputs.parse_regions(region, case)
 
     bokehcolors, plotorder = reeds.reedsplots.get_tech_colors_order(order='fuel_storage_vre')
 

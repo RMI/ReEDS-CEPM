@@ -13,7 +13,6 @@ import json
 import h5py
 from pathlib import Path
 # Local Imports
-from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 import reeds
 
@@ -1406,7 +1405,7 @@ def write_miscellaneous_files(
         os.path.join(inputs_case,'co2_tax.csv')
     )
 
-    solveyears = reeds.parse.parse_yearset(sw['yearset'])
+    solveyears = reeds.inputs.parse_yearset(sw['yearset'])
     if int(sw['startyear']) not in solveyears:
         solveyears.append(int(sw['startyear']))
         solveyears = sorted(solveyears)

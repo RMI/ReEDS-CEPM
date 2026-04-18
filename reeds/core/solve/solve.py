@@ -42,7 +42,7 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
                 glob(os.path.join(casepath,'g00files',f"{batch_case}_{tprev[t]}i*"))
             )[-1]
 
-        cmd_gams = reeds.parse.solvestring_sequential(
+        cmd_gams = reeds.inputs.solvestring_sequential(
             batch_case=batch_case,
             caseSwitches=sw,
             cur_year=t,

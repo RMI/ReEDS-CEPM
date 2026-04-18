@@ -1922,7 +1922,7 @@ import reeds
 # GSw_ZoneSet can be any of the supported values listed in the "Choices" column
 # for the `GSw_ZoneSet` switch in `cases.csv`
 GSw_ZoneSet = 'z132'
-reeds.parse.get_itls(GSw_ZoneSet=GSw_ZoneSet)
+reeds.inputs.get_itls(GSw_ZoneSet=GSw_ZoneSet)
 ```
 ```
 
