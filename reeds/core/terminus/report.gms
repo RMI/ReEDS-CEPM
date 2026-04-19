@@ -113,10 +113,10 @@ h2_demand_type / "electricity", "cross-sector"/
 
 ;
 
-* Parameter definitions in the following file are read from e_report_params.csv
+* Parameter definitions in the following file are read from report_params.csv
 * and parsed in copy_files.py.
-* All output parameters should be defined in e_report_params.csv.
-$include e_report_params.gms
+* All output parameters should be defined in report_params.csv.
+$include autocode%ds%report_params.gms
 
 * Restrict operational outputs to representative timeslices and seasons
 h(h)$[not h_rep(h)] = no ;
@@ -2077,15 +2077,15 @@ h2_usage(r,h,t)$tmodel_new(t) =
 *========================================
 
 $ifthene.powerfrac %GSw_calc_powfrac% == 1
-$include e_powfrac_calc.gms
+$include reeds%ds%core%ds%terminus%ds%e_powfrac_calc.gms
 $endif.powerfrac
 
 *========================================
 * Dump results
 *========================================
 
-* The parameter list in the following file is read from e_report_params.csv
+* The parameter list in the following file is read from report_params.csv
 * and parsed in copy_files.py
 execute_unload "outputs%ds%rep_%fname%.gdx"
-$include e_report_paramlist.txt
+$include autocode%ds%report_paramlist.txt
 ;

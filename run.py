@@ -1091,6 +1091,7 @@ def write_batch_script(
 
     #%% Set up case-specific directory structure
     os.makedirs(inputs_case, exist_ok=True)
+    os.makedirs(os.path.join(casedir, 'autocode'), exist_ok=True)
     os.makedirs(os.path.join(casedir, 'g00files'), exist_ok=True)
     os.makedirs(os.path.join(casedir, 'lstfiles'), exist_ok=True)
     os.makedirs(os.path.join(casedir, 'outputs', 'figures'), exist_ok=True)

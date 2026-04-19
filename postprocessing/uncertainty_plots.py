@@ -486,7 +486,7 @@ class DataFetcher:
 
         # --- Fetch methods for output data ---
         self.OUT_FETCH_METHODS = {
-            # Naming as in e_report_params.csv
+            # Naming as in report_params.csv
             "cap_out": self._fetch_cap_out,
             "gen_ann": self._fetch_gen_ann,
             "tran_mi_out_detail": self._fetch_tran_mi_out_detail,

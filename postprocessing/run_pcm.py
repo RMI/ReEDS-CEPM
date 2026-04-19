@@ -266,7 +266,7 @@ def main(casepath, t, switch_mods=switch_mods_default, label='', overwrite=False
     # %% Dump gdx to h5
     ## Get new file names if applicable
     dfparams = pd.read_csv(
-        os.path.join(casepath, "e_report_params.csv"),
+        os.path.join(casepath, 'autocode', 'report_params.csv'),
         comment="#",
         index_col="param",
     )

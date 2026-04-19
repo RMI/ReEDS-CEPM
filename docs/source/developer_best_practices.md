@@ -107,7 +107,7 @@ _Some exceptions to this might exist due to number scaling (e.g., emission rates
   * GAMS functions such as sum, max, smax, etc. should use {}; Example: avg_outage(i) = sum{h,hours(h)*outage(i,h)} / 8760 ;
   * When including the semicolon on the end of a line there should be a space between the semicolon and the last character of the line (see previous example)
   * When using `/ /` for a parameter declaration, place the closing semicolon on the same line as the final slash: `/ ;`
-  * Sums outside of equations (e.g., in e_reports) need not be split over multiple lines if they do not exceed the line limit
+  * Sums outside of equations (e.g., in `report.gms`) need not be split over multiple lines if they do not exceed the line limit
   * Do not use hard-coded numbers in equations or calculations. Values should be assigned to an appropriate parameter name that is subsequently used in the code.
   * Large input data tables should be loaded from individual data files for each table, preferably in *.csv format. Large data tables should not be manually written into the code but can be written dynamically by scripts or inserted with a $include statement.
   * Compile-time conditionals should always use a tag (period + tag name) to clearly define the relationships between compile-time conditional statements. Failure to do so hurts readability sometimes leads to compilation errors. Example:

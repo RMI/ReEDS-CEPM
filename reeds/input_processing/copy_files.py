@@ -769,14 +769,14 @@ def scalar_csv_to_txt(path_to_scalar_csv):
     return dfscalar
 
 
-def param_csv_to_txt(path_to_param_csv, writelist=True):
+def param_csv_to_txt(infilepath, outdirpath, writelist=True):
     """
     Write a parameter csv to GAMS-readable text
     Format of csv should be: parameter(indices),units,comment
     """
     # Load the csv
     dfparams = pd.read_csv(
-        path_to_param_csv,
+        infilepath,
         index_col='param', comment='#',
     )
     # Create the GAMS-readable param definition string (comments must be ≤255 characters)
@@ -786,15 +786,17 @@ def param_csv_to_txt(path_to_param_csv, writelist=True):
         for i, row in dfparams.loc[dfparams.input != 1].iterrows()
     ])
     # Write it to a file, replacing .csv with .gms in the filename
-    param_gms_path = path_to_param_csv.replace('.csv','.gms')
+    param_gms_path = Path(outdirpath, Path(infilepath).stem + '.gms')
     with open(param_gms_path, 'w') as w:
         w.write(paramtext)
     # Write the list of parameters if desired
     if writelist:
         # Create the GAMS-readable list of parameters (without indices)
         paramlist = '\n'.join(dfparams.index.map(lambda x: x.split('(')[0]).tolist())
-        param_list_path = (
-            path_to_param_csv.replace('params','paramlist').replace('.csv','.txt'))
+        param_list_path = Path(
+            outdirpath,
+            Path(infilepath).stem.replace('params','paramlist') + '.txt'
+        )
         with open(param_list_path, 'w') as w:
             w.write(paramlist)
 
@@ -929,7 +931,7 @@ def write_GAMS_sets(runfiles, reeds_path, inputs_case):
         for i, row in sets.iterrows()
     ]) + '\n$onlisting\n'
     # Write to file
-    with open(os.path.join(casedir, 'reeds', 'core', 'setup', 'b_sets.gms'), 'w') as f:
+    with open(os.path.join(casedir, 'autocode', 'b_sets.gms'), 'w') as f:
         f.write(settext)
 
 
@@ -986,10 +988,6 @@ def write_non_region_file(filename, filepath, src_file, dir_dst, sw, regions_and
 
         else:
             shutil.copy(src_file, os.path.join(dir_dst,filename))
-
-            if filename == 'e_report_params.csv':
-                # Rewrite e_report_params as GAMS-readable definition
-                param_csv_to_txt(os.path.join(dir_dst,'e_report_params.csv'))
 
             if filename == 'scalars.csv':
                 # Rewrite scalars.csv as GAMS-readable definition
@@ -1553,6 +1551,12 @@ def write_miscellaneous_files(
             name='MW',
         ).rename_axis('tech').dropna().astype(int)
         unitsize.to_csv(fpath_out)
+
+    # Rewrite report_params as GAMS-readable definitions
+    param_csv_to_txt(
+        infilepath=Path(reeds_path, 'reeds', 'core', 'terminus', 'report_params.csv'),
+        outdirpath=Path(inputs_case, '..', 'autocode'),
+    )
 
 
 def generate_maps_gpkg(inputs_case):

@@ -233,7 +233,7 @@ $include inputs_case%ds%val_hurdlereg.csv
 ;
 
 * Written by copy_files.py
-$include reeds%ds%core%ds%setup%ds%b_sets.gms
+$include autocode%ds%b_sets.gms
 
 sets
 *The following two sets:
@@ -6503,7 +6503,7 @@ allow_cap_up(i,v,r,rscbin,t)$[valcap(i,v,r,t)$cap_cap_up(i,v,r,rscbin,t)$(t.val>
 allow_ener_up(i,v,r,rscbin,t)$[valcap(i,v,r,t)$cap_ener_up(i,v,r,rscbin,t)$(t.val>=Sw_UpgradeYear)] = yes ;
 
 
-* Track the initial amount of m_rsc_dat capacity to compare in e_report
+* Track the initial amount of m_rsc_dat capacity to compare in report.gms
 * We adjust upwards by small amounts given potential for infeasibilities
 * in very tiny amounts and thus track the extent of the adjustments
 parameter m_rsc_dat_init(r,i,rscbin) "--MW-- Initial amount of resource supply curve capacity to compare with final amounts after adjustments" ;

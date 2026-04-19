@@ -2381,7 +2381,7 @@ eq_offshore_no_backflow(r,rr,trtype,h,t)
 * ---------------------------------------------------------------------------
 
 * Because EMIT is only evaluated for emit_modeled, the full emissions need to be
-* calculated in the e_report rather than relying on the EMIT variable
+* calculated in report.gms rather than relying on the EMIT variable
 eq_emit_accounting(etype,e,r,t)$[emit_modeled(e,r,t)$tmodel(t)]..
 
     EMIT(etype,e,r,t)
