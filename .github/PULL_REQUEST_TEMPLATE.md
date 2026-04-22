@@ -67,7 +67,7 @@ Include additional illustrative plots describing input data, methods, testing, a
   - If entries are added/removed/changed in the EIA-NEMS unit database:
     - [ ] Changes have been committed to [ReEDS_Input_Processing](https://github.com/ReEDS-Model/ReEDS_Input_Processing)
     - [ ] `hourlize/resource.py` was rerun to regenerate the existing/prescribed VRE capacity data
-- [ ] Code formatting standardized <!-- Coding conventions: https://pages.github.nrel.gov/ReEDS/ReEDS-2.0/internal/developer_best_practices.html#coding-standards-and-conventions -->
+- [ ] Code formatting standardized <!-- Coding conventions: https://reeds-model.github.io/ReEDS/developer_best_practices.html#coding-standards-and-conventions -->
 - [ ] Reusable functions used where possible instead of copy/pasted code
 
 ### General information to guide review

@@ -50,10 +50,6 @@ inputs/profiles_temperature
 inputs/remote
 inputs/shapefiles/cache
 
-# Old climate scenarios (temporarily ignore, remove this section once ESPRS data is available)
-inputs/climate/
-!inputs/climate/climate_heuristics_*.csv
-
 # IDE stuff
 *.vscode
 

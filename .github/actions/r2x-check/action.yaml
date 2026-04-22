@@ -43,13 +43,13 @@ runs:
         echo "system_json=$system_json" >> "$GITHUB_OUTPUT"
 
     - name: Install uv and set the python version
-      uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       with:
         python-version: ${{ inputs.python-version }}
-
-    - name: Install R2X
-      shell: bash -le {0}
-      run: uv pip install "r2x-reeds>=0.3.5"
+        enable-cache: true
+        restore-cache: true
+        save-cache: true
+        ignore-nothing-to-cache: true
 
     - name: Run R2X translation
       shell: bash -le {0}
@@ -60,7 +60,7 @@ runs:
         R2X_SCENARIO: ${{ steps.resolve.outputs.scenario }}
         R2X_SYSTEM_JSON: ${{ steps.resolve.outputs.system_json }}
       run: |
-        uv run python - <<'PY'
+        uv run --with "r2x-reeds>=0.3.5" python - <<'PY'
         import os
         from pathlib import Path
 
@@ -92,7 +92,7 @@ runs:
         PY
 
     - name: Save R2X system
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: r2x-${{ steps.resolve.outputs.scenario }}
         compression-level: 9
