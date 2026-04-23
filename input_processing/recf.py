@@ -101,6 +101,51 @@ def csp_dispatch(cfcsp, sm=2.4, storage_duration=10):
     return total_dispatch
 
 
+def make_fake_profiles(
+    sitecf:pd.Series,
+    timeindex:pd.DatetimeIndex,
+    seed:None|int=17,
+) -> pd.DataFrame:
+    """
+    Make a dataframe of fake CF profiles, len(timeindex) rows × len(sitecf) columns.
+    To make them somewhat realistic in terms of min/mean/max (but not temporal shape),
+    we randomly sample from the two-state [0,1] array, where probaility(1) = CF [fraction].
+    These profiles should NOT be used for any kind of analysis; they are just for testing
+    when you want to avoid downloading the actual data via reeds/remote.py.
+
+    Args:
+        sitecf (pd.Series): index = sc_point_gids, values = capacity factor [fraction]
+        timeindex (pd.DatetimeIndex): Time index for the output dataframe
+        seed (int): (optional) Random number generator (RNG) seed
+
+    Returns:
+        pd.DataFrame: len(timeindex) rows × len(sitecf) columns
+
+    Inputs for testing:
+        sitecf = pd.Series{{36432:0.24, 37116:0.59, 37787:0.07, 38464:0.27})
+        timeindex = pd.date_range(
+            '2007-01-01', '2008-01-01', freq='h', inclusive='left', tz='UTC'
+        )[:8760]
+        seed = 17
+    """
+    rng = np.random.default_rng(seed)
+    choices = [0, 1]
+    ## Site-specific CF
+    prob1 = sitecf.values
+    prob0 = 1 - prob1
+    probs = list(zip(prob0, prob1))
+    dfout = pd.concat(
+        {
+            s: pd.Series(rng.choice(a=choices, size=len(timeindex), p=p))
+            for s, p in zip(sitecf.index, probs)
+        },
+        axis=1,
+    )
+    dfout.index = timeindex
+
+    return dfout
+
+
 def calculate_class_region_cf_hourly(
     inputs_case,
     tech,
@@ -110,6 +155,7 @@ def calculate_class_region_cf_hourly(
     if not tz_out.startswith('Etc/GMT'):
         raise ValueError("tz_out must be formatted as 'Etc/GMT[+/-][number].")
 
+    sw = reeds.io.get_switches(inputs_case)
     # Get supply curve information
     df_sc = reeds.io.assemble_supplycurve(
         os.path.join(inputs_case, f'supplycurve_{tech}.csv'),
@@ -129,12 +175,19 @@ def calculate_class_region_cf_hourly(
     # all of the site-level hourly data in memory at once
     df_list = []
     for year in weather_years:
+        print(f'Processing {tech} CF for {year}')
         # Get site-level hourly CFs
-        weather_year_site_cf_hourly = reeds.io.get_site_cf_hourly(
-            tech=tech,
-            year=year,
-            case=inputs_case,
-        )
+        if int(sw.GSw_FakeData):
+            weather_year_site_cf_hourly = make_fake_profiles(
+                sitecf=df_sc['cf'],
+                timeindex=reeds.timeseries.get_timeindex([year], tz='UTC'),
+            )
+        else:
+            weather_year_site_cf_hourly = reeds.io.get_site_cf_hourly(
+                tech=tech,
+                year=year,
+                case=inputs_case,
+            )
         # Downselect to relevant sites
         weather_year_site_cf_hourly = weather_year_site_cf_hourly[df_sc.index]
         # Calculate the capacity-weighted average CF for each class-region pair
@@ -230,7 +283,7 @@ def main(reeds_path, inputs_case):
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
     # inputs_case = os.path.join(
-    #     reeds_path,'runs','v20250129_cspfixM0_ISONE','inputs_case')
+    #     reeds_path,'runs','v20260416_mainM0_Pacific','inputs_case')
 
     #%% Inputs from switches
     sw = reeds.io.get_switches(inputs_case)
@@ -294,7 +347,7 @@ def main(reeds_path, inputs_case):
         techs[tech].extend(temp_save)
     vre_dist = techs['VRE_DISTRIBUTED']
 
-    # ------- Read in the static inputs for this run -------
+    #%% Read capacity factor profiles
 
     ### Onshore Wind
     df_windons = calculate_class_region_cf_hourly(

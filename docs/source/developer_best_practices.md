@@ -509,8 +509,8 @@ Please follow these guidelines when planning and opening a pull request (PR):
       - This is crucial, as the title of your pull request will be used in the summary of changes for each new version of ReEDS
     - The description should be clear enough for someone not directly involved in your work to grasp the changes being proposed
     - If you used an LLM-based coding assistant or chatbot in the preparation of the pull request, make sure to describe how in the appropriate section of the pull request template
-    - If you have a charge code for your project, provide it in the PR text to cover reviewers' time
-    - Assign and contact reviewers
+    - Assign and contact reviewers.
+    If you have a charge code for your project, share it with the reviewers to cover their time.
 
 - After opening the pull request, monitor the status of the automated tests (which run a few full test cases and the R2X translation) and fix any failed tests
 

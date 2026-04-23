@@ -2,7 +2,7 @@
 **Regional Energy Deployment System (ReEDS) Model**
 
  
-[![CI](https://github.com/ReEDS-Model/ReEDS/actions/workflows/python-app.yaml/badge.svg)](https://github.com/ReEDS-Model/ReEDS/actions/workflows/python-app.yaml)
+[![CI](https://github.com/ReEDS-Model/ReEDS/actions/workflows/python-app.yaml/badge.svg?branch=main)](https://github.com/ReEDS-Model/ReEDS/actions/workflows/python-app.yaml)
 [![Documentation](https://img.shields.io/badge/Documentation-view%20online-0a7f5e?logo=readthedocs&logoColor=white&labelColor=555)](https://reeds-model.github.io/ReEDS)
 ![Static Badge](https://img.shields.io/badge/python-3.11-blue)
 ![GitHub License](https://img.shields.io/github/license/ReEDS-Model/ReEDS)
@@ -15,7 +15,7 @@ This GitHub repository contains the source code for NLR's ReEDS model.
 The ReEDS model source code is available at no cost from the National Laboratory of the Rockies.
 The ReEDS model can be downloaded or cloned from [https://github.com/ReEDS-Model/ReEDS](https://github.com/ReEDS-Model/ReEDS).
 
-**For more information about the model, see the [Documentation](https://reeds-model.github.io/ReEDS).**
+**For more information about the model, see the [ReEDS Documentation](https://reeds-model.github.io/ReEDS).**
 
 ReEDS training videos are available on the [NLR Learning YouTube channel](https://youtube.com/playlist?list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&si=NgGBaL_MxNcYiIEX).
 
@@ -25,10 +25,10 @@ ReEDS training videos are available on the [NLR Learning YouTube channel](https:
 
 ## Introduction
 
-[ReEDS](https://www.nrel.gov/analysis/reeds/) is a capacity planning and dispatch model for the U.S. electricity system.
+[ReEDS](https://www.nlr.gov/analysis/reeds/) is a capacity planning and dispatch model for the U.S. electricity system.
 
 As NLR's flagship long-term power sector model, ReEDS has served as the primary analytic tool for [many studies](https://reeds-model.github.io/ReEDS/publications.html) of electricity sector research questions.
-Example model results are available in the [Scenario Viewer](https://scenarioviewer.nrel.gov/).
+Example model results are available in the [Scenario Viewer](https://scenarioviewer.nlr.gov/).
 
 
 
@@ -46,14 +46,17 @@ A step-by-step guide for getting started with ReEDS is available [here](https://
 2. Set up GAMS:
     1. Install GAMS: <https://www.gams.com/download/>
     2. Obtain a combined GAMS/CPLEX license: <https://www.gams.com/sales/licensing/>
-        1. Small ReEDS systems have been solved using the open-source [COIN-OR](https://www.coin-or.org/) solver as described [here](https://www.nrel.gov/docs/fy21osti/77907.pdf), but this capability is not actively maintained.
+        1. Small ReEDS systems have been solved using the open-source [COIN-OR](https://www.coin-or.org/) solver as described [here](https://www.nlr.gov/docs/fy21osti/77907.pdf), but this capability is not actively maintained.
         2. Other commercial solvers have also been successfully applied to ReEDS, but setup details and some solver tuning are specific to the CPLEX solver.
-3. Install Julia: <https://julialang.org/downloads/>
+3. Install Julia version 1.12.1 as described in the [documentation](https://reeds-model.github.io/ReEDS/setup.html#reeds2pras-julia-and-stress-periods-setup):
+    1. Follow the platform-dependent installation instructions at <https://julialang.org/downloads/> to install both `julia` and `juliaup`
+    2. Specify version 1.12.1 by running:
+        1. `juliaup add 1.12.1`
+        2. `juliaup default 1.12.1`
 4. Open a command-line interface and set up your environments:
     1. Clone the ReEDS repository: `git clone git@github.com:ReEDS-Model/ReEDS.git` or `git clone https://github.com/ReEDS-Model/ReEDS.git`
     2. Navigate to the cloned repository
     3. Create the `reeds2` [conda environment](https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html): `conda env create -f environment.yml`
-        1. Linux and Mac users can use the environment.yml directly. Windows users need to comment out the `- julia=1.8` line from the environment.yml file before creating the environment and use the version of Julia installed above.
     4. Activate the `reeds2` environment: `conda activate reeds2`
     5. Instantiate the Julia environment: `julia --project=. instantiate.jl`
     6. (Optional) Several large data files are hosted remotely.

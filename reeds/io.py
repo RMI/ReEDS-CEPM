@@ -1451,7 +1451,7 @@ def assemble_supplycurve(
         if skip_if_complete:
             return dfin
         else:
-            dfin = dfin[['class', 'capacity', 'capital_adder_per_mw']].copy()
+            dfin = dfin[['class', 'capacity', 'capital_adder_per_mw', 'cf']].copy()
 
     county2zone = reeds.io.get_county2zone(case if agg else None, **kwargs)
 

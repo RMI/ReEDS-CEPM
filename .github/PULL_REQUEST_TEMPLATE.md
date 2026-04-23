@@ -86,7 +86,7 @@ Include additional illustrative plots describing input data, methods, testing, a
 <!-- - [ ] Financial calculations: @wcole -->
 <!-- - [ ] FINITO: @molmezt or @cavraam -->
 <!-- - [ ] Hybrids: @aschleif -->
-<!-- - [ ] Monte Carlo: @vduraes -->
+<!-- - [ ] Monte Carlo: @bsergi -->
 <!-- - [ ] Sparse chronology or interday diurnal storage: @ychen10 -->
 <!-- - [ ] State policies: @wcole or @aschleif -->
 <!-- - [ ] Stress periods, resource adequacy, or ReEDS2PRAS/Julia: @pbrown -->
