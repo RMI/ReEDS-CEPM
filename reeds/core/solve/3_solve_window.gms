@@ -149,6 +149,6 @@ $ifthene.lastiter %niter%=%maxiter%
 
 $eval nextwindow %window% + 1
 tfix(t)$(tmodel(t)$(yeart(t)<solvewindows("%nextwindow%","start"))) = yes ;
-$include reeds%ds%core%ds%5_varfix.gms
+$include reeds%ds%core%ds%solve%ds%5_varfix.gms
 
 $endif.lastiter
