@@ -197,6 +197,28 @@ def get_rev_paths(revswitches, caseSwitches):
 
     return revswitches
 
+
+def check_cases_format(df_cases):
+    """Check the integrity of the input cases_{}.csv data"""
+    dfkeep = df_cases.loc[:, ~df_cases.loc['ignore'].astype(int).astype(bool)]
+    ## Only allow GSw_FakeData to be used all-or-nothing
+    unique_fakes = dfkeep.loc['GSw_FakeData'].unique()
+    if len(unique_fakes) > 1:
+        err = (
+            'GSw_FakeData can only take a single value in a set of cases but values of "'
+            + ', '.join(unique_fakes) + '" were provided'
+        )
+        raise ValueError(err)
+    ## Check for spaces in case names
+    spaces = [i for i in dfkeep if ' ' in i]
+    if len(spaces):
+        err = (
+            'Spaces are not allowed in case names; the following names have spaces:\n'
+            + '\n'.join(f'"{i}"' for i in spaces)
+        )
+        raise ValueError(err)
+
+
 def check_compatibility(sw):
     if int(sw['startyear']) < 2010:
         raise ValueError(f"startyear = {sw['startyear']} but must be ≥ 2010")
@@ -472,7 +494,7 @@ def check_compatibility(sw):
         err = (
             "Manifest.toml does not exist. "
             "Please set up julia by following the instructions at "
-            "https://natlabrockies.github.io/ReEDS-2.0/setup.html#reeds2pras-julia-and-stress-periods-setup"
+            "https://reeds-model.github.io/ReEDS/setup.html#reeds2pras-julia-and-stress-periods-setup"
         )
         raise Exception(err)
 
@@ -931,6 +953,7 @@ def setupEnvironment(
     )
 
     #%% Stop now if any switches are incompatible
+    check_cases_format(df_cases)
     for sw in caseSwitches:
         check_compatibility(sw)
     if dryrun:
@@ -1201,8 +1224,13 @@ def write_batch_script(
         repo = git.Repo()
         try:
             branch = repo.active_branch.name
-            tag = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1].name
-            description = repo.git.describe()
+            tags = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)
+            if len(tags):
+                tag = tags[-1].name
+                description = repo.git.describe()
+            else:
+                tag = ''
+                description = ''
         except TypeError:
             branch = 'DETACHED_HEAD'
             tag = ''
@@ -1313,6 +1341,7 @@ def write_batch_script(
                 OPATH.writelines("module load anaconda3 \n")
                 OPATH.writelines("module use /nopt/nrel/apps/software/gams/modulefiles \n")
                 OPATH.writelines("module load gams \n")
+                OPATH.writelines("module load julia/1.12.1 \n")
             else:
                 OPATH.writelines("module load conda \n")
                 OPATH.writelines("module load gams \n")

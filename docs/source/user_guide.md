@@ -112,7 +112,7 @@ The `GSw_LoadProfiles` switch corresponds to a file saved to `inputs/remote/dema
 
 | Switch Name    | Description of Profile | Origin | Weather year included |
 | ------------- | ------------- | ------------- | ------------- |
-| historic | Detrended historic demand from 2007-2013 and 2016-2023. This is multiplied by annual growth factors from AEO to forecast load growth. | Produced by the ReEDS team from a compilation of data sources. More detail can be found in the [hourlize readme](https://github.com/NatLabRockies/ReEDS-2.0/tree/main/hourlize). | 2007-2013 & 2016-2023 |
+| historic | Detrended historic demand from 2007-2013 and 2016-2023. This is multiplied by annual growth factors from AEO to forecast load growth. | Produced by the ReEDS team from a compilation of data sources. More detail can be found in the [hourlize readme](https://github.com/ReEDS-Model/ReEDS/tree/main/hourlize). | 2007-2013 & 2016-2023 |
 | EFS_Clean2035_LTS | Net-zero emissions, economy wide, by 2050 based on the White House's Long Term Strategy as shown here: <https://www.whitehouse.gov/wp-content/uploads/2021/10/US-Long-Term-Strategy.pdf> | Developed for the 100% Clean Electricity by 2035 study: <https://www.nrel.gov/docs/fy22osti/81644.pdf> |  2007-2013 |
 | EFS_Clean2035    | Accelerated Demand Electrification (ADE) profile. This profile was custom made for the 100% Clean Electricity by 2035 study. More information about how it was formed can be found in <https://www.nrel.gov/docs/fy22osti/81644.pdf> Appendix C. | Developed for the 100% Clean Electricity by 2035 study: <https://www.nrel.gov/docs/fy22osti/81644.pdf> |  2007-2013 |
 | EFS_Clean2035clip1pct | Same as Clean2035 but clips off the top 1% of load hours. | Developed for the 100% Clean Electricity by 2035 study: <https://www.nrel.gov/docs/fy22osti/81644.pdf> |  2007-2013 |
@@ -138,7 +138,7 @@ The `GSw_LoadProfiles` switch corresponds to a file saved to `inputs/remote/dema
 
 ### Different weather years
 
-For EER’s load profiles, “weather” includes everything considered by NLR's [ResStock](https://resstock.nrel.gov/) and [ComStock](https://comstock.nrel.gov/) building models (i.e., temperature, humidity, insolation, and wind speed). This information gets translated into variations in load through regressions and benchmarking with historical system load data for the weather year in question.
+For EER’s load profiles, “weather” includes everything considered by NLR's [ResStock](https://resstock.nlr.gov/) and [ComStock](https://comstock.nlr.gov/) building models (i.e., temperature, humidity, insolation, and wind speed). This information gets translated into variations in load through regressions and benchmarking with historical system load data for the weather year in question.
 
 ### Demand Response
 
@@ -162,7 +162,7 @@ The low cost scenario assumes further declines from 2030 to 2050.
 
 Fixed O&M values are assumed to be 5% of CAPEX (source: <https://iopscience.iop.org/article/10.1088/1748-9326/acacb5>)
 
-Electrolyzer performance (efficiency) as well as SMR cost and performance assumptions are derived from assumptions [H2A: Hydrogen Analysis Production Models](https://www.nrel.gov/hydrogen/h2a-production-models.html), with guidance from Paige Jadun.
+Electrolyzer performance (efficiency) as well as SMR cost and performance assumptions are derived from assumptions [H2A: Hydrogen Analysis Production Models](https://www.nlr.gov/hydrogen/h2a-production-models.html), with guidance from Paige Jadun.
 See original input assumptions in the [ReEDS_Input_Processing repo](https://github.com/ReEDS-Model/ReEDS_Input_Processing/blob/main/hydrogen/costs/H2ProductionCosts-20210414.xlsx).
 
 Note that SMR costs are currently in 2018$ and electrolyzer costs are in 2022$.

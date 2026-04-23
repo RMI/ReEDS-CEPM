@@ -11,6 +11,7 @@
     - [How do I change the spatial resolution of a ReEDS case?](#how-do-i-change-the-spatial-resolution-of-a-reeds-case)
     - [How can I reduce solve time?](#how-can-i-reduce-solve-time)
     - [How often are updates made to ReEDS?](#how-often-are-updates-made-to-reeds)
+    - [Help, I'm getting lots of log messages about missing fonts](#help-im-getting-lots-of-log-messages-about-missing-fonts)
     - [What are the limitations, caveats, and known issues?](#what-are-the-limitations-caveats-and-known-issues)
       - [Capabilities that don't currently work](#capabilities-that-dont-currently-work)
       - [Assumptions](#assumptions)
@@ -94,6 +95,16 @@ Here is an example of what this would look like:
 ```bash
 git checkout tags/v2024.0.0
 ```
+
+### Help, I'm getting lots of log messages about missing fonts
+
+We use the `mscorefonts` package to get nicer-looking fonts in plots.
+If you had `matplotlib` installed before running a script from the `reeds2` environment,
+you might need to clear your fonts cache (you can back it up first if you like).
+
+- On Mac/Linux, try deleting `~/.cache/matplotlib` or `~/.matplotlib`
+- On Windows, try deleting `%HOMEPATH%\.matplotlib`
+
 
 ### What are the limitations, caveats, and known issues?
 

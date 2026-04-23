@@ -2972,7 +2972,7 @@
 
   - [PSH_supply_curves_capacity_10hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_ref_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 10 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_10hr_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_wEph_apr2025.csv)
@@ -2980,7 +2980,7 @@
 
   - [PSH_supply_curves_capacity_10hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 10 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_10hr_wExist_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_wExist_apr2025.csv)
@@ -2988,7 +2988,7 @@
 
   - [PSH_supply_curves_capacity_10hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 10 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_10hr_wExist_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_wExist_wEph_apr2025.csv)
@@ -2996,7 +2996,7 @@
 
   - [PSH_supply_curves_capacity_10hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 10 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_12hr_ref_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_ref_apr2025.csv)
@@ -3004,7 +3004,7 @@
 
   - [PSH_supply_curves_capacity_12hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_ref_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 12 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_12hr_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_wEph_apr2025.csv)
@@ -3012,7 +3012,7 @@
 
   - [PSH_supply_curves_capacity_12hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 12 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_12hr_wExist_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_wExist_apr2025.csv)
@@ -3020,7 +3020,7 @@
 
   - [PSH_supply_curves_capacity_12hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 12 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_12hr_wExist_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_wExist_wEph_apr2025.csv)
@@ -3028,7 +3028,7 @@
 
   - [PSH_supply_curves_capacity_12hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 12 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_8hr_ref_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_ref_apr2025.csv)
@@ -3036,7 +3036,7 @@
 
   - [PSH_supply_curves_capacity_8hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_ref_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 8 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_8hr_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_wEph_apr2025.csv)
@@ -3044,7 +3044,7 @@
 
   - [PSH_supply_curves_capacity_8hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 8 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_8hr_wExist_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_wExist_apr2025.csv)
@@ -3052,7 +3052,7 @@
 
   - [PSH_supply_curves_capacity_8hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 8 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_8hr_wExist_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_wExist_wEph_apr2025.csv)
@@ -3060,7 +3060,7 @@
 
   - [PSH_supply_curves_capacity_8hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 8 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_10hr_ref_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_ref_apr2025.csv)
@@ -3069,7 +3069,7 @@
   - [PSH_supply_curves_cost_10hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_ref_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 10 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_10hr_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_wEph_apr2025.csv)
@@ -3078,7 +3078,7 @@
   - [PSH_supply_curves_cost_10hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 10 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_10hr_wExist_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_wExist_apr2025.csv)
@@ -3087,7 +3087,7 @@
   - [PSH_supply_curves_cost_10hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 10 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_10hr_wExist_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_wExist_wEph_apr2025.csv)
@@ -3096,7 +3096,7 @@
   - [PSH_supply_curves_cost_10hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 10 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_12hr_ref_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_ref_apr2025.csv)
@@ -3105,7 +3105,7 @@
   - [PSH_supply_curves_cost_12hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_ref_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 12 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_12hr_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_wEph_apr2025.csv)
@@ -3114,7 +3114,7 @@
   - [PSH_supply_curves_cost_12hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 12 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_12hr_wExist_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_wExist_apr2025.csv)
@@ -3123,7 +3123,7 @@
   - [PSH_supply_curves_cost_12hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 12 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_12hr_wExist_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_wExist_wEph_apr2025.csv)
@@ -3132,7 +3132,7 @@
   - [PSH_supply_curves_cost_12hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 12 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_8hr_ref_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_ref_apr2025.csv)
@@ -3141,7 +3141,7 @@
   - [PSH_supply_curves_cost_8hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_ref_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 8 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_8hr_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_wEph_apr2025.csv)
@@ -3150,7 +3150,7 @@
   - [PSH_supply_curves_cost_8hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 8 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_8hr_wExist_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_wExist_apr2025.csv)
@@ -3159,7 +3159,7 @@
   - [PSH_supply_curves_cost_8hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 8 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_8hr_wExist_wEph_apr2025.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_wExist_wEph_apr2025.csv)
@@ -3168,7 +3168,7 @@
   - [PSH_supply_curves_cost_8hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 8 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
+    - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
 ---
 
   - [rev_paths.csv](/inputs/supply_curve/rev_paths.csv)
