@@ -176,7 +176,7 @@ if __name__ == '__main__':
                         elif "dual objective limit exceeded" in slurm: 
                             errortext = "(hit dual obj. limit)"
                         # check if infeasible
-                        elif "d_solveoneyear.gms failed with return code 3" in slurm:
+                        elif "3_solve_oneyear.gms failed with return code 3" in slurm:
                             errortext = "(infeasible)"
                         else:
                             errortext = ""

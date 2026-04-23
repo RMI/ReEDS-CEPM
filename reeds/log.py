@@ -103,7 +103,7 @@ def get_solve_times(path=''):
                 process = line[len('--- Job ') : line.index(' Stop ')]
                 x = f'--- Job {process} Stop '
                 y = ' elapsed '
-                label = process if process != 'd_solveoneyear.gms' else stress_year
+                label = process if process != '3_solve_oneyear.gms' else stress_year
                 lengths['total'][label] = pd.Timedelta(line[line.index(y) + len(y) :])
                 times['stop'][label] = pd.Timestamp(line[len(x) : line.index(y)])
                 times['start'][label] = times['stop'][label] - lengths['total'][label]
@@ -164,7 +164,7 @@ def write_last_solve_time(path=''):
         scriptname = lasttime.name
         year = 0
     else:
-        scriptname = 'd_solveoneyear.gms'
+        scriptname = '3_solve_oneyear.gms'
         year = int(lasttime.name.split('i')[0])
     towrite = {
         'gams': scriptname,
@@ -173,7 +173,7 @@ def write_last_solve_time(path=''):
         'remainder': 'solver/remainder',
     }
     with open(os.path.join(path, 'meta.csv'), 'a') as METAFILE:
-        if (scriptname == 'd_solveoneyear.gms') and all([i in lasttime for i in towrite]):
+        if (scriptname == '3_solve_oneyear.gms') and all([i in lasttime for i in towrite]):
             for i, process in enumerate(towrite):
                 METAFILE.writelines(
                     '{},{},{},{},{}\n'.format(

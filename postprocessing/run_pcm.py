@@ -12,6 +12,7 @@ from pathlib import Path
 import reeds
 from reeds.input_processing import hourly_repperiods
 from reeds.input_processing import hourly_writetimeseries
+from reeds.core.terminus.report_dump import write_dfdict
 
 
 # %% Inferred inputs
@@ -282,7 +283,7 @@ def main(casepath, t, switch_mods=switch_mods_default, label='', overwrite=False
 
     outputs_path = os.path.join(casepath, 'outputs', f'pcm_{label}_{_t}')
     os.makedirs(outputs_path, exist_ok=True)
-    reeds.core.terminus.report_dump.write_dfdict(
+    write_dfdict(
         dfdict=dict_out,
         outputs_path=outputs_path,
         rename=rename,

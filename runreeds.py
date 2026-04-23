@@ -550,7 +550,7 @@ def setup_sequential_year(
                 cur_year, next_year, prev_year, restartfile,
                 toLogGamsString, hpc,
             ))
-        OPATH.writelines(writescripterrorcheck(f"d_solveoneyear.gms_{cur_year}"))
+        OPATH.writelines(writescripterrorcheck(f"3_solve_oneyear.gms_{cur_year}"))
         OPATH.writelines(f'python {logger} --year={cur_year}\n')
 
         if int(caseSwitches['GSw_ValStr']):

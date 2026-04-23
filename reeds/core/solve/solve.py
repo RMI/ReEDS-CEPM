@@ -11,14 +11,15 @@ import reeds
 
 
 #%% Main function
-def run_reeds(casepath, t, onlygams=False, iteration=0):
+def run_reeds(casepath, t, iteration=0, onlygams=False, onlyra=False):
     """
     """
     # #%% Arguments for testing
     # casepath = os.path.expanduser('~/github/ReEDS-2.0/runs/v20230512_prasM0_ERCOT')
     # t = 2020
-    # onlygams = 0
     # iteration = 0
+    # onlygams = 0
+    # onlyra = 0
     # os.chdir(casepath)
 
     #%% Get the run settings
@@ -153,10 +154,6 @@ if __name__ == '__main__':
                         help='year to run')
     parser.add_argument('--iteration', '-i', type=int, default=0,
                         help='iteration counter for this run')
-    parser.add_argument('--onlygams', '-g', action='store_true',
-                        help='Only run GAMS (skip resource adequacy)')
-    parser.add_argument('--onlyra', '-a', action='store_true',
-                        help='Only run resource adequacy (RA) (skip GAMS)')
     parser.add_argument('--overwrite', '-o', action='store_true',
                         help='Overwrite iterations that have already finished')
 
@@ -164,8 +161,6 @@ if __name__ == '__main__':
     casepath = args.casepath
     t = args.t
     iteration = args.iteration
-    onlygams = args.onlygams
-    onlyra = args.onlyra
     overwrite = args.overwrite
 
     #%% Switch to run folder

@@ -16,7 +16,7 @@ input_processing/outage_rates.py,#A55194
 input_processing/hourly_repperiods.py,#CE6DBD
 input_processing/check_inputs.py,#DE9ED6
 a_createmodel.gms,#31A354
-d_solveoneyear.gms,#843C39
+3_solve_oneyear.gms,#843C39
 solver/barrier,#AD494A
 solver/crossover,#D6616B
 solver/remainder,#E7969C
