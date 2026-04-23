@@ -741,7 +741,7 @@ def setup_window(
             OPATH.writelines(writeerrorcheck(os.path.join("g00files", restartfile + ".g*")))
             ## solve via the window solve file
             OPATH.writelines(
-                f"gams {Path('reeds','core','d_solvewindow.gms')} o="
+                f"gams {Path('reeds','core','3_solvewindow.gms')} o="
                 + os.path.join("lstfiles", batch_case + "_" + str(i) + ".lst")
                 +" r=" + os.path.join("g00files", restartfile)
                 + " gdxcompress=1 xs=g00files\\"+savefile + toLogGamsString + " --niter=" + str(i)
