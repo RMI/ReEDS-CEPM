@@ -46,8 +46,6 @@ jobs:
       - uses: julia-actions/setup-julia@5c9647d97b78a5debe5164e9eec09d653d29bd71 # v2
         with:
           version: ${{ env.JULIA_VERSION }}
-        env:
-          NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/nrel_ca_chain.crt
 
       - run: julia --project=. instantiate.jl
 
@@ -203,8 +201,6 @@ jobs:
         id: setup-julia
         with:
           version: ${{ env.JULIA_VERSION }}
-        env:
-          NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/nrel_ca_chain.crt
 
       - name: Restore Julia cache
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4

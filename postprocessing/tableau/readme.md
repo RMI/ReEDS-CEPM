@@ -14,10 +14,10 @@ This folder contains files that facilitate the postprocessing and publication of
 ### Step 1: Set up Tableau
 1. [Tableau](https://www.tableau.com/) is a commercial software that requires a license. Licenses are available through NLR overhead funds for no additional cost to projects. Request a license through the [Tableau catalog item](https://nrel.servicenowservices.com/sp?id=sc_cat_item_guide&sys_id=9c54d9cc874b7910496140070cbb35d7) in the IT Service portal. Under 'Product/Version', select 'Tableau Creator'. This includes Tableau Desktop and will allow you to edit Tableau workbooks, as opposed to purely viewing them. 
 2. Install [Tableau Desktop](https://www.tableau.com/products/desktop/download) on your local machine. IT will complete this with you with your license ticket, as submitted in Step 1.   
-3. Activate your license. IT will most likely complete this with you with your license ticket, as submitted in Step 1. If they do not, Tableau Desktop installations activate by authenticating to [Tableau Server](https://tableau.nrel.gov/). All licensed Tableau users have been added to the Server. The Server will activate Desktop installations for users assigned a Tableau Creator license. Note: Computers must be connected to NLR's enterprise network (onsite or by VPN) to authenticate to Tableau Server. To activate an existing installation of Tableau:
+3. Activate your license. IT will most likely complete this with you with your license ticket, as submitted in Step 1. If they do not, Tableau Desktop installations activate by authenticating to [Tableau Server](https://tableau.nlr.gov/). All licensed Tableau users have been added to the Server. The Server will activate Desktop installations for users assigned a Tableau Creator license. Note: Computers must be connected to NLR's enterprise network (onsite or by VPN) to authenticate to Tableau Server. To activate an existing installation of Tableau:
     - Open Tableau and go to Help > Manage Product Keys.  
     - Click the Activate button and select Activate by signing into a server.  
-    - In the Server field, enter https://tableau.nrel.gov
+    - In the Server field, enter https://tableau.nlr.gov
     - Click Connect
 
 ** If you are no longer using your Tableau license please let the ITS Asset Management team know so that the license seat can be used by someone else. 

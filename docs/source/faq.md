@@ -11,6 +11,7 @@
     - [How do I change the spatial resolution of a ReEDS case?](#how-do-i-change-the-spatial-resolution-of-a-reeds-case)
     - [How can I reduce solve time?](#how-can-i-reduce-solve-time)
     - [How often are updates made to ReEDS?](#how-often-are-updates-made-to-reeds)
+    - [Help, I'm getting lots of log messages about missing fonts](#help-im-getting-lots-of-log-messages-about-missing-fonts)
     - [What are the limitations, caveats, and known issues?](#what-are-the-limitations-caveats-and-known-issues)
       - [Capabilities that don't currently work](#capabilities-that-dont-currently-work)
       - [Assumptions](#assumptions)

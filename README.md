@@ -1,4 +1,4 @@
-## ReEDS 2.0
+## ReEDS
 **Regional Energy Deployment System (ReEDS) Model**
 
  

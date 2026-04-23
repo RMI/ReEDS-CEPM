@@ -15,7 +15,6 @@
 
 ### Relevant sources or documentation <!-- if any, otherwise delete -->
 
-
 ## Validation, testing, and comparison report(s)
 
 <!--
