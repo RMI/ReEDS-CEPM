@@ -1453,7 +1453,7 @@ def write_miscellaneous_files(
     )[sw['GSw_PRM_CapCreditSeasons']].rename('ccseason')
     ccseason_dates.to_csv(os.path.join(inputs_case, 'ccseason_dates.csv'))
     reeds.io.write_input_to_h5(
-        df=ccseason_dates.drop_duplicates().to_frame(),
+        df=ccseason_dates.drop_duplicates().rename('*').to_frame(),
         key='ccseason',
         case=inputs_case,
         comment='seasons used for capacity credit',

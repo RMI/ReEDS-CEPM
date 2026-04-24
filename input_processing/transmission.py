@@ -495,7 +495,7 @@ for col, label in labels.items():
         index=False,
     )
 reeds.io.write_input_to_h5(
-    df=transmission_cost_ac.tscbin.drop_duplicates().to_frame(),
+    df=transmission_cost_ac.tscbin.drop_duplicates().rename('*').to_frame(),
     key='tscbin',
     case=inputs_case,
     comment='transmission upgrade supply curve bins',

@@ -53,9 +53,6 @@ option solprint = off ;
 option sysout = off ;
 *$offtext
 
-set dummy "set used for initialization of numerical sets" / 0*10000 / ;
-alias(dummy,adummy) ;
-
 
 *======================
 * -- Local Switches --
@@ -212,7 +209,18 @@ $include inputs_case%ds%val_hurdlereg.csv
 ;
 
 * Written by h5_to_gdx.py
-$declareAndLoad inputs_case%ds%inputs_0.gdx
+* $declareAndLoad inputs_case%ds%inputs_0.gdx
+* sets
+*   eall
+*   e(eall)
+*   i
+* ;
+$include b_declare_sets.gms
+$include b_declare_parameters.gms
+$gdxin inputs_case%ds%inputs_0.gdx
+$include b_load_sets.gms
+$include b_load_parameters.gms
+$gdxin
 
 sets
 *The following two sets:
@@ -277,8 +285,6 @@ $endif.hydup2
     fsl
     ss
   / ;
-
-alias(i,ii,iii) ;
 
 set i_water_cooling(i) "derived technologies from original technologies with cooling technologies other than just none",
 *Hereafter numeraire techs in cooling-water context mean original technologies,
@@ -471,17 +477,6 @@ hyd_add_pump('hydED_pumped-hydro-flex') = yes ;
 * Sets involved with resource supply curve definitions
 set rscbin "Resource supply curves bins" /bin1*bin%numbins%/,
     rscfeas(i,r,rscbin) "feasibility set for technologies that have resource supply curves" ;
-
-alias(r,rr,n,nn) ;
-alias(v,vv) ;
-alias(t,tt,ttt) ;
-alias(st,ast) ;
-alias(allt,alltt) ;
-alias(cendiv,cendiv2) ;
-alias(rscbin,arscbin) ;
-alias(nercr,nercrr) ;
-alias(transgrp,transgrpp) ;
-alias(itlgrp,itlgrpp) ;
 
 parameter yeart(t) "numeric value for year",
           year(allt) "numeric year value for allt" ;
@@ -1054,8 +1049,6 @@ prescriptivelink0("csp-ws",ii)$[csp(ii)$i_numeraire(ii)$Sw_WaterMain] = no ;
 set prescriptivelink(pcat,i) "final set of prescribed categories and their technologies - used in the model" ;
 
 prescriptivelink(pcat,i)$prescriptivelink0(pcat,i) = yes ;
-
-alias(pcat,ppcat) ;
 
 * active prescriptivelink for all techs not included in the table above
 * but restrict out csp techs in this calculation - since they
@@ -2167,8 +2160,6 @@ m_rscfeas(r,i,"bin1")$[sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulativ
 *==========================================================
 *--- Interconnection queues (Capacity deployment limit) ---
 *==========================================================
-alias(tg,tgg) ;
-
 $onempty
 table cap_limit(tg,r,allt) "--MW-- capacity deployment limit by region and technology based on interconnection queues"
 $offlisting
@@ -3094,8 +3085,6 @@ set routes(r,rr,trtype,t)     "final conditional on transmission feasibility"
     routes_prm(r,rr)          "routes where PRM trading is allowed"
     opres_routes(r,rr,t)      "final conditional on operating reserve flow feasibility"
 ;
-
-alias(trtype,intype,outtype) ;
 
 * Specify the transmission types that are limited by Sw_TransCapMax and Sw_TransCapMaxTotal
 set trtypemax(trtype) "trtypes to limit" ;
@@ -5038,8 +5027,6 @@ cost_growth(i,st,t) = 0 ;
 * --- CES Gas supply curve setup ---
 *====================================
 
-alias(gb,gbb) ;
-
 * gassupply scale determines how far the bins reference quantity should deviate from its reference price
 * with gassupply scale = -0.5, the center of the reference price bin will be the reference quantity
 * with gassupplyscale = 0, the end of the reference gas price's bin will the limit for that reference bin
@@ -5217,8 +5204,6 @@ ng_crf_penalty_nat(i,t)$[gas(i)$ccs(i)$sum{r, valcap_irt(i,r,t) }] = 1 ;
 *===========================================
 * --- Regional Gas supply curve ---
 *===========================================
-
-alias(fuelbin,afuelbin) ;
 
 Scalar numfuelbins       "number of fuel bins",
        normfuelbinwidth  "typical fuel bin width",
@@ -6361,12 +6346,6 @@ Parameter
     gasadder_cd(cendiv,t,allh)             "--$/MMbtu-- adder for NG census division"
     szn_adj_gas(allh)                      "--fraction-- seasonal adjustment for gas prices"
 ;
-
-alias(allh,allhh,allhhh) ;
-alias(h,hh,hhh) ;
-alias(allszn,allsznn) ;
-alias(actualszn,actualsznn,actualsznnn) ;
-alias(szn,sznn) ;
 
 * Initialize some parameters
 sdbin_size(ccreg,ccseason,sdbin,"%startyear%") = 1000 ;
