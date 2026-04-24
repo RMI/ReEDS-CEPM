@@ -793,10 +793,7 @@ def main(
     timestamps_day = make_timestamps(sw=pd.Series({**sw, **{'GSw_HourlyType':'day'}}))
     timestamps_wek = make_timestamps(sw=pd.Series({**sw, **{'GSw_HourlyType':'wek'}}))
     ## Include all possible seasons so dispatch mode can be rerun with any of them
-    quarters = pd.read_csv(
-        os.path.join(inputs_case, 'sets', 'quarter.csv'),
-        header=None,
-    ).squeeze(1).tolist()
+    quarters = reeds.io.read_input(inputs_case, 'quarter').squeeze(1).tolist()
     set_allszn = pd.Series(
         list(timestamps_day.period.unique())
         + list(timestamps_wek.period.unique())
