@@ -905,59 +905,38 @@ def write_scalars(scalars, inputs_case):
     scalar_csv_to_txt(os.path.join(inputs_case,'scalars.csv'))
 
 
-def write_GAMS_sets(runfiles, reeds_path, inputs_case):
-    """
-    Write GAMS-readable sets to the inputs_case directory
-    """
-    casedir = os.path.dirname(inputs_case)
-
-    # Create Sets folder
-    shutil.copytree(
-        os.path.join(reeds_path,'inputs','sets'),
-        os.path.join(inputs_case,'sets'),
-        dirs_exist_ok=True,
-        ignore=shutil.ignore_patterns('README*','readme*'),
-    )
-
-    # Write commands to load sets
-    sets = runfiles.loc[runfiles.GAMStype=='set'].copy()
-    settext = '$offlisting\n' + '\n\n'.join([
-        f"set {row.GAMSname} '{row.comment:.255}'"
-        '\n/'
-        f"\n$include inputs_case%ds%{row.filename}"
-        '\n/ ;'
-        for i, row in sets.iterrows()
-    ]) + '\n$onlisting\n'
-    # Write to file
-    with open(os.path.join(casedir,'b_sets.gms'), 'w') as f:
-        f.write(settext)
-
-
-def write_non_region_file(filename, filepath, src_file, dir_dst, sw, regions_and_agglevel, source_deflator_map):
+def write_non_region_file(
+    row,
+    case,
+    dir_dst,
+    sw,
+    regions_and_agglevel,
+    source_deflator_map,
+):
     """
     Copy a non-region specific file (filename) from src_file to dir_dst
     """
     # Check if source file exists and is not rev_paths.csv
-    if (os.path.exists(src_file)) and (filename!='rev_paths.csv'):
+    if (os.path.exists(row.full_filepath)) and (row.filename != 'rev_paths.csv'):
 
         # Special Case: Values in load_multiplier.csv need to be rounded prior to copy
-        if filename == 'load_multiplier.csv':
-            df_load_multiplier = pd.read_csv(src_file).round(6)
+        if row.filename == 'load_multiplier.csv':
+            df_load_multiplier = pd.read_csv(row.full_filepath).round(6)
             df_load_multiplier.to_csv(os.path.join(dir_dst,'load_multiplier.csv'),index=False)
 
-        elif filename == 'h2_exogenous_demand.csv':
+        elif row.filename == 'h2_exogenous_demand.csv':
             # h2_exogenous_demand.csv has a path in runfiles.csv (considered a non-region file)
-            df=pd.read_csv(src_file,index_col=['p','t'])
+            df=pd.read_csv(row.full_filepath, index_col=['p','t'])
             df[sw['GSw_H2_Demand_Case']].round(3).rename_axis(['*p','t']).to_csv(
                 os.path.join(dir_dst,'h2_exogenous_demand.csv')
             )
 
-        elif filename in ['energy_communities.csv', 'nuclear_energy_communities.csv']:
+        elif row.filename in ['energy_communities.csv', 'nuclear_energy_communities.csv']:
             # Map energy communities to regions and compute the percentage of energy communities
             # within each region to assign a weighted bonus.
 
             # Rename column in energy_communities.csv and map county to r, save as energy_communities.csv
-            energy_communities = pd.read_csv(src_file)
+            energy_communities = pd.read_csv(row.full_filepath)
             energy_communities.rename(columns={'County Region': 'county'}, inplace=True)
 
             r_county = regions_and_agglevel ['r_county']
@@ -976,22 +955,31 @@ def write_non_region_file(filename, filepath, src_file, dir_dst, sw, regions_and
             # Rename columns from ['r','county'] to ['r','percentage_energy_communities']
             e_df.columns = ['r', 'percentage_energy_communities']
 
-            e_df.to_csv(os.path.join(dir_dst,filename),index=False)
+            e_df.to_csv(os.path.join(dir_dst, row.filename),index=False)
         
-        elif filename == 'co2_site_char.csv':
+        elif row.filename == 'co2_site_char.csv':
             # Adjust for inflation
-            df = pd.read_csv(src_file)
-            df[f"bec_{sw['GSw_CO2_BEC']}"] *= source_deflator_map[filepath]
+            df = pd.read_csv(row.full_filepath)
+            df[f"bec_{sw['GSw_CO2_BEC']}"] *= source_deflator_map[row.filepath]
             df.to_csv(os.path.join(dir_dst, 'co2_site_char.csv'), index=False)
 
         else:
-            shutil.copy(src_file, os.path.join(dir_dst,filename))
+            if str(row.GAMStype).lower() == 'set':
+                reeds.io.write_csv_to_h5(
+                    filepath=row.full_filepath,
+                    case=case,
+                    comment=row.comment,
+                    gamstype=row.GAMStype.lower(),
+                    overwrite=True, # TEMPORARY for testing
+                )
+            else:
+                shutil.copy(row.full_filepath, os.path.join(dir_dst, row.filename))
 
-            if filename == 'e_report_params.csv':
+            if row.filename == 'e_report_params.csv':
                 # Rewrite e_report_params as GAMS-readable definition
                 param_csv_to_txt(os.path.join(dir_dst,'e_report_params.csv'))
 
-            if filename == 'scalars.csv':
+            if row.filename == 'scalars.csv':
                 # Rewrite scalars.csv as GAMS-readable definition
                 scalars = reeds.io.get_scalars(full=True)
                 write_scalars(scalars, dir_dst)
@@ -1002,7 +990,7 @@ def write_non_region_files(non_region_files, sw, inputs_case, regions_and_agglev
     Copy non-region specific files to the input case directory.
     """
     print('Copying non-region-indexed files')
-
+    case = reeds.io.standardize_case(inputs_case)
     for _, row in non_region_files.iterrows():
         if row['filepath'].split('/')[0] in ['inputs','postprocessing','tests']:
             dir_dst = inputs_case
@@ -1016,10 +1004,14 @@ def write_non_region_files(non_region_files, sw, inputs_case, regions_and_agglev
             write_empty_file(os.path.join(dir_dst,row['filename']))
         else:
             print(f'...copying {row.filename}')
-            filename = row['filename']
-            filepath = row['filepath']
-            src_file = row['full_filepath']
-            write_non_region_file(filename, filepath, src_file, dir_dst, sw, regions_and_agglevel, source_deflator_map)
+            write_non_region_file(
+                row,
+                case,
+                dir_dst,
+                sw,
+                regions_and_agglevel,
+                source_deflator_map,
+            )
 
     
 def calculate_county_fractions(df, county2zone):
@@ -1603,10 +1595,6 @@ def main(reeds_path, inputs_case):
         sw,
         agglevel_variables
     )
-
-    # Write general GAMS files
-    # Write GAMS-readable sets to the inputs_case directory
-    write_GAMS_sets(runfiles, reeds_path, inputs_case)
 
     # Rewrite the switches tables as GAMS-readable definition
     # (gswitches.csv is first written at runbatch.py)

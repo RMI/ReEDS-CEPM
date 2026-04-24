@@ -1334,6 +1334,7 @@ def write_batch_script(
             'transmission',
             'outage_rates',
             'hourly_repperiods',
+            'h5_to_gdx',
         ]:
             OPATH.writelines(f"echo {'-'*12+'-'*len(s)}\n")
             OPATH.writelines(f"echo 'starting {s}.py'\n")
