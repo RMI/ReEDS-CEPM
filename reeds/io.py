@@ -10,6 +10,7 @@ import pandas as pd
 import geopandas as gpd
 from glob import glob
 from pathlib import Path
+from typing import Literal
 from pandas.api.types import is_float_dtype
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -451,6 +452,42 @@ def get_h2_storage_sites(h2_storage_type="salt"):
 
 
 ### Read files from a ReEDS case
+def read_h5(h5path:str|Path, key:str) -> pd.DataFrame():
+    """Read a key from a ReEDS-formatted .h5 file"""
+    if not Path(h5path).is_file():
+        raise FileNotFoundError(h5path)
+    with h5py.File(h5path, 'r') as f:
+        columns = [i.decode() for i in list(f[key]['columns'])]
+        df = pd.DataFrame({col: f[key][col] for col in columns})
+    for col in df:
+        if df[col].dtype == 'O':
+            df[col] = df[col].str.decode('utf-8')
+    return df
+
+
+def read_input(
+    case:str|Path,
+    name:str,
+    **kwargs,
+) -> pd.DataFrame:
+    """
+    Read a ReEDS input set or parameter (name) from {case}/inputs_case.
+    If {case}/inputs_case/inputs.h5 exists, the named parameter is read from there;
+    otherwise, it is read from {case}/inputs_case/{name}.csv;
+    if that doesn't exist, an error is raised.
+    """
+    key = Path(name).stem
+    h5path = Path(reeds.io.standardize_case(case), 'inputs_case', 'inputs.h5')
+    csvpath = Path(h5path.parent, f'{key}.csv')
+    if h5path.is_file():
+        df = read_h5(h5path, key)
+    elif csvpath.is_file():
+        df = pd.read_csv(csvpath)
+    else:
+        raise FileNotFoundError(f'Neither {h5path} nor {csvpath} exist')
+    return df
+
+
 def read_output(
     case: str,
     filename: str,
@@ -482,12 +519,7 @@ def read_output(
     if os.path.exists(h5path) and not filename.endswith('.csv'):
         key = os.path.basename(filename)
         try:
-            with h5py.File(h5path, 'r') as f:
-                columns = [i.decode() for i in list(f[key]['columns'])]
-                df = pd.DataFrame({col: f[key][col] for col in columns})
-            for col in df:
-                if df[col].dtype == 'O':
-                    df[col] = df[col].str.decode('utf-8')
+            df = read_h5(h5path, key)
         except KeyError:
             ## Empty dataframes aren't written to h5 file, so make one ourselves
             e_report_params = pd.read_csv(
@@ -1682,7 +1714,6 @@ def write_input_to_h5(
     case,
     comment='',
     gamstype='parameter',
-    rename={'t':'allt', 'h':'allh'},
     **kwargs,
 ):
     """
@@ -1690,24 +1721,70 @@ def write_input_to_h5(
     ### Parse inputs
     assert gamstype.lower() in ['set', 'parameter']
 
-    if os.path.basepath(case) == 'inputs_case':
+    if Path(case).name == 'inputs_case':
         h5path = os.path.join(case, 'inputs.h5')
-    elif case.endswith('.h5'):
+    elif Path(case).suffix == '.h5':
         h5path = case
     else:
-        h5path = os.path.join(case, 'inputs_case', 'inputs.h5')
+        h5path = Path(case, 'inputs_case', 'inputs.h5')
 
     ### Write record to h5 file
+    attrs = {'gamstype': gamstype.lower()}
+    if len(comment):
+        attrs['comment'] = comment
     write_to_h5(
         df,
         key,
         h5path,
-        attrs={
-            'comment': comment,
-            'gamstype': gamstype.lower(),
-        },
+        attrs=attrs,
         **kwargs,
     )
+
+
+def write_csv_to_h5(
+    filepath,
+    case,
+    comment='',
+    gamstype:Literal['set']='set',
+    **kwargs,
+):
+    """
+    Read a csv file (formatted as described in inputs/sets/README.md)
+    and write it to inputs.h5
+    """
+    df = pd.read_csv(filepath, dtype=str, header=None)
+    key = Path(filepath).stem
+    if df.shape[1] == 1:
+        ## Subsets have a header column beginning with '*';
+        ## primary sets do not have a header
+        primary = False if df.loc[0,0].startswith('*') else True
+    else:
+        ## Multidimensional sets must be subsets so must have a header
+        primary = False
+    ## For primary sets we use the set name as the output header;
+    ## for subsets we read the header from the file
+    if primary:
+        df.columns = [key]
+    else:
+        df.columns = df.loc[0].str.replace('*','').values
+        df = df.drop(0)
+    ## No other *'s are allowed
+    if df.applymap(lambda x: '*' in x).any().any():
+        err = (
+            "'*' characters are only allowed in subset headers.\n"
+            f"{filepath} has at least one disallowed '*' character."
+        )
+        raise ValueError(err)
+    ## Write it
+    reeds.io.write_input_to_h5(
+        df=df,
+        key=key,
+        case=case,
+        comment=comment,
+        gamstype=gamstype,
+        **kwargs,
+    )
+    return df
 
 
 def write_output_to_h5(
