@@ -377,8 +377,6 @@ runfiles.csv,runfiles.csv,1,ignore,ignore,ignore,,,0,0,,,,,,so meta
 sc_cat.csv,inputs/sets/sc_cat.csv,1,ignore,ignore,,,,,0,,,set,sc_cat,supply curve categories (capacity and cost),
 scalars.csv,inputs/scalars.csv,1,ignore,ignore,,,,,0,,1,,,,
 set_actualszn.csv,,1,ignore,ignore,,,,,0,,,,,,
-set_allh.csv,,1,ignore,ignore,,,,,0,,,,,,
-set_allszn.csv,,1,ignore,ignore,,,,,0,,,,,,
 set_h.csv,,1,ignore,ignore,,,,,,,,,,,
 set_szn.csv,,1,ignore,ignore,,,,,,,,,,,
 site_bin_map.csv,,1,ignore,ignore,,,,,0,,,,,,

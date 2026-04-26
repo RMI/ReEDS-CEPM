@@ -867,11 +867,14 @@ def main(
         return period_szn_write
 
     #%% Write the sets over all possible periods (representative and stress)
-    set_allszn.to_csv(
-        os.path.join(inputs_case, 'set_allszn.csv'), header=False, index=False)
-
-    set_allh.to_csv(
-        os.path.join(inputs_case, 'set_allh.csv'), header=False, index=False)
+    reeds.io.write_input_to_h5(
+        pd.Series(set_allszn, name='*'), 'allszn', inputs_case, gamstype='set',
+        comment='all potentially modeled time periods (days/weks)',
+    )
+    reeds.io.write_input_to_h5(
+        pd.Series(set_allh, name='*'), 'allh', inputs_case, gamstype='set',
+        comment='all potentially modeled time chunks (hour groupings)',
+    )
 
     #%% Write the seed stress periods to use for the PRM constraint
     if 'user' in sw.GSw_PRM_StressModel:

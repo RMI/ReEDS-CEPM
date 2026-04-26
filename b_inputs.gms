@@ -326,26 +326,7 @@ set
   vre_no_csp(i)        "variable renewable energy technologies that are not csp",
   vre_utility(i)       "utility scale wind and PV technologies",
   vre(i)               "variable renewable energy technologies",
-  wind(i)              "wind generation technologies",
-
-t(allt) "full set of years" /%startyear%*%endyear%/,
-
-* Each generation technology is broken out by class:
-* 1. initial capacity: init-1, init-2, ..., init-n
-* 2. prescribed capacity: prescribed
-* 3. new capacity: new
-* This allows us to distinguish between existing, prescribed, and model-chosen builds
-* The number of classes is set by numhintage for initial capacity and numclass for new capacity
-v "technology class"
-    /
-      init-1*init-%numhintage%,
-      new1*new%numclass%
-    /,
-
-initv(v) "initial technologies" /init-1*init-%numhintage%/,
-
-newv(v) "new tech set" /new1*new%numclass%/
-
+  wind(i)              "wind generation technologies"
 ;
 
 hyd_add_pump('hydED_pumped-hydro') = yes ;
@@ -1061,16 +1042,6 @@ tsolved(t) = no ;
 *==============================
 * Year specification
 *==============================
-
-* declared over allt to allow for external data files that extend beyond end_year
-set tmodel_new(allt) "years to run the model"
-/
-$offlisting
-$include inputs_case%ds%modeledyears.csv
-$onlisting
-/ ;
-
-tmodel_new(allt)$[year(allt) > %endyear%]= no ;
 
 *reset the first and last year indices of the model
 tfirst(t)$[ord(t) = smin{tt$tmodel_new(tt), ord(tt) }] = yes ;
@@ -2883,23 +2854,6 @@ REC_unbundled_limit("CES",st,t) = CES_unbundled_limit_in(st,t) ;
 
 st_unbundled_limit(RPSCat,st)$sum{t, REC_unbundled_limit(RPSCat,st,t) } = yes ;
 
-parameter national_gen_frac(allt) "--%-- national fraction of load + losses that must be met by RE"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%gen_mandate_trajectory.csv
-$offdelim
-$onlisting
-/ ;
-
-parameter nat_gen_tech_frac(i) "--fraction-- fraction of each tech generation that may be counted toward eq_national_gen"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%gen_mandate_tech_list.csv
-$offdelim
-$onlisting
-/ ;
 nat_gen_tech_frac(i)$[i_water_cooling(i)$Sw_WaterMain] = sum{ii$ctt_i_ii(i,ii), nat_gen_tech_frac(ii) } ;
 
 *====================
@@ -4810,14 +4764,6 @@ emit_rate("process",e,i,v,r,t)
 * set upgraded H2 tech emissions
 emit_rate("process","H2",i,v,r,t)$[upgrade(i)] = sum{ii$upgrade_to(i,ii), emit_rate("process","H2",ii,v,r,t) } ;
 
-* Global warming potential of different pollutants
-parameter gwp(e)   "--metric ton CO2-equivalents --global warming potential"
-/
-$ondelim
-$include inputs_case%ds%gwp.csv
-$offdelim
-/ ;
-
 * CO2(e) emissions rate (used in postprocessing only)
 emit_rate(etype,"CO2e",i,v,r,t)$[Sw_AnnualCap=2]
   = round(sum{e, emit_rate(etype,e,i,v,r,t) * gwp(e)$[(not sameas(e, "H2"))]},10) ;
@@ -5626,15 +5572,6 @@ yearweight(t) = 0 ;
 yearweight(t)$tmodel_new(t) = sum{tt$tprev(tt,t), yeart(tt) } - yeart(t) ;
 yearweight(t)$tlast(t) = 1 + smax{yearafter, yearafter.val } ;
 
-* declared over allt to allow for external data files that extend beyond end_year
-parameter co2_cap(allt)      "--metric tons-- CO2 emissions cap used when Sw_AnnualCap is on"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%co2_cap.csv
-$offdelim
-$onlisting
-/ ;
 if(Sw_AnnualCap = 1,
     emit_cap("CO2",t) = co2_cap(t) ;
 ) ;
@@ -5642,16 +5579,6 @@ if(Sw_AnnualCap = 1,
 if(Sw_AnnualCap > 1,
     emit_cap("CO2e",t) = co2_cap(t) ;
 ) ;
-
-parameter co2_tax(allt)      "--$/metric ton-- CO2 tax used when Sw_CarbTax is on"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%co2_tax.csv
-$offdelim
-$onlisting
-/ ;
-
 
 * set the carbon tax based on switch arguments
 if(Sw_CarbTax = 1,
@@ -6081,21 +6008,6 @@ z_rep_op(t) = 0 ;
 *== h- and szn-dependent sets and parameters (declared here, populated in d1_temporal_params) ===
 *================================================================================================
 
-* allh and allszn need to be populated here so they can be used in c_supplymodel and c_supplyobjective
-Set allh "all potentially modeled hours"
-/
-$offlisting
-$include inputs_case%ds%set_allh.csv
-$onlisting
-/ ;
-
-Set allszn "all potentially modeled seasons (used as representative days/weks for hourly resolution)"
-/
-$offlisting
-$include inputs_case%ds%set_allszn.csv
-$onlisting
-/ ;
-
 Set
 * Timeslices
     h(allh)                                "representative and stress timeslices"
@@ -6139,6 +6051,10 @@ Set
 * Minloading
     hour_szn_group(allh,allh)              "h and hh in the same season - used in minloading constraint"
 ;
+
+alias(h,hh,hhh) ;
+alias(szn,sznn) ;
+alias(actualszn,actualsznn,actualsznnn) ;
 
 Parameter
 * Hour/period weighting

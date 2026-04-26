@@ -1,6 +1,4 @@
 *parent,alias
-actualszn,actualsznn
-actualszn,actualsznnn
 allh,allhh
 allh,allhhh
 allszn,allsznn
@@ -9,8 +7,6 @@ cendiv,cendiv2
 dummy,adummy
 fuelbin,afuelbin
 gb,gbb
-h,hh
-h,hhh
 i,ii
 i,iii
 itlgrp,itlgrpp
@@ -21,7 +17,6 @@ r,nn
 r,rr
 rscbin,arscbin
 st,ast
-szn,sznn
 t,tt
 t,ttt
 tg,tgg

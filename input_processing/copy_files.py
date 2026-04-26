@@ -1378,7 +1378,10 @@ def write_miscellaneous_files(
 
     gwp_write['H2'] = scalars.loc['h2_gwp','value'].copy()
 
-    gwp_write.to_csv(os.path.join(inputs_case,'gwp.csv'), header=False)
+    reeds.io.write_input_to_h5(
+        gwp_write, 'gwp', inputs_case, gamstype='parameter',
+        comment='--metric ton CO2-equivalents-- global warming potential',
+    )
 
     # Calculate CO2 cap based on GSw_Region chosen (national or sub-national regions)
     # Read in national co2 cap
@@ -1388,7 +1391,7 @@ def write_miscellaneous_files(
             index_col='t',
         )
         .loc[sw['GSw_AnnualCapScen']]
-        .rename_axis('*t')
+        .rename_axis('allt')
         .rename('tonne_per_year')
     )
 
@@ -1407,13 +1410,19 @@ def write_miscellaneous_files(
 
     # Apply the emission share to national cap to get the emission cap trajectory of GSw_Region
     co2_cap *= region_em_share
-    co2_cap.round(0).to_csv(os.path.join(inputs_case, 'co2_cap.csv'))
+
+    reeds.io.write_input_to_h5(
+        co2_cap, 'co2_cap', inputs_case, gamstype='parameter',
+        comment='--metric tons-- CO2 emissions cap used when Sw_AnnualCap is on',
+    )
 
     # CO2 tax
-    pd.read_csv(
+    co2_tax = pd.read_csv(
         os.path.join(reeds_path,'inputs','emission_constraints','co2_tax.csv'), index_col='t',
-    )[sw['GSw_CarbTaxOption']].rename_axis('*t').round(2).to_csv(
-        os.path.join(inputs_case,'co2_tax.csv')
+    )[sw['GSw_CarbTaxOption']].rename_axis('allt')
+    reeds.io.write_input_to_h5(
+        co2_tax, 'co2_tax', inputs_case, gamstype='parameter',
+        comment='--$/metric ton-- CO2 tax used when Sw_CarbTax is on',
     )
 
     solveyears = reeds.inputs.parse_yearset(sw['yearset'])
@@ -1423,12 +1432,24 @@ def write_miscellaneous_files(
     solveyears = [y for y in solveyears if (y >= int(sw['startyear'])) and (y <= int(sw['endyear']))]
     pd.DataFrame(columns=solveyears).to_csv(
         os.path.join(inputs_case,'modeledyears.csv'), index=False)
+    reeds.io.write_input_to_h5(
+        pd.Series(solveyears, name='allt'), 'tmodel_new', inputs_case, gamstype='set',
+        comment='years to run the model',
+    )
 
-    pd.read_csv(
+    t = pd.Series(range(int(sw.startyear), int(sw.endyear)+1), name='allt')
+    reeds.io.write_input_to_h5(
+        pd.Series(t, name='allt'), 't', inputs_case, gamstype='set',
+        comment='full set of years',
+    )
+
+    gen_mandate_trajectory = pd.read_csv(
         os.path.join(reeds_path,'inputs','national_generation','gen_mandate_trajectory.csv'),
         index_col='GSw_GenMandateScen'
-    ).loc[sw['GSw_GenMandateScen']].rename_axis('*t').round(5).to_csv(
-        os.path.join(inputs_case,'gen_mandate_trajectory.csv')
+    ).loc[sw['GSw_GenMandateScen']].rename_axis('allt')
+    reeds.io.write_input_to_h5(
+        gen_mandate_trajectory, 'national_gen_frac', inputs_case, gamstype='parameter',
+        comment='--fraction-- national fraction of load + losses that must be met by RE',
     )
 
     nat_gen_tech_frac = pd.read_csv(
@@ -1676,7 +1697,7 @@ if __name__ == '__main__' and not hasattr(sys, 'ps1'):
 
     # #%% Settings for testing ###
     # reeds_path = reeds.io.reeds_path
-    # inputs_case = os.path.join(reeds_path,'runs','v20260305_itlM0_USA_defaults','inputs_case')
+    # inputs_case = os.path.join(reeds_path,'runs','v20260425_inputsM0_Pacific','inputs_case')
 
 
     # ---- Set up logger ----
