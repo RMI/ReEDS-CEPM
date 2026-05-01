@@ -341,9 +341,9 @@ If you would like to see what the documentation will look like when developing l
 
 1. Download Zotero: [https://www.zotero.org/](https://www.zotero.org/)
    a. Install the "Better BibTeX for Zotero" plugin: [https://retorque.re/zotero-better-bibtex/](https://retorque.re/zotero-better-bibtex/)
-   b. Turn on "Automatic export" under (Better BibTeX preferences)/(Automatic export) and adjust the filepath to {your filepath}
-   c. Under (Better BibTeX preferences)/Export/BibTeX or Edit->Preferences->Better BibTex, set "Add URLs to BibTeX export" to "in the 'url' field"
-   d. Under (Better BibTeX preferences)/Export/Fields or Edit->Preferences->Better BibTex, enter the following in "Fields to omit from export (comma-separated)": `file,keywords`
+   b. In Zotero, navigate to Edit -> Settings then select the "Better BibTeX" tab. (On Mac: Zotero -> Settings -> Better BibTeX -> Open Better BibTeX Preferences...)
+   c. Under Export/BibTeX or Edit->Preferences->Better BibTeX, set "Add URLs to BibTeX export" to "in the 'url' field"
+   d. Under Export/Fields or Edit->Preferences->Better BibTeX, enter the following in "Fields to omit from export (comma-separated)": `file,keywords`
 
 2. Request access to the ReEDS Zotero library from Brian, Patrick, or Wesley
 
