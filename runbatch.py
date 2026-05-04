@@ -1545,7 +1545,7 @@ def write_batch_script(
             r2xpath = os.path.join(casedir, 'outputs', 'r2x')
             os.makedirs(r2xpath, exist_ok=True)
             OPATH.writelines(
-                "uvx --python 3.11 --from git+https://github.com/nrel/r2x@main r2x -vv run "
+                "uvx --python 3.11 --from git+https://github.com/natlabrockies/r2x@main r2x -vv run "
                 f"-i {casedir} "
                 f"-o {r2xpath} "
                 "--input-model=reeds-US "
