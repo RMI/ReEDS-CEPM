@@ -477,6 +477,13 @@ def general_mcs_dist_validation(reeds_path: str, mcs_dist_path: str, sw: pd.Seri
             # latin hypercube only works with specific types of dirichlet
             if distribution == "dirichlet":
                 check_lhs_settings(sample_group["dist_params"], sample_group)
+        else:
+            # triangular and uniform only supported for latin hypercube
+            if distribution in ['triangular', 'uniform']:
+                raise ValueError(
+                    f"To implement a uniform or triangular for {sample_group['name']} using random sampling (MCS_lhs=0), "
+                    "set the distribution to 'dirichlet' with dist_params equal to [1,1] or [1,1,1]"
+                )
             
 def get_dist_instructions(reeds_path: str, inputs_case: str) -> Tuple[pd.DataFrame, dict]:
     """
@@ -594,16 +601,13 @@ def get_region_weights(distribution: str, dist_params: list) -> np.ndarray:
 
     if distribution == "dirichlet":
         r_weights = np.random.dirichlet(dist_params, n_samples_weight)
-
     elif distribution == "discrete":
         prob = np.array(dist_params) / np.sum(dist_params)
         sampled_index = np.random.choice(len(dist_params), n_samples_weight, p=prob)[0]
         r_weights = np.zeros(len(dist_params), dtype=int)
         r_weights[sampled_index] = 1
-
     elif distribution == "uniform_multiplier":
         r_weights = np.random.uniform(dist_params[0], dist_params[1], n_samples_weight)
-
     elif distribution == "triangular_multiplier":
         r_weights = np.random.triangular(dist_params[0], dist_params[1], dist_params[2], n_samples_weight)
 
@@ -1581,7 +1585,6 @@ class MCS_Sampler:
             # get multipler and apply to switch
             lhs_sw_mult = self.sample_lhs_triangular(self.sample_num, sample_group_num, lower, mode, upper)
             lhs_sw_val = lhs_sw_mult * sw_assignments[0]
-            # TODO adjust dist parameters for multipler 
         elif self.distribution == "uniform":
             lower, upper = sw_assignments
             # get sample values
@@ -1694,11 +1697,8 @@ class MCS_Sampler:
                     pass
                 else:
                     self.apply_lhs_general(sample_group_num, Sample_ID, dist_files, aux_files, modifiable_columns)
-               
             else:
-                # TODO: adapt to enable pure uniform and triangular
                 dict_df_weights = self.weight_calc.get_df_weights(dist_files, modifiable_columns, sw_name, file_name)
-
                 # Dispatch weight application based on file type
                 if file_name == "switches.csv":
                     self._apply_weights_switches_csv(dist_files, n_decimals, dict_df_weights, sample_idx)
