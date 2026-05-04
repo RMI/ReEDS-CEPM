@@ -169,7 +169,8 @@ _Some exceptions to this might exist due to number scaling (e.g., emission rates
 
 * In general, if inputs require calculations before they are ingested into b_inputs, those calculations should be done in Python rather than in GAMS. GAMS can be used for calculations where the GAMS syntax simplifies the calculation or where upstream dependencies make it challenging for the calculations to happen in Python preprocessing scripts.
 
-* In Python, file paths should be added using os.path.join() rather than writing out the filepath with slashes.
+* In Python, file paths should be specified using `from pathlib import Path` and `Path(reeds.io.reeds_path, 'foldername', 'maybe_more_foldernames', 'filename.extension')` instead of writing out the filepath as a string with slashes.
+Use absolute filepaths whenever possible.
 
 * Data column headers should use the ReEDS set names when practical. 
   * Example: data that include regions should use "r" for the column name rather than "ba", "reeds_ba", or "region".

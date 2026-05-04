@@ -97,7 +97,7 @@ git clone git@github.nrel.gov:ReEDS/ReEDS-2.0
 
 # Run ReEDS! 
 # (using nohup to keep the process from dying when you end your ssh session)
-#nohup python runreeds_aws.py -c weekendcentroid -r 4 -b centwknd > myout.txt &
+#nohup python runreeds.py -c weekendcentroid -r 4 -b centwknd > myout.txt &
 
 
 #========================================
