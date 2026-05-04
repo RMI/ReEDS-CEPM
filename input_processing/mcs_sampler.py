@@ -1609,22 +1609,23 @@ class MCS_Sampler:
                 # special case: dirichlet with two or three of the same parameters are 
                 # equivalent to uniform and triangular, respectively
                 self.distribution = check_lhs_settings(self.dist_params, self.sample_group)        
+
+            # note that this is deliberately not an elif as the above block adjusts select dirichlet
+            # distributions to be uniform or triangular as appropriate
             if self.distribution == "triangular":
                 # get triangular distribution parameters (ordering checked in sample_lhs_triangular function)
                 lower = np.array(dist_files[0][mod_col])
                 mode = np.array(dist_files[1][mod_col])
-                upper = np.array(dist_files[2][mod_col])
-                
+                upper = np.array(dist_files[2][mod_col])                
                 # get new values
                 lhs_vals = self.sample_lhs_triangular(self.sample_num, sample_group_num, lower, mode, upper)
                 # replace file data with with lhs sample values
                 # for NA values from sampling (occurs if lower == upper), use existing values file values
                 samples_sw[mod_col] = np.where(np.isnan(lhs_vals), samples_sw[mod_col], lhs_vals)
-                    
+            
             elif self.distribution == "uniform":
                 lower = np.array(dist_files[0][mod_col])
                 upper = np.array(dist_files[1][mod_col])
-
                 # get new values
                 lhs_vals = self.sample_lhs_uniform(self.sample_num, sample_group_num, lower, upper)
                 samples_sw[mod_col] = np.where(np.isnan(lhs_vals), samples_sw[mod_col], lhs_vals)
@@ -1633,9 +1634,22 @@ class MCS_Sampler:
                 lhs_index = self.sample_lhs_discrete(self.sample_num, sample_group_num)
                 samples_sw[mod_col] = dist_files[lhs_index][mod_col]
 
-            else:
-                # TODO: add support for multiplicative distributions
-                breakpoint()
+            elif self.distribution == "uniform_multiplier":
+                lower = np.array(dist_files[0][mod_col]) * self.dist_params[0]
+                upper = np.array(dist_files[0][mod_col]) * self.dist_params[1]
+                # get new values
+                lhs_vals = self.sample_lhs_uniform(self.sample_num, sample_group_num, lower, upper)
+                samples_sw[mod_col] = np.where(np.isnan(lhs_vals), samples_sw[mod_col], lhs_vals)
+
+            elif self.distribution == "triangular_multiplier":
+                lower = np.array(dist_files[0][mod_col]) * self.dist_params[0]
+                mode = np.array(dist_files[0][mod_col]) * self.dist_params[1]
+                upper = np.array(dist_files[0][mod_col]) * self.dist_params[2]                
+                # get new values
+                lhs_vals = self.sample_lhs_triangular(self.sample_num, sample_group_num, lower, mode, upper)
+                # replace file data with with lhs sample values
+                # for NA values from sampling (occurs if lower == upper), use existing values file values
+                samples_sw[mod_col] = np.where(np.isnan(lhs_vals), samples_sw[mod_col], lhs_vals)
 
 
         self.samples[Sample_ID] = samples_sw
