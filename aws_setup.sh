@@ -86,13 +86,11 @@ pip install gdxpds
 ssh-keygen -t rsa -b 4096 -C "youremailaddress@nlr.gov"  
 eval "$(ssh-agent -s)"
 ssh-add id_rsa
-#[copy key and add to your github.nrel.gov account]
-ssh -T git@github.nrel.gov
+#[copy key and add to your github.com account]
+ssh -T git@github.com
 #type yes 
 # should say Hi [username]! ...
-git clone https://github.nrel.gov/ReEDS/ReEDS-2.0.git reeds
-
-git clone git@github.nrel.gov:ReEDS/ReEDS-2.0
+git clone git@github.com:ReEDS-Model/ReEDS.git
 
 
 # Run ReEDS! 
