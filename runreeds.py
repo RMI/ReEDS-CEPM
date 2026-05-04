@@ -637,8 +637,6 @@ def setup_intertemporal(
         caseSwitches, startiter, niter, ccworkers,
         solveyears, endyear, batch_case, toLogGamsString, modeledyears, OPATH,
     ):
-    ### beginning year is passed to rabatch
-    begyear = min(solveyears)
     ### first save file from e_solveprep is just the case name
     savefile = batch_case
     ### if this is the first iteration
@@ -677,21 +675,11 @@ def setup_intertemporal(
         ## check to see if the save file exists
         OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
 
-        ## start threads for cc/curt
-        ## no need to run cc curt scripts for final iteration
+        ## Run resource adequacy calculations (no need to run for final iteration)
         if i < niter-1:
-            ## batch out calls to rabatch
-            OPATH.writelines(
-                "python rabatch.py " + batch_case + " " + str(ccworkers) + " "
-                + modeledyears + " " + savefile + " " + str(begyear) + " "
-                + str(endyear) + " " + caseSwitches['distpvscen'] + " "
-                + str(caseSwitches['calc_csp_cc']) + " "
-                + str(caseSwitches['timetype']) + " "
-                + str(caseSwitches['GSw_WaterMain']) + " " + str(i) + " "
-                + str(caseSwitches['marg_vre_mw']) + " "
-                + str(caseSwitches['marg_stor_mw']) + " "
-                + str(caseSwitches['marg_evmc_mw']) + " "
-                + '\n')
+            ## TODO: Run the RA calculations via ra_calcs.py for each solve year
+            ## (needs to be reimplemented)
+
             ## merge all the resulting gdx files
             ## the output file will be for the next iteration
             nextiter = i+1
@@ -725,12 +713,6 @@ def setup_window(
 
     ### for windows indicated in the csv file
     for win in win_in[1:]:
-
-        ## beginning year is the first column (start)
-        begyear = win[1]
-        ## end year is the second column (end)
-        endyear = win[2]
-        ## for the number of iterations we have...
         for i in range(startiter,niter):
             big_comment(f'Window: {win}', OPATH)
             comment(f'Iteration: {i}', OPATH)
@@ -748,17 +730,9 @@ def setup_window(
                 + " --maxiter=" + str(niter-1) + " --case=" + batch_case + " --window=" + win[0] + ' \n')
             ## start threads for cc/curt
             OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
-            OPATH.writelines(
-                "python rabatch.py " + batch_case + " " + str(ccworkers) + " "
-                + modeledyears + " " + savefile + " " + str(begyear) + " "
-                + str(endyear) + " " + caseSwitches['distpvscen'] + " "
-                + str(caseSwitches['calc_csp_cc']) + " "
-                + str(caseSwitches['timetype']) + " "
-                + str(caseSwitches['GSw_WaterMain']) + " " + str(i) + " "
-                + str(caseSwitches['marg_vre_mw']) + " "
-                + str(caseSwitches['marg_stor_mw']) + " "
-                + str(caseSwitches['marg_evmc_mw']) + " "
-                + '\n')
+            ## TODO: Run the RA calculations via ra_calcs.py for each solve year
+            ## in window (needs to be reimplemented)
+
             ## merge all the resulting r2_in gdx files
             ## the output file will be for the next iteration
             nextiter = i+1
