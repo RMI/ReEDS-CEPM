@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analysis tools and helper scripts &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="_static/customtheme.css?v=299ffeb9" />
+
+  
+    <link rel="shortcut icon" href="_static/reeds-icon.png"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="ReEDS publications" href="publications.html" />
+    <link rel="prev" title="Sources and Data" href="sources.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/reeds-logo-white.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_best_practices.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Analysis tools and helper scripts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#setting-up-new-cases">Setting up new cases</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#create-a-new-cases-csv-file-preprocessing-casemaker-py">Create a new cases_{}.csv file: <code class="docutils literal notranslate"><span class="pre">preprocessing/casemaker.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fix-representative-stress-periods-preprocessing-get-case-periods-py">Fix representative/stress periods: <code class="docutils literal notranslate"><span class="pre">preprocessing/get_case_periods.py</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#managing-currently-running-cases">Managing currently-running cases</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#print-details-for-active-hpc-runs-runstatus-py">Print details for active HPC runs: <code class="docutils literal notranslate"><span class="pre">runstatus.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#manage-hpc-runs-restart-runs-py">Manage HPC runs: <code class="docutils literal notranslate"><span class="pre">restart_runs.py</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#analyzing-finished-cases">Analyzing finished cases</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#compare-results-postprocessing-compare-cases-py">Compare results: <code class="docutils literal notranslate"><span class="pre">postprocessing/compare_cases.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-pras-postprocessing-run-reeds2pras-py">Run PRAS: <code class="docutils literal notranslate"><span class="pre">postprocessing/run_reeds2pras.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-a-dispatch-model-run-pcm-py">Run a dispatch model: <code class="docutils literal notranslate"><span class="pre">run_pcm.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#generate-static-plots-postprocessing-single-case-plots-py">Generate static plots: <code class="docutils literal notranslate"><span class="pre">postprocessing/single_case_plots.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#generate-interactive-plots-postprocessing-bokehpivot">Generate interactive plots: <code class="docutils literal notranslate"><span class="pre">postprocessing/bokehpivot</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#calculate-hourly-prices-and-technology-value-metrics-postprocessing-revalue">Calculate hourly prices and technology value metrics: <code class="docutils literal notranslate"><span class="pre">postprocessing/reValue</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#estimate-retail-rates-postprocessing-retail-rate-module">Estimate retail rates: <code class="docutils literal notranslate"><span class="pre">postprocessing/retail_rate_module</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#generate-a-tableau-results-viewer-postprocessing-tableau">Generate a Tableau results viewer: <code class="docutils literal notranslate"><span class="pre">postprocessing/tableau</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">ReEDS publications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Analysis tools and helper scripts</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/postprocessing_tools.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="analysis-tools-and-helper-scripts">
+<h1>Analysis tools and helper scripts<a class="headerlink" href="#analysis-tools-and-helper-scripts" title="Link to this heading"></a></h1>
+<p>The ReEDS model includes several tools for setting up new cases, managing active cases, and analyzing case results.
+Most of these scripts have command-line interfaces, the details of which can be printed by running <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">path/to/scriptname.py</span> <span class="pre">-h</span></code>.</p>
+<section id="setting-up-new-cases">
+<h2>Setting up new cases<a class="headerlink" href="#setting-up-new-cases" title="Link to this heading"></a></h2>
+<section id="create-a-new-cases-csv-file-preprocessing-casemaker-py">
+<h3>Create a new cases_{}.csv file: <code class="docutils literal notranslate"><span class="pre">preprocessing/casemaker.py</span></code><a class="headerlink" href="#create-a-new-cases-csv-file-preprocessing-casemaker-py" title="Link to this heading"></a></h3>
+<p>This script facilitates the creation of a multidimensional matrix of scenarios, with “dimensions” and “casegroups” (permutations of dimensions) provided via a .yaml file.</p>
+<p>An example .yaml file is provided in <code class="docutils literal notranslate"><span class="pre">preprocessing/casematrix_example.yaml</span></code>.
+In this example, three dimensions are explored: “policy”, “demand”, and “sensitivity”.
+Each dimension specifies a dictionary of choices, and each choice specifies the switch values associated with that choice.
+Default switch values are taken from <code class="docutils literal notranslate"><span class="pre">cases.csv</span></code>; if a “shared” field is provided in the casematrix .yaml file, the switch/value pairs in the “shared” field overwrite the associated defaults from <code class="docutils literal notranslate"><span class="pre">cases.csv</span></code>.
+Cases in the resulting <code class="docutils literal notranslate"><span class="pre">cases_{batchname}.csv</span></code> file are labeled as <code class="docutils literal notranslate"><span class="pre">{policy</span> <span class="pre">choice}_{demand</span> <span class="pre">choice}_{sensitivity</span> <span class="pre">choice}</span></code>.
+For example, a case using the “IRA” policy setting, “DemMd” demand setting, and “core” sensitivity setting would be labeled as <code class="docutils literal notranslate"><span class="pre">IRA_DemMd_core</span></code>.</p>
+<p>The “casegroups” indicate which permutations of dimension values to include in the resulting <code class="docutils literal notranslate"><span class="pre">cases_{batchname}.csv</span></code> file.
+The provided example includes 3 policy scenarios, 7 demand scenarios, and 9 sensitivity cases, which would produce 3 × 7 × 9 = 189 cases if all permutations were included.
+<code class="docutils literal notranslate"><span class="pre">casegroups</span></code> is a list of <em>n</em>-element lists, where <em>n</em> is the number of dimensions specified above.
+If an element is an empty list, all options for that dimension are used;
+if an element specifies a single option or a list of options, only those options are used.
+The order of elements matches the order of dimensions.
+For example, since the dimensions are “policy”, “demand”, and “sensitivity”:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">[[],</span> <span class="pre">[],</span> <span class="pre">core]</span></code> includes all policy scenarios, all demand scenarios, and the single “core” sensitivity, for 3 × 7 × 1 = 21 cases.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[OBBBA,</span> <span class="pre">DemMd,</span> <span class="pre">[]]</span></code> includes a single policy scenario, a single demand scenario, and all sensitivity cases, for 1 × 1 × 9 = 9 cases.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[[OBBBA,</span> <span class="pre">OBBBAcon],</span> <span class="pre">DemMd,</span> <span class="pre">[GasPriceLo,</span> <span class="pre">GasPriceHi]]</span></code> includes two policy scenarios, a single demand scenario, and two sensitivity cases, for 2 × 1 × 2 = 4 cases.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[[],</span> <span class="pre">[],</span> <span class="pre">[]]</span></code> would include all 3 × 7 × 9 = 189 cases.</p></li>
+</ul>
+</section>
+<section id="fix-representative-stress-periods-preprocessing-get-case-periods-py">
+<h3>Fix representative/stress periods: <code class="docutils literal notranslate"><span class="pre">preprocessing/get_case_periods.py</span></code><a class="headerlink" href="#fix-representative-stress-periods-preprocessing-get-case-periods-py" title="Link to this heading"></a></h3>
+<p>This script takes as its required argument a filepath to a completed ReEDS case.</p>
+<ul class="simple">
+<li><p>If the optional <code class="docutils literal notranslate"><span class="pre">-r/--rep</span></code> flag is added (as in <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">preprocessing/get_case_periods.py</span> <span class="pre">path/to/casename</span> <span class="pre">-r</span></code>), the representative periods for the provided run are written to <code class="docutils literal notranslate"><span class="pre">inputs/temporal/period_szn_user_{name}.csv</span></code>, where <code class="docutils literal notranslate"><span class="pre">name</span></code> is either provided by the <code class="docutils literal notranslate"><span class="pre">-n/--name</span></code> argument or (if no name is provided) given by the case name.</p>
+<ul>
+<li><p>In a subsequent case, these representative periods can be used by setting <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm</span></code> to <code class="docutils literal notranslate"><span class="pre">user_{name}</span></code>.</p></li>
+</ul>
+</li>
+<li><p>If the optional <code class="docutils literal notranslate"><span class="pre">-s/--stress</span></code> flag is added, the stress periods for the provided run are written to <code class="docutils literal notranslate"><span class="pre">inputs/temporal/stressperiods_user_{name}.csv</span></code>.</p>
+<ul>
+<li><p>In a subsequent case, these stress periods can be used by setting <code class="docutils literal notranslate"><span class="pre">GSw_PRM_StressModel</span></code> to <code class="docutils literal notranslate"><span class="pre">user_{name}</span></code>.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+<section id="managing-currently-running-cases">
+<h2>Managing currently-running cases<a class="headerlink" href="#managing-currently-running-cases" title="Link to this heading"></a></h2>
+<section id="print-details-for-active-hpc-runs-runstatus-py">
+<h3>Print details for active HPC runs: <code class="docutils literal notranslate"><span class="pre">runstatus.py</span></code><a class="headerlink" href="#print-details-for-active-hpc-runs-runstatus-py" title="Link to this heading"></a></h3>
+<p>This script prints details about cases that are currently running on the HPC.</p>
+<ul class="simple">
+<li><p>If run without arguments (<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runstatus.py</span></code>), it uses <code class="docutils literal notranslate"><span class="pre">squeue</span></code> to get a list of the active runs under your username.</p></li>
+<li><p>If run with an argument (e.g. <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runstatus.py</span> <span class="pre">v20250310</span></code>), it only prints details for runs whose name begins with the provided argument.</p></li>
+<li><p>Adding the <code class="docutils literal notranslate"><span class="pre">-f</span></code> flag will print the names of the finished runs: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runstatus.py</span> <span class="pre">v20231112</span> <span class="pre">-f</span></code></p></li>
+<li><p>If you increase the verbosity by adding <code class="docutils literal notranslate"><span class="pre">-v</span></code> flags, it prints a number of lines from the end of that run’s gamslog.txt equal to the number of v’s in the flag: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runstatus.py</span> <span class="pre">v20231112</span> <span class="pre">-vvvvv</span></code></p></li>
+</ul>
+</section>
+<section id="manage-hpc-runs-restart-runs-py">
+<h3>Manage HPC runs: <code class="docutils literal notranslate"><span class="pre">restart_runs.py</span></code><a class="headerlink" href="#manage-hpc-runs-restart-runs-py" title="Link to this heading"></a></h3>
+<p>This script restarts failed runs on the HPC whose case name starts with the provided prefix: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">restart_runs.py</span> <span class="pre">case_name_prefix</span></code></p>
+</section>
+</section>
+<section id="analyzing-finished-cases">
+<h2>Analyzing finished cases<a class="headerlink" href="#analyzing-finished-cases" title="Link to this heading"></a></h2>
+<section id="compare-results-postprocessing-compare-cases-py">
+<h3>Compare results: <code class="docutils literal notranslate"><span class="pre">postprocessing/compare_cases.py</span></code><a class="headerlink" href="#compare-results-postprocessing-compare-cases-py" title="Link to this heading"></a></h3>
+<p>This script creates a powerpoint file comparing the results of the cases provided via the <code class="docutils literal notranslate"><span class="pre">caselist</span></code> argument.
+The list of cases to compare can be provided in one of two ways: as a space-delimited list of filepaths, or as a single filepath to a .csv file in the format of postprocessing/example.csv.
+The first case in the list is treated as the base case, and other cases are all compared to that same case.
+<code class="docutils literal notranslate"><span class="pre">compare_cases.py</span></code> accepts command line arguments to modify the figures:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--casenames</span></code> or <code class="docutils literal notranslate"><span class="pre">-n</span></code>: comma-delimited list of shorter case names to use in plots</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--titleshorten</span></code> or <code class="docutils literal notranslate"><span class="pre">-s</span></code>: characters to cut from start of case name (only used if no casenames)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--startyear</span></code> or <code class="docutils literal notranslate"><span class="pre">-t</span></code>: First year to show</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--sharey</span></code> or <code class="docutils literal notranslate"><span class="pre">-y</span></code>: Use same y-axis scale for absolute and difference plots</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--basecase</span></code> or <code class="docutils literal notranslate"><span class="pre">-b</span></code>: Substring of case path to use as default (if empty, uses first case in list)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--skipbp</span></code> or <code class="docutils literal notranslate"><span class="pre">-p</span></code>: flag to prevent bokehpivot report from being generated</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--bpreport</span></code> or <code class="docutils literal notranslate"><span class="pre">-r</span></code>: which bokehpivot report to generate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--tableau</span></code> or <code class="docutils literal notranslate"><span class="pre">-a</span></code>: create the csvs needed for publication of ReEDS study results via Tableau</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--gdxdiff</span></code> or <code class="docutils literal notranslate"><span class="pre">-g</span></code>: generate gdx diff report between inputs.gdx when comparing 2 cases</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--detailed</span></code> or <code class="docutils literal notranslate"><span class="pre">-d</span></code>: Include more detailed plots</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--forcemulti</span></code> or <code class="docutils literal notranslate"><span class="pre">-m</span></code>: Always use multi-case plots (even for 2 cases)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--lesslabels</span></code> or <code class="docutils literal notranslate"><span class="pre">-l</span></code>: Add less value labels to plots</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--nowrap</span></code> or <code class="docutils literal notranslate"><span class="pre">-w</span></code>: Don’t wrap subplot title</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--simplify-techs</span></code> or <code class="docutils literal notranslate"><span class="pre">-st</span></code>: Simplify technology names based on postprocessing\tech_aggregation.csv column named here</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--label_aggregation_level</span></code> or <code class="docutils literal notranslate"><span class="pre">-a</span></code>: postprocessing\tech_aggregation.csv column to use for aggregation categories</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--map</span></code> or <code class="docutils literal notranslate"><span class="pre">-z</span></code>: aggregate techs to hard coded dictionary, else uses aggregation categories from postprocessing\tech_aggregation.csv</p></li>
+</ul>
+<p>Example for two cases:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>postprocessing/compare_cases.py<span class="w"> </span>/Users/username/github/ReEDS-2.0/runs/v20250310_main_USA<span class="w"> </span>/Users/username/github/ReEDS-2.0/runs/v20250310_newthing_USA
+</pre></div>
+</div>
+<p>Example for three cases:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>postprocessing/compare_cases.py<span class="w"> </span>/Users/username/github/ReEDS-2.0/runs/v20250310_main_USA<span class="w"> </span>/Users/username/github/ReEDS-2.0/runs/v20250310_newthing1_USA<span class="w"> </span>/Users/username/github/ReEDS-2.0/runs/v20250310_newthing2_USA
+</pre></div>
+</div>
+<p>Example for a .csv file of cases:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>postprocessing/compare_cases.py<span class="w"> </span>/Users/username/github/ReEDS-2.0/postprocessing/example.csv
+</pre></div>
+</div>
+</section>
+<section id="run-pras-postprocessing-run-reeds2pras-py">
+<h3>Run PRAS: <code class="docutils literal notranslate"><span class="pre">postprocessing/run_reeds2pras.py</span></code><a class="headerlink" href="#run-pras-postprocessing-run-reeds2pras-py" title="Link to this heading"></a></h3>
+<p>The PRAS model is typically run multiple times during each ReEDS case (as long as <code class="docutils literal notranslate"><span class="pre">GSw_PRM_CapCredit</span> <span class="pre">=</span> <span class="pre">0</span></code>) to ensure resource adequacy.
+This script reruns PRAS on a finished ReEDS case (provided by the single required command-line argument) and allows the settings to be changed.
+For example, to use a different number of samples than are specified by the default <code class="docutils literal notranslate"><span class="pre">pras_samples</span></code> switch, use the <code class="docutils literal notranslate"><span class="pre">-s/--samples</span></code> command-line argument.</p>
+</section>
+<section id="run-a-dispatch-model-run-pcm-py">
+<h3>Run a dispatch model: <code class="docutils literal notranslate"><span class="pre">run_pcm.py</span></code><a class="headerlink" href="#run-a-dispatch-model-run-pcm-py" title="Link to this heading"></a></h3>
+<p>This script reruns a completed ReEDS case as a dispatch simulation at higher time resolution.
+The operational constraints in <code class="docutils literal notranslate"><span class="pre">c_supplymodel.gms</span></code> are used directly, but the investment and capacity variables are fixed to their previously optimized values; only the operational variables are re-optimized.
+365 representative 1-day periods at 1-hour resolution are used by default, but these settings can be changed using the <code class="docutils literal notranslate"><span class="pre">-s/--switch_mods</span></code> switch.</p>
+<p>This approach is distinct from the <a class="reference external" href="https://github.com/NatLabRockies/R2X">R2X</a> tool, which formats the results of a ReEDS case as inputs to a separate production cost modeling tool such as <a class="reference external" href="https://github.com/NREL-Sienna">Sienna</a> or <a class="reference external" href="https://www.energyexemplar.com/plexos">PLEXOS</a>.
+Those tools provide more advanced and realistic features like unit commitment and rolling forecast horizons;
+by contrast, <code class="docutils literal notranslate"><span class="pre">run_pcm.py</span></code> simply reuses the existing ReEDS formulation at higher time resolution,
+and is subject to all the normal caveats and limitations of ReEDS (linear variables, pipe-and-bubble transmission flow, etc.).</p>
+</section>
+<section id="generate-static-plots-postprocessing-single-case-plots-py">
+<h3>Generate static plots: <code class="docutils literal notranslate"><span class="pre">postprocessing/single_case_plots.py</span></code><a class="headerlink" href="#generate-static-plots-postprocessing-single-case-plots-py" title="Link to this heading"></a></h3>
+<p>This script runs automatically at the end of a ReEDS case and writes static figures to the <code class="docutils literal notranslate"><span class="pre">{case}/outputs/figures</span></code> folder as .png files.</p>
+</section>
+<section id="generate-interactive-plots-postprocessing-bokehpivot">
+<h3>Generate interactive plots: <code class="docutils literal notranslate"><span class="pre">postprocessing/bokehpivot</span></code><a class="headerlink" href="#generate-interactive-plots-postprocessing-bokehpivot" title="Link to this heading"></a></h3>
+<p>The bokehpivot module can be used to visualize the outputs of ReEDS runs.
+For more information on how to use bokehpivot, see the <a class="reference internal" href="bokehpivot.html"><span class="std std-doc">bokehpivot guide</span></a>.</p>
+<p>If you’re new to bokehpivot, the following YouTube video will be a good starting point: <a class="reference external" href="https://www.youtube.com/watch?v=8Xi59M4bB6I&amp;amp;list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&amp;amp;index=3">Viewing ReEDS Outputs Using the BokehPivot Module</a></p>
+</section>
+<section id="calculate-hourly-prices-and-technology-value-metrics-postprocessing-revalue">
+<h3>Calculate hourly prices and technology value metrics: <code class="docutils literal notranslate"><span class="pre">postprocessing/reValue</span></code><a class="headerlink" href="#calculate-hourly-prices-and-technology-value-metrics-postprocessing-revalue" title="Link to this heading"></a></h3>
+<p>reValue is used for two main things:</p>
+<ul class="simple">
+<li><p>extracting regional hourly prices from ReEDS scenarios and years</p></li>
+<li><p>(Optional) using extracted prices to calculate value and competitiveness-related metrics for a set of regional generation or load profiles.</p></li>
+</ul>
+<p>More more information on reValue, see the <a class="reference internal" href="revalue.html"><span class="std std-doc">reValue documentation</span></a>.</p>
+</section>
+<section id="estimate-retail-rates-postprocessing-retail-rate-module">
+<h3>Estimate retail rates: <code class="docutils literal notranslate"><span class="pre">postprocessing/retail_rate_module</span></code><a class="headerlink" href="#estimate-retail-rates-postprocessing-retail-rate-module" title="Link to this heading"></a></h3>
+<p>The retail rate module can be used after finishing a ReEDS run to calculate retail electricity rates by state and year, where each state is served by its own investor-owned utility (IOU).</p>
+<p>For more information on this module, see the <a class="reference internal" href="retail_rate_module.html"><span class="std std-doc">retail_rate_module documentation</span></a>.</p>
+</section>
+<section id="generate-a-tableau-results-viewer-postprocessing-tableau">
+<h3>Generate a Tableau results viewer: <code class="docutils literal notranslate"><span class="pre">postprocessing/tableau</span></code><a class="headerlink" href="#generate-a-tableau-results-viewer-postprocessing-tableau" title="Link to this heading"></a></h3>
+<p>The commercial software Tableau can be used for the analysis and publication of ReEDS results.</p>
+<p>For more information on how to use Tableau with ReEDS, see the <a class="reference internal" href="tableau.html"><span class="std std-doc">Tableau documentation</span></a>.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="sources.html" class="btn btn-neutral float-left" title="Sources and Data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="publications.html" class="btn btn-neutral float-right" title="ReEDS publications" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.
+      <span class="lastupdated">Last updated on May 05, 2026.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
