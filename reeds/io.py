@@ -5,6 +5,7 @@ import re
 import datetime
 import h5py
 import ctypes
+import inspect
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -1729,6 +1730,7 @@ def write_input_to_h5(
     case:str|Path,
     gamstype:Literal['set','parameter']='set',
     comment:str='',
+    units:str='',
     verbose=1,
     **kwargs,
 ):
@@ -1754,9 +1756,12 @@ def write_input_to_h5(
     if gamstype == 'parameter':
         dfwrite.columns = dfwrite.columns.tolist()[:-1] + ['Value']
     ### Write record to h5 file
-    attrs = {'gamstype': gamstype.lower()}
-    if len(comment):
-        attrs['comment'] = comment
+    calling_file = Path(inspect.stack()[-1][1]).name
+    attrs = {'gamstype': gamstype.lower(), 'written_by': calling_file}
+    if len(units):
+        attrs['comment'] = f'[{units}] {comment} (written by {calling_file})'
+    else:
+        attrs['comment'] = f'{comment} (written by {calling_file})'
     write_to_h5(
         dfwrite,
         key,
@@ -1765,7 +1770,7 @@ def write_input_to_h5(
         **kwargs,
     )
     if verbose:
-        print(f'{Path(h5path).name}: Wrote {key}')
+        print(f'{Path(h5path).name}: Wrote {key} from {calling_file}')
 
 
 def write_csv_to_h5(
