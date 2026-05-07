@@ -33,7 +33,7 @@ excludecells = {
 ### Specify the state-to-region mapping to use for regional projections
 ### None of the region breakdowns in hierarchy.csv are completely aligned with state borders.
 ### So do census divisions by hand from Figure 36 in ReEDS version 2019 documentation
-### (https://www.nrel.gov/docs/fy20osti/74111.pdf)
+### (https://www.nlr.gov/docs/fy20osti/74111.pdf)
 # state2region = {
 #     'WA': 'Pacific',
 #     'OR': 'Pacific',

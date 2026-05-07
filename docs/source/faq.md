@@ -139,5 +139,5 @@ ReEDS is a big model with limitations and caveats. Higher-level limitations are 
 - Land use
   - Land-use calculations use a static map of current land types; we do not project changes in land type (e.g. urbanization, changes to forestry and agriculture practices, etc) when assessing the land types utilized by new wind and solar.
 - Retail rates
-  - High-level limitations and caveats are discussed in [Brown et al 2022](https://www.nrel.gov/docs/fy22osti/78224.pdf)
+  - High-level limitations and caveats are discussed in [Brown et al 2022](https://www.nlr.gov/docs/fy22osti/78224.pdf)
   - When using a 5-year model step (for example), the value of the PTC is evenly split over all 5 years in the step. We don't try to assess in which year within the step a capacity investment is made.

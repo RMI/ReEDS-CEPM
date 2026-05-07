@@ -61,7 +61,7 @@ Sources
 Method derived from:
 [1] Sullivan, P.; Colman, J.; Kalendra, E. "Predicting the response of electricity load to
 climate change". Technical Report, National Renewable Energy Laboratory,
-NREL/TP-6A20-64297. https://www.nrel.gov/docs/fy15osti/64297.pdf
+NREL/TP-6A20-64297. https://www.nlr.gov/docs/fy15osti/64297.pdf
 """
 
 #%% ===========================================================================

@@ -1363,7 +1363,7 @@
 ---
 
   - [emitrate.csv](/inputs/emission_constraints/emitrate.csv)
-    - **Description:** Emission rates for thermal generators with values from Table 5 of https://docs.nrel.gov/docs/fy25osti/93005.pdf
+    - **Description:** Emission rates for thermal generators with values from Table 5 of https://docs.nlr.gov/docs/fy25osti/93005.pdf
     - **Indices:** i,e
 ---
 
@@ -3186,7 +3186,7 @@
   - [supplycurve_upv-limited.csv](/inputs/supply_curve/supplycurve_upv-limited.csv)
     - **Description:** UPV supply curve from reV for the limited siting scenario
     - **Dollar year:** specified in inputs/supply_curve/dollaryear.csv
-    - **Citation:** [https://docs.nrel.gov/docs/fy25osti/91900.pdf](https://docs.nrel.gov/docs/fy25osti/91900.pdf)
+    - **Citation:** [https://docs.nlr.gov/docs/fy25osti/91900.pdf](https://docs.nlr.gov/docs/fy25osti/91900.pdf)
     - **Units:** capacity numbers are in MW_DC and cost numbers are in $/MW_AC
 
 ---
@@ -3194,7 +3194,7 @@
   - [supplycurve_upv-open.csv](/inputs/supply_curve/supplycurve_upv-open.csv)
     - **Description:** UPV supply curve from reV for the open siting scenario
     - **Dollar year:** specified in inputs/supply_curve/dollaryear.csv
-    - **Citation:** [https://docs.nrel.gov/docs/fy25osti/91900.pdf](https://docs.nrel.gov/docs/fy25osti/91900.pdf)
+    - **Citation:** [https://docs.nlr.gov/docs/fy25osti/91900.pdf](https://docs.nlr.gov/docs/fy25osti/91900.pdf)
     - **Units:** capacity numbers are in MW_DC and cost numbers are in $/MW_AC
 
 ---
@@ -3202,7 +3202,7 @@
   - [supplycurve_upv-reference.csv](/inputs/supply_curve/supplycurve_upv-reference.csv)
     - **Description:** UPV supply curve from reV for the reference siting scenario
     - **Dollar year:** specified in inputs/supply_curve/dollaryear.csv
-    - **Citation:** [https://docs.nrel.gov/docs/fy25osti/91900.pdf](https://docs.nrel.gov/docs/fy25osti/91900.pdf)
+    - **Citation:** [https://docs.nlr.gov/docs/fy25osti/91900.pdf](https://docs.nlr.gov/docs/fy25osti/91900.pdf)
     - **Units:** capacity numbers are in MW_DC and cost numbers are in $/MW_AC
 
 ---
@@ -3210,37 +3210,37 @@
   - [supplycurve_wind-ofs-limited.csv](/inputs/supply_curve/supplycurve_wind-ofs-limited.csv)
     - **Description:** Offshore sind supply curve from reV for the limited siting scenario
     - **Dollar year:** specified in inputs/supply_curve/dollaryear.csv
-    - **Citation:** [https://docs.nrel.gov/docs/fy25osti/91900.pdf](https://docs.nrel.gov/docs/fy25osti/91900.pdf)
+    - **Citation:** [https://docs.nlr.gov/docs/fy25osti/91900.pdf](https://docs.nlr.gov/docs/fy25osti/91900.pdf)
 ---
 
   - [supplycurve_wind-ofs-open.csv](/inputs/supply_curve/supplycurve_wind-ofs-open.csv)
     - **Description:** Offshore wind supply curve from reV for the open siting scenario
     - **Dollar year:** specified in inputs/supply_curve/dollaryear.csv
-    - **Citation:** [https://docs.nrel.gov/docs/fy25osti/91900.pdf](https://docs.nrel.gov/docs/fy25osti/91900.pdf)
+    - **Citation:** [https://docs.nlr.gov/docs/fy25osti/91900.pdf](https://docs.nlr.gov/docs/fy25osti/91900.pdf)
 ---
 
   - [supplycurve_wind-ofs-reference.csv](/inputs/supply_curve/supplycurve_wind-ofs-reference.csv)
     - **Description:** Offshore wind supply curve from reV for the reference siting scenario
     - **Dollar year:** specified in inputs/supply_curve/dollaryear.csv
-    - **Citation:** [https://docs.nrel.gov/docs/fy25osti/91900.pdf](https://docs.nrel.gov/docs/fy25osti/91900.pdf)
+    - **Citation:** [https://docs.nlr.gov/docs/fy25osti/91900.pdf](https://docs.nlr.gov/docs/fy25osti/91900.pdf)
 ---
 
   - [supplycurve_wind-ons-limited.csv](/inputs/supply_curve/supplycurve_wind-ons-limited.csv)
     - **Description:** Land-based wind supply curve from reV for the limited siting scenario
     - **Dollar year:** specified in inputs/supply_curve/dollaryear.csv
-    - **Citation:** [https://docs.nrel.gov/docs/fy25osti/91900.pdf](https://docs.nrel.gov/docs/fy25osti/91900.pdf)
+    - **Citation:** [https://docs.nlr.gov/docs/fy25osti/91900.pdf](https://docs.nlr.gov/docs/fy25osti/91900.pdf)
 ---
 
   - [supplycurve_wind-ons-open.csv](/inputs/supply_curve/supplycurve_wind-ons-open.csv)
     - **Description:** Land-based wind supply curve from reV for the open siting scenario
     - **Dollar year:** specified in inputs/supply_curve/dollaryear.csv
-    - **Citation:** [https://docs.nrel.gov/docs/fy25osti/91900.pdf](https://docs.nrel.gov/docs/fy25osti/91900.pdf)
+    - **Citation:** [https://docs.nlr.gov/docs/fy25osti/91900.pdf](https://docs.nlr.gov/docs/fy25osti/91900.pdf)
 ---
 
   - [supplycurve_wind-ons-reference.csv](/inputs/supply_curve/supplycurve_wind-ons-reference.csv)
     - **Description:** Land-based wind supply curve from reV for the reference siting scenario
     - **Dollar year:** specified in inputs/supply_curve/dollaryear.csv
-    - **Citation:** [https://docs.nrel.gov/docs/fy25osti/91900.pdf](https://docs.nrel.gov/docs/fy25osti/91900.pdf)
+    - **Citation:** [https://docs.nlr.gov/docs/fy25osti/91900.pdf](https://docs.nlr.gov/docs/fy25osti/91900.pdf)
 ---
 
   - [trans_intra_cost_adder.csv](/inputs/supply_curve/trans_intra_cost_adder.csv)

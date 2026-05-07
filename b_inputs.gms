@@ -4030,7 +4030,7 @@ prod_conversion_rate(i,v,r,t)$[consume(i)$valcap(i,v,r,t)] =
     h2_conversion_rate(i,v,r,t)$h2(i) + dac_conversion_rate(i,t)$dac(i) ;
 
 * H2 energy intensity is either 52,217 btu / lb
-* (LHV, based on https://www.nrel.gov/docs/gen/fy08/43061.pdf)
+* (LHV, based on https://www.nlr.gov/docs/gen/fy08/43061.pdf)
 * or 60,920 btu / lb (HHV, based on
 * https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html)
 * DOE H2 office recommends using the HHV value
@@ -4803,7 +4803,7 @@ reserve_frac(i,ortype)$upgrade(i) = sum{ii$upgrade_to(i,ii), reserve_frac(ii,ort
 
 * input data for opres reserve costs by generator type (in $2004)
 * current options are bottom up costs by generator type ("default") or estimates based on historical reserve prices ("market")
-* market data based on national reserve prices in https://www.nrel.gov/docs/fy19osti/72578.pdf (converted from $2017)
+* market data based on national reserve prices in https://www.nlr.gov/docs/fy19osti/72578.pdf (converted from $2017)
 table cost_opres_input(i,ortype)
 $offlisting
 $ondelim

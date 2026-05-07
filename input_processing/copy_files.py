@@ -1030,7 +1030,7 @@ def calculate_county_fractions(df, county2zone):
     "model region" means a zone from the set of zones specific to this run).
     Note the calculation of the county-to-BA fractions will eventually
     be deprecated once the 134-zone structure is removed from all spatial
-    inputs (see https://github.nrel.gov/ReEDS/ReEDS-2.0/issues/1889).
+    inputs (see https://github.com/ReEDS-Model/ReEDS/issues/16).
     The provided dataframe must have columns 'FIPS' and 'value'.
     """
     required_columns = ['FIPS', 'value']
