@@ -190,6 +190,16 @@ def get_countymap(select_counties=None, exclude_water_areas=False):
     return dfcounty
 
 
+def get_offshore_zones(crs='ESRI:102008'):
+    offshore_zones = (
+        gpd.read_file(
+            os.path.join(reeds_path, 'inputs', 'shapefiles', 'offshore_zones.gpkg')
+        ).set_index('zone').to_crs(crs).drop(columns=['zone_old'], errors='ignore')
+        .rename(columns={'node_latitude':'node_lat', 'node_longitude':'node_lon'})
+    )
+    return offshore_zones
+
+
 def get_zonemap(case=None, exclude_water_areas=False, crs='ESRI:102008'):
     """
     Get geodataframe of model zones, applying aggregation if necessary
@@ -298,12 +308,7 @@ def get_zonemap(case=None, exclude_water_areas=False, crs='ESRI:102008'):
             )
             ## Add offshore zones (transmission endpoints already included)
             if int(sw.GSw_OffshoreZones):
-                offshore_zones = (
-                    gpd.read_file(
-                        os.path.join(reeds_path, 'inputs', 'shapefiles', 'offshore_zones.gpkg')
-                    ).set_index('zone').to_crs(crs).drop(columns=['zone_old'], errors='ignore')
-                    .rename(columns={'node_latitude':'node_lat', 'node_longitude':'node_lon'})
-                )
+                offshore_zones = get_offshore_zones(crs=crs)
                 ## Get node x/y for consistency with land-based zones
                 xy = reeds.plots.df2gdf(
                     offshore_zones.drop(columns='geometry'),

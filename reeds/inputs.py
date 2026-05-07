@@ -557,8 +557,19 @@ def get_interface_data(
             dfout[side] = dfout[r].map(zonehash)
         dfout = dfout.merge(dfin, on=['start', 'end'], how='left')
     else:
-        dfout = dfin.loc[dfin.start.isin(zonehash) & dfin.end.isin(zonehash)].copy()
-        hash2zone = pd.Series(zonehash.index, index=zonehash.values)
+        ## Include any connections to offshore zones for now
+        offshore_zones = reeds.io.get_offshore_zones().index.values.tolist()
+        dfout = dfin.loc[
+            (
+                dfin.start.isin(zonehash.tolist()+offshore_zones)
+                & dfin.end.isin(zonehash.tolist()+offshore_zones)
+            )
+            | (dfin.start.isin(offshore_zones) & (dfin.end.isin(offshore_zones)))
+        ].copy()
+        hash2zone = pd.Series(
+            data=zonehash.index.tolist()+offshore_zones,
+            index=zonehash.values.tolist()+offshore_zones,
+        )
         for r, side in [('r', 'start'), ('rr', 'end')]:
             dfout[r] = dfout[side].map(hash2zone)
         ## Keep them sorted

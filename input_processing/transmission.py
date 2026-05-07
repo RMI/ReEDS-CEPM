@@ -201,10 +201,11 @@ def get_interface_params(case):
 def get_trancap_fut(case):
     sw = reeds.io.get_switches(case)
     scalars = reeds.io.get_scalars(case)
-
+    ## Always-included lines
     planned_capacity = reeds.inputs.map_hvdc_lines_to_interfaces(
         case=case, filename='planned_lines-baseline.csv',
     )
+    ## Scenario-specific lines
     if sw.GSw_TransScen != 'none':
         planned_capacity = pd.concat([
             planned_capacity,
@@ -212,6 +213,33 @@ def get_trancap_fut(case):
                 case=case, filename=f'planned_lines-{sw.GSw_TransScen}.csv',
             )
         ])
+    ## Offshore lines
+    if int(sw.GSw_OffshoreZones):
+        zonepath = Path(reeds.io.reeds_path, 'inputs', 'zones', sw.GSw_ZoneSet)
+        ## Land-to-offshore links (these are only built for offshore wind delivery
+        ## so they won't be built early unless there's exogenous offshore wind)
+        fpath_land = Path(zonepath, 'newlinks_offshore_radial.csv')
+        offshore_land = (
+            pd.read_csv(fpath_land)
+            .assign(year_online=int(sw.startyear))
+            .assign(name='radial')
+        )
+        ## Offshore-to-offshore backbone links
+        fpath_offshore = Path(
+            reeds.io.reeds_path, 'inputs', 'transmission', 'newlinks_offshore_backbone.csv',
+        )
+        offshore_offshore = (
+            pd.read_csv(fpath_offshore)
+            .assign(year_online=0)
+            .assign(name='backbone')
+        )
+        offshore_links = (
+            pd.concat([offshore_land, offshore_offshore])
+            .assign(trtype='VSC')
+            .assign(certain=0)
+            .assign(MW=100000)
+        ).set_index(['r','rr','trtype','year_online','certain'])
+        planned_capacity = pd.concat([planned_capacity, offshore_links])
     trancap_fut = (
         planned_capacity.reset_index()
         .rename(columns={'year_online':'t', 'certain':'status'})
@@ -227,6 +255,17 @@ def get_trancap_fut(case):
     )
 
     return trancap_fut
+
+
+def include_reverse_direction(df:pd.Series, indices=['r', 'rr', 'trtype']):
+    """Add duplicate values for (rr,r) direction"""
+    assert (('r' in indices) and ('rr' in indices))
+    reverse = (
+        df.reset_index().rename(columns={'r':'rr', 'rr':'r'})
+        .set_index(indices).squeeze(1)
+    )
+    dfout = pd.concat([df, reverse])
+    return dfout
 
 
 def get_transmission_fom(case, interface_params):
@@ -259,11 +298,7 @@ def get_transmission_fom(case, interface_params):
         .round(2)
     )
     ## Include both directions
-    reverse = (
-        transmission_line_fom.reset_index().rename(columns={'r':'rr', 'rr':'r'})
-        .set_index(['r','rr','trtype']).squeeze(1)
-    )
-    transmission_line_fom = pd.concat([transmission_line_fom, reverse])
+    transmission_line_fom = include_reverse_direction(transmission_line_fom)
     dups = transmission_line_fom.index.duplicated()
     if dups.sum():
         print(transmission_line_fom.loc[dups])
@@ -382,6 +417,15 @@ def get_transmission_cost(case, interface_params):
         )
         raise ValueError(err)
     return transmission_cost_ac
+
+
+def get_transmission_cost_nonac(case, interface_params):
+    transmission_cost_nonac = interface_params.loc[
+        interface_params.trtype != 'AC',
+        ['r', 'rr', 'trtype', f'USD{reeds.io.get_switches(case).dollar_year}perMW']
+    ].round(2).set_index(['r','rr','trtype']).squeeze(1)
+    transmission_cost_nonac = include_reverse_direction(transmission_cost_nonac).reset_index()
+    return transmission_cost_nonac
 
 
 def get_hurdle_rates(case, hurdle_level=1):
@@ -526,6 +570,7 @@ def main(case):
     outputs['tranloss'] = interface_params[['r','rr','trtype','loss']].round(5)
     outputs['transmission_line_fom'] = get_transmission_fom(case, interface_params).reset_index()
     outputs['trancap_fut'] = get_trancap_fut(case)
+    outputs['transmission_cost_nonac'] = get_transmission_cost_nonac(case, interface_params)
 
     for hurdle_level in [1, 2]:
         outputs[f'cost_hurdle_rate{hurdle_level}'] = get_hurdle_rates(case, hurdle_level)
@@ -565,11 +610,6 @@ def main(case):
             .round(2)
         )
     outputs['tscbin'] = transmission_cost_ac.tscbin.drop_duplicates()
-
-    outputs['transmission_cost_nonac'] = interface_params.loc[
-        interface_params.trtype != 'AC',
-        ['r', 'rr', 'trtype', f'USD{reeds.io.get_switches(case).dollar_year}perMW']
-    ].round(2)
 
     ### Pipelines
     outputs['pipeline_cost_mult'] = get_pipeline_cost_mult(
@@ -612,7 +652,6 @@ def main(case):
         outputs[key] = df
 
     #%% Write the outputs
-    index = {}
     header = {
         'val_cs': False,
         'tscbin': False,
@@ -620,7 +659,7 @@ def main(case):
     for key, df in outputs.items():
         df.to_csv(
             Path(case, 'inputs_case', f'{key}.csv'),
-            index=index.get(key, False), header=header.get(key, True),
+            index=False, header=header.get(key, True),
         )
 
     #%% Done
@@ -638,7 +677,7 @@ if __name__ == '__main__':
     case = Path(args.inputs_case).parent
 
     # #%% Settings for testing ###
-    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260507_transcostM1_MARICTNYNJPAOH_Offshore'))
+    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260507_transcostM2_MARICTNYNJPAOH_Offshore'))
 
     #%% Set up logger
     log = reeds.log.makelog(scriptname=__file__, logpath=Path(case, 'gamslog.txt'))
