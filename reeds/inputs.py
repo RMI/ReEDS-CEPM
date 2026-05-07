@@ -11,6 +11,7 @@ import sklearn.cluster
 import geopandas as gpd
 from pathlib import Path
 from warnings import warn
+from typing import Literal
 sys.path.append(str(Path(__file__).parent.parent))
 import reeds
 from input_processing import mcs_sampler
@@ -485,8 +486,9 @@ def get_itl(r, rr, case=None, errors='raise', **kwargs) -> dict:
 
 def get_interface_data(
     case=None,
-    datafile='itl_NARIS.csv',
+    datafile:Literal['itl_NARIS.csv', 'transmission_cost_distance.csv']='itl_NARIS.csv',
     level:str='r',
+    interfaces:bool=True,
     errors='raise',
     **kwargs,
 ) -> pd.DataFrame:
@@ -501,17 +503,11 @@ def get_interface_data(
     Args:
         datafile (str): 'itl_NARIS.csv' or 'transmission_cost_distance.csv'
         level (str): 'r' or 'transgrp'
-
-    Inputs for testing:
-        case = None
-        level = 'r'
-        kwargs = {}
-        errors = 'raise'
+        interfaces (bool): If True, return values for
+            inputs/zones/{GSw_ZoneSet}/interfaces_{level}.csv;
+            if False, return values for all start/end zone pairs in GSw_ZoneSet
     """
-    ## Validate inputs
-    choices = ['itl_NARIS.csv', 'transmission_cost_distance.csv']
-    if datafile not in choices:
-        raise ValueError(f'datafile={datafile} but must be in {choices}')
+    ## Derivative inputs
     datacols = {
         'itl_NARIS.csv': ['MW_forward', 'MW_reverse'],
         'transmission_cost_distance.csv': ['polarity', 'voltage', 'cost_MUSD', 'length_miles'],
@@ -553,12 +549,23 @@ def get_interface_data(
             raise ValueError(err)
         zonehash = county2level.reset_index().groupby(level).FIPS.agg(hash_counties)
     ### Get the data for the defined interfaces
-    interfacepath = Path(inputs, 'zones', sw.GSw_ZoneSet, f'interfaces_{level}.csv')
-    dfout = pd.read_csv(interfacepath)
-    for i, (r, side) in enumerate([('r', 'start'), ('rr', 'end')]):
-        dfout[r] = dfout.interface.str.split(config['idelim']).str[i]
-        dfout[side] = dfout[r].map(zonehash)
-    dfout = dfout.merge(dfin, on=['start', 'end'], how='left')
+    if interfaces:
+        interfacepath = Path(inputs, 'zones', sw.GSw_ZoneSet, f'interfaces_{level}.csv')
+        dfout = pd.read_csv(interfacepath)
+        for i, (r, side) in enumerate([('r', 'start'), ('rr', 'end')]):
+            dfout[r] = dfout.interface.str.split(config['idelim']).str[i]
+            dfout[side] = dfout[r].map(zonehash)
+        dfout = dfout.merge(dfin, on=['start', 'end'], how='left')
+    else:
+        dfout = dfin.loc[dfin.start.isin(zonehash) & dfin.end.isin(zonehash)].copy()
+        hash2zone = pd.Series(zonehash.index, index=zonehash.values)
+        for r, side in [('r', 'start'), ('rr', 'end')]:
+            dfout[r] = dfout[side].map(hash2zone)
+        ## Keep them sorted
+        r = dfout[['r','rr']].min(axis=1)
+        rr = dfout[['r','rr']].max(axis=1)
+        dfout['r'] = r
+        dfout['rr'] = rr
     ### Make sure it worked
     missing = dfout.loc[dfout[datacols].isnull().any(axis=1)]
     if len(missing):
@@ -595,6 +602,7 @@ def get_itls(case=None, level:str='r', errors='raise', **kwargs) -> pd.DataFrame
         case=case,
         datafile='itl_NARIS.csv',
         level=level,
+        interaces=True,
         errors=errors,
         **kwargs,
     )
@@ -607,6 +615,7 @@ def get_distances(case=None, errors='raise', **kwargs) -> pd.DataFrame:
         case=case,
         datafile='transmission_cost_distance.csv',
         level='r',
+        interfaces=False,
         errors=errors,
         **kwargs,
     )

@@ -24,9 +24,9 @@ def get_trancap_init(case, interface_params, level='r'):
         .assign(trtype='AC')
     )
     valid_regions = {}
-    for level in ['r','itlgrp','transgrp']:
-        valid_regions[level] = pd.read_csv(
-            Path(case, 'inputs_case', f'val_{level}.csv'), header=None).squeeze(1).tolist()
+    for i in ['r', 'itlgrp', 'transgrp']:
+        valid_regions[i] = pd.read_csv(
+            Path(case, 'inputs_case', f'val_{i}.csv'), header=None).squeeze(1).tolist()
 
     ### DEPRECATED: p19 is islanded with NARIS transmission data, so connect it manually
     if (
@@ -120,7 +120,19 @@ def get_interface_params(case):
     scalars = reeds.io.get_scalars(case)
 
     interface_params = reeds.inputs.get_distances(case)
-    interface_params['r_rr'] = interface_params.r + '_' + interface_params.rr
+    ## Swapping the start/end points sometimes gives slightly different routes,
+    ## resulting in duplicate values. So drop duplicates, keeping the longer route.
+    interface_params = (
+        interface_params.sort_values('length_miles', ascending=False)
+        .drop_duplicates(['r','rr','polarity','voltage'], keep='first')
+    )
+    ## Make sure there are no duplicates
+    if interface_params[['r','rr','polarity']].duplicated().sum():
+        dup = interface_params.loc[
+            interface_params[['r','rr','polarity']].duplicated(keep=False)
+        ].sort_values(['r','rr','polarity'])
+        print(dup)
+        raise Exception(f'{len(dup)} duplicate entries in interface_params')
 
     ## Calculate $/MW
     _line_params = {
@@ -156,15 +168,6 @@ def get_interface_params(case):
 
     ## Apply the distance multiplier
     interface_params['miles'] = interface_params['length_miles'] * float(sw.GSw_TransSquiggliness)
-
-    ## Make sure there are no duplicates
-    if interface_params[['r','rr','polarity']].duplicated().sum():
-        print(
-            interface_params.loc[
-                interface_params[['r','rr','polarity']].duplicated(keep=False)
-            ].sort_values(['r','rr','polarity'])
-        )
-        raise Exception('Duplicate entries in interface_params')
 
     ### Calculate losses
     tranloss_fixed = {
@@ -441,6 +444,7 @@ def calculate_co2_storage_routes(dfzones, max_miles=200):
     Keep storage sites that are within {max_miles} miles
     of each region's transmission endpoint.
     """
+    scalars = reeds.io.get_scalars(case)
     co2_storage_sites = reeds.io.get_co2_storage_sites()
     dfzones = reeds.io.get_dfmap(case, levels=['r'], exclude_water_areas=True)['r']
     region_centroids = (
@@ -489,7 +493,13 @@ def calculate_co2_storage_routes(dfzones, max_miles=200):
         | (routes_cs.length == 0)
     )]
     routes_cs['distance_m'] = routes_cs.length
-    routes_cs['miles'] = (routes_cs['distance_m'] / 1609.34).round(2)
+    ## Wherever BA centroids fall within formation boundaries, assume some minimal
+    # spur line distance to connect a CCS or DAC plant with an injection site
+    routes_cs['miles'] = (
+        (routes_cs['distance_m'] / 1609.34)
+        .clip(lower=scalars.min_co2_spurline_miles)
+        .round(2)
+    )
 
     return routes_cs
 
@@ -572,15 +582,6 @@ def main(case):
     co2_site_char = pd.read_csv(Path(reeds.io.reeds_path, 'inputs', 'ctus', 'co2_site_char.csv'))
     outputs['co2_site_char'] = co2_site_char.loc[co2_site_char['cs'].isin(val_cs)]
 
-    # Create WKT file of region-to-site spurlines
-    outputs['ctus_r_cs_spurlines_200mi'] = (
-        routes_cs.loc[routes_cs['distance_m'] > 0]
-        .rename(columns={'r': 'ba_str', 'cs': 'FmnID'})
-        .to_crs('EPSG:4326')
-        .assign(WKT=lambda x: x['geometry'].to_wkt())
-        [['ba_str', 'FmnID', 'distance_m', 'WKT']]
-    )
-
     #%% Downselect to active regions
     table = {'co2_site_char': True}
     hierarchy = reeds.io.get_hierarchy(case).reset_index()
@@ -627,7 +628,7 @@ if __name__ == '__main__':
     case = Path(args.inputs_case).parent
 
     # #%% Settings for testing ###
-    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260507_transcostM0_Pacific'))
+    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260507_transcostM1_Pacific'))
 
     #%% Set up logger
     log = reeds.log.makelog(scriptname=__file__, logpath=Path(case, 'gamslog.txt'))
