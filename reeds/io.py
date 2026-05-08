@@ -1228,15 +1228,18 @@ def get_last_iteration(case, year=2050, datum=None, samples=None):
     """Get the last iteration of PRAS for a given case/year"""
     if datum not in [None,'flow','energy']:
         raise ValueError(f"datum must be in [None,'flow','energy'] but is {datum}")
-    infile = sorted(glob(
-        os.path.join(
-            case, 'ReEDS_Augur', 'PRAS',
-            f"PRAS_{year}i*"
-            + (f'-{samples}' if samples is not None else '')
-            + (f'-{datum}' if datum is not None else '')
-            + '.h5'
-        )
-    ))[-1]
+    pattern = f"PRAS_{year}i*" \
+        + (f'-{samples}' if samples is not None else '') \
+        + (f'-{datum}' if datum is not None else '') \
+        + '.h5'
+    matches = list(Path(case, 'ReEDS_Augur', 'PRAS').glob(pattern))
+    if not matches:
+        print(f"ERROR: The run {case} has not solved last modeled year {year}.", file=sys.stderr)
+        sys.exit(1)
+    infile = max(
+        matches,
+        key=lambda f: int(f.stem[f.stem.rfind('i')+1:].split('-')[0])
+    )
     iteration = int(
         os.path.splitext(os.path.basename(infile))[0]
         .split('-')[0].split('_')[1].split('i')[1]
