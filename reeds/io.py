@@ -1728,16 +1728,35 @@ def write_to_h5(
 
 
 def write_input_to_h5(
-    df,
+    df:pd.DataFrame|pd.Series,
     key:str,
     case:str|Path,
     gamstype:Literal['set','parameter']='set',
     comment:str='',
     units:str='',
-    verbose=1,
+    verbose:int|bool=1,
     **kwargs,
 ):
     """
+    Write a Series or DataFrame (long format) to a ReEDS-formatted inputs.h5 file
+
+    Args:
+        df (pd.Series or pd.DataFrame): Long-formatted series/dataframe (where "long
+        format" means there is a single data column; all the other columns are indices)
+        key (str): Name of the key to be written to inputs.h5
+        case (str or Path): Absolute path to a ReEDS case OR inputs_case OR inputs.h5.
+            That is, any of the following work as inputs:
+            - {absolute_casepath}
+            - {absolute_casepath}/inputs_case
+            - {absolute_casepath}/inputs_case/inputs.h5
+        gamstype (str): 'set' or 'parameter', indicating the kind of data to write
+        comment (str): Comment assigned to the data in GAMS.
+            If the `units` input is provided, the comment is written as,
+            "[{units}] {comment} (written by {script that called this function})".
+            If the `units` input is not provided, the comment is written as,
+            "{comment} (written by {script that called this function})".
+        units (str): Physical units, like MW or MMBtu
+        verbose (bool or int): If true, prints a message to the log after successful write
     """
     ### Parse inputs
     if Path(case).name == 'inputs_case':
