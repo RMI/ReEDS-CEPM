@@ -215,7 +215,7 @@ jobs:
 
       - name: Upload ReEDS failure diagnostics
         if: ${{ failure() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ format('{0}-failure-diagnostics', matrix.scenario) }}
           compression-level: 9
@@ -230,7 +230,7 @@ jobs:
             ${{ env.RUN_FOLDER }}/ReEDS_Augur/PRAS/PRAS_*i*.log
 
       - name: Save ReEDS run
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ matrix.scenario }}
           compression-level: 9
@@ -274,7 +274,7 @@ jobs:
           path: ${{ format('{0}-{1}', matrix.scenario, matrix.solve-year) }}
 
       - name: Install uv and set Python version
-        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           python-version: "3.11"
           enable-cache: true
@@ -298,7 +298,7 @@ jobs:
             --system-json "$R2X_SYSTEM_JSON"
 
       - name: Save R2X system
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: r2x-${{ matrix.scenario }}
           compression-level: 9
