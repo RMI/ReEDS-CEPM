@@ -849,19 +849,19 @@ if __name__ == '__main__':
                     reeds_path, inputs_case, agglevel=resolution, 
                     regions=agglevel_variables['ba_regions'],
                 )
-                coments = {**comments, **_comments}
+                comments = {**comments, **_comments}
             if resolution == 'ba':
                 ba_data, _comments = main(
                     reeds_path, inputs_case, agglevel=resolution, 
                     regions=agglevel_variables['ba_regions'],
                 )
-                coments = {**comments, **_comments}
+                comments = {**comments, **_comments}
             if resolution == 'county':
                 county_data, _comments = main(
                     reeds_path, inputs_case, agglevel=resolution,
                     regions=agglevel_variables['county_regions'],
                 )
-                coments = {**comments, **_comments}
+                comments = {**comments, **_comments}
         
         # Combine and write mixed resolution data
         # ReEDS only supports county-BA, county-aggreg combinations 
