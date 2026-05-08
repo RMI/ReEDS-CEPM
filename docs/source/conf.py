@@ -33,7 +33,7 @@ numfig = True  # auto number figures when true
 gamslice_secret = os.getenv("GAMSLICE", "")
 
 # get BASE_URL from environment variable
-base_url = os.environ.get("BASE_URL", "https://github.nrel.gov/ReEDS/ReEDS-2.0")
+base_url = os.environ.get("BASE_URL", "https://github.com/ReEDS-Model/ReEDS")
 github_releases_url = base_url + "/releases"
 
 myst_enable_extensions = ["substitution", "dollarmath", "html_image"]

@@ -51,7 +51,7 @@ Before running resource hourlize the reV runs should be copied from their origin
 Under the appropriate tech folder (UPV, ONSHORE, OFFSHORE, etc.) create a directory with a descrptive name for the supply curves (e.g., 2023_06_06_Update). Then copy the reV supply curves and profiles into a folder called `reV`. A good approach is to use rsync; below is an example copying original reV files from Eagle to Kestrel:
 
 ```bash
-rsync -aPu [username]@eagle.hpc.nrel.gov://shared-projects/rev/projects/seto/fy23/rev/standard_scenarios/aggregation/  /projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_06_06_Update/reV
+rsync -aPu [username]@kestrel.nlr.gov://shared-projects/rev/projects/seto/fy23/rev/standard_scenarios/aggregation/  /kfs2/shared-projects/reeds/Supply_Curve_Data/UPV/2023_06_06_Update/reV
 ```
 
 ### 2. Update the rev_paths files
@@ -80,7 +80,7 @@ By default hourlize will copy the required files in your ReEDS repository (`copy
 Note that hourlize copies to only one of the shared locations (either the HPC or nrelnas01, depending on where you are running it), so even with `copy_to_shared=True` you'll want to sync up the two shared folders. When starting from the HPC, be sure to open up permissions to the supply curve outputs you've just created (e.g., `chmod -R 777 UPV/2023_06_06_Update`). Then, from your local computer, use WinSCP or rsync to copy the files from Kestrel to nrelnas01:
 
 ```bash
-rsync -aPu [username]@kestrel.nrel.gov://projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_11_02_LandCover /Volumes/ReEDS/Supply_Curve_Data/UPV
+rsync -aPu [username]@kestrel.nlr.gov://projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_11_02_LandCover /Volumes/ReEDS/Supply_Curve_Data/UPV
 ```
 
 ## Running hourlize

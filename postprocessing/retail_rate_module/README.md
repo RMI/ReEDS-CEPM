@@ -14,7 +14,7 @@ the past decade.
 Additional information about this module can be found here:
 Brown, Patrick R, Pieter J Gagnon, J Sean Corcoran, and Wesley J Cole. 2022. Retail Rate Projections for
 Long-Term Electricity System Models. Golden, CO: National Renewable Energy Laboratory. NREL/TP-6A20-78224.
-<https://www.nrel.gov/docs/fy22osti/78224.pdf>.
+<https://www.nlr.gov/docs/fy22osti/78224.pdf>.
 
 ## Usage
 

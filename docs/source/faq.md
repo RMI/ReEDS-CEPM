@@ -11,6 +11,7 @@
     - [How do I change the spatial resolution of a ReEDS case?](#how-do-i-change-the-spatial-resolution-of-a-reeds-case)
     - [How can I reduce solve time?](#how-can-i-reduce-solve-time)
     - [How often are updates made to ReEDS?](#how-often-are-updates-made-to-reeds)
+    - [Help, I'm getting lots of log messages about missing fonts](#help-im-getting-lots-of-log-messages-about-missing-fonts)
     - [What are the limitations, caveats, and known issues?](#what-are-the-limitations-caveats-and-known-issues)
       - [Capabilities that don't currently work](#capabilities-that-dont-currently-work)
       - [Assumptions](#assumptions)
@@ -95,6 +96,16 @@ Here is an example of what this would look like:
 git checkout tags/v2024.0.0
 ```
 
+### Help, I'm getting lots of log messages about missing fonts
+
+We use the `mscorefonts` package to get nicer-looking fonts in plots.
+If you had `matplotlib` installed before running a script from the `reeds2` environment,
+you might need to clear your fonts cache (you can back it up first if you like).
+
+- On Mac/Linux, try deleting `~/.cache/matplotlib` or `~/.matplotlib`
+- On Windows, try deleting `%HOMEPATH%\.matplotlib`
+
+
 ### What are the limitations, caveats, and known issues?
 
 ReEDS is a big model with limitations and caveats. Higher-level limitations are discussed in the [model documentation](model_documentation.md); more code-facing issues are listed here.
@@ -128,5 +139,5 @@ ReEDS is a big model with limitations and caveats. Higher-level limitations are 
 - Land use
   - Land-use calculations use a static map of current land types; we do not project changes in land type (e.g. urbanization, changes to forestry and agriculture practices, etc) when assessing the land types utilized by new wind and solar.
 - Retail rates
-  - High-level limitations and caveats are discussed in [Brown et al 2022](https://www.nrel.gov/docs/fy22osti/78224.pdf)
+  - High-level limitations and caveats are discussed in [Brown et al 2022](https://www.nlr.gov/docs/fy22osti/78224.pdf)
   - When using a 5-year model step (for example), the value of the PTC is evenly split over all 5 years in the step. We don't try to assess in which year within the step a capacity investment is made.
