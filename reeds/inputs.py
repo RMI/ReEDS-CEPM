@@ -843,9 +843,16 @@ def validate_zoneset(GSw_ZoneSet):
             f"match for {len(wrong)} zones: {', '.join(wrong.index)}"
         )
     ## Do all the zone interfaces have ITLs?
-    get_itls(GSw_ZoneSet=GSw_ZoneSet, errors='raise')
+    dfitl = get_itls(GSw_ZoneSet=GSw_ZoneSet, errors='raise')
     ## Do all the transgrp interfaces have ITLs?
     get_itls(GSw_ZoneSet=GSw_ZoneSet, level='transgrp', errors='raise')
+    ## Do all interfaces with ITLs have distances and costs?
+    dfdistance = get_distances(GSw_ZoneSet=GSw_ZoneSet)
+    dftest = dfitl.merge(dfdistance.loc[dfdistance.polarity=='ac'], on=['r','rr'], how='left')
+    nulls = dftest.loc[dftest[['cost_MUSD','length_miles']].isnull().sum(axis=1) > 0]
+    if len(nulls):
+        print(nulls)
+        raise ValueError(f'Missing transmission distance/cost for {len(nulls)} interfaces')
     ## Do the hierarchy files have all the required columns?
     required_levels = ['st', 'transreg', 'transgrp', 'nercr', 'interconnect']
     hierarchy = reeds.io.assemble_hierarchy(GSw_ZoneSet=GSw_ZoneSet).set_index('r')
