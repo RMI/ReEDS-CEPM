@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import reeds
 
 # #%% Debugging
-# sw['reeds_path'] = os.path.expanduser('~/github/ReEDS-2.0/')
+# sw['reeds_path'] = os.path.expanduser('~/github/ReEDS/')
 # sw['casedir'] = os.path.join(sw['reeds_path'],'runs','v20230123_prmM3_Pacific_d7sIrh4sh2_y2')
 # import importlib
 # importlib.reload(functions)
@@ -604,7 +604,7 @@ def main(sw, t, iteration=0, logging=True):
 
 # if __name__ == '__main__':
 #     #%%###  option to run script directly for debugging
-#     casedir =  "/path/to/ReEDS-2.0/runs/runname"
+#     casedir =  "/path/to/ReEDS/runs/runname"
 #     t = 2030 # previous solve year
 #     iteration = 0
 #     # load switches

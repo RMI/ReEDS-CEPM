@@ -162,7 +162,7 @@ The ReEDS source code is hosted on GitHub at <https://github.com/ReEDS-Model/ReE
 git lfs install
 ```
 
-3. Clone the ReEDS-2.0 repository on your desktop. Alternatively, download a ZIP from GitHub ({numref}`figure-github-download`).
+3. Clone the ReEDS repository on your desktop. Alternatively, download a ZIP from GitHub ({numref}`figure-github-download`).
 
 ```{figure} figs/readme/github-download.png
 :name: figure-github-download

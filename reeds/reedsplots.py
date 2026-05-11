@@ -2034,7 +2034,7 @@ def plot_interreg_transfer_cap_ratio(
     """Plot interregional transfer capability / peak demand over time"""
     ### Inputs for debugging
     # case = (
-    #     '/Users/pbrown/github2/ReEDS-2.0/runs/'
+    #     '/Users/pbrown/github2/ReEDS/runs/'
     #     'v20240212_transopM0_WECC_CPNP_GP1_TFY2035_PTL2035_TRc_MITCg0p3')
     # casenames = 'base'
     # level = 'transreg'; tstart=2020;

@@ -453,7 +453,7 @@ def main(reeds_path, inputs_case):
         :, resources.loc[resources.tech.isin(vre_dist),'resource'].values
     ] /= (1 - distloss)
 
-    # Set the column names for resources to match ReEDS-2.0
+    # Set the column names for resources to match ReEDS
     resources['ccreg'] = resources.area.map(r2ccreg)
     resources.rename(columns={'area':'r','tech':'i'}, inplace=True)
     resources = resources[['r','i','ccreg','resource']]
@@ -539,8 +539,8 @@ if __name__ == '__main__':
         description='Create run-specific hourly profiles',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument('reeds_path', help='ReEDS-2.0 directory')
-    parser.add_argument('inputs_case', help='ReEDS-2.0/runs/{case}/inputs_case directory')
+    parser.add_argument('reeds_path', help='ReEDS directory')
+    parser.add_argument('inputs_case', help='ReEDS/runs/{case}/inputs_case directory')
 
     args = parser.parse_args()
     reeds_path = args.reeds_path

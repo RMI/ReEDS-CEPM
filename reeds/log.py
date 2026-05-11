@@ -68,7 +68,7 @@ def toc(tic, year, process, path=''):
 def get_solve_times(path=''):
     """Get all solve times, disaggregated by GAMS/barrier/crossover/remainder.
     Disaggregation only works when using CPLEX as the solver."""
-    # path = '/Users/pbrown/github/ReEDS-2.0/runs/v20240111_stressM0_stress_WECC_crossover'
+    # path = '/Users/pbrown/github/ReEDS/runs/v20240111_stressM0_stress_WECC_crossover'
     lengths = {
         'gams': {},
         'barrier': {},

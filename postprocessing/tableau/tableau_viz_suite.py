@@ -510,10 +510,10 @@ if __name__ == '__main__':
         description='Create the necessary csv files for Tableau to ingest and visualize from ReEDS outputs')
     parser.add_argument(
         '--reeds_path', default=os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')), 
-        help='ReEDS-2.0 directory')
+        help='ReEDS directory')
     parser.add_argument(
         '--tableau_path', default=os.path.expanduser('~\Documents\My Tableau Repository'), 
-        help='ReEDS-2.0 directory')    
+        help='ReEDS directory')    
     parser.add_argument(
         'caselist', type=str, nargs='+',
         help=('space-delimited list of cases to plot, OR shared casename prefix, '
@@ -561,9 +561,9 @@ if __name__ == '__main__':
 
     #%%### Inputs for debugging
     # reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-    # caselist = r'C:\Users\ahamilto\Documents\GitHub\ReEDS-2.0\postprocessing\example.csv'
+    # caselist = r'C:\Users\ahamilto\Documents\GitHub\ReEDS\postprocessing\example.csv'
     # years = list(range(2025-2050))
-    # python tableau_viz_suite.py C:\Users\ahamilto\Documents\GitHub\ReEDS-2.0\postprocessing\example.csv --reeds_path C:\Users\ahamilto\Documents\GitHub\ReEDS-2.0
+    # python tableau_viz_suite.py C:\Users\ahamilto\Documents\GitHub\ReEDS\postprocessing\example.csv --reeds_path C:\Users\ahamilto\Documents\GitHub\ReEDS
     
     #%%###os globals
     this_dir_path = os.path.dirname(os.path.realpath(__file__))

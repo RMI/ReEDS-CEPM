@@ -23,7 +23,7 @@ curl -fsSL https://install.julialang.org | sh
 winget install --name Julia --id 9NJNWW8PVKMN -e -s msstore
 ```
 
-Then, from the ReEDS-2.0 directory, run `julia --project=. instantiate.jl` to ensure proper installation of Julia and the ReEDS2PRAS environment.
+Then, from the ReEDS directory, run `julia --project=. instantiate.jl` to ensure proper installation of Julia and the ReEDS2PRAS environment.
 
 ## Basic Usage
 
@@ -32,7 +32,7 @@ If you have a completed ReEDS run and a REPL with ReEDS2PRAS (`using ReEDS2PRAS`
 ```julia
 using ReEDS2PRAS
 
-reedscase = "/projects/ntps/llavin/ReEDS-2.0/runs/ntpsrerun_Xlim_DemHi_90by2035EarlyPhaseout__core" # path to completed ReEDS run
+reedscase = "/projects/ntps/llavin/ReEDS/runs/ntpsrerun_Xlim_DemHi_90by2035EarlyPhaseout__core" # path to completed ReEDS run
 solve_year = 2035 #need ReEDS Augur data for the input solve year
 weather_year = 2012 # must be 2007-2013 or 2016-2023
 timesteps = 8760
@@ -52,7 +52,7 @@ ReEDS2PRAS can be run for multiple weather years of a completed ReEDS run by pas
 using ReEDS2PRAS
 
 # path to completed ReEDS run
-reedscase = "/projects/ntps/llavin/ReEDS-2.0/runs/ntpsrerun_Xlim_DemHi_90by2035EarlyPhaseout__core"
+reedscase = "/projects/ntps/llavin/ReEDS/runs/ntpsrerun_Xlim_DemHi_90by2035EarlyPhaseout__core"
 solve_year = 2035 #need ReEDS Augur data for the input solve year
 weather_year = 2007 # must be 2007-2013 or 2016-2023
 timesteps = 61320
@@ -71,14 +71,14 @@ It is always good practice to include new tests if the current tests don't cover
 You can run ReEDS2PRAS tests by running:
 
 ```shell
-cd ReEDS-2.0/reeds2pras/test
+cd ReEDS/reeds2pras/test
 julia --project runtests.jl
 ```
 
 or
 
 ```shell
-cd ReEDS-2.0/reeds2pras/test
+cd ReEDS/reeds2pras/test
 julia --project
 ```
 

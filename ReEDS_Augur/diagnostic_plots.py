@@ -1304,8 +1304,8 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(
         description='Create the necessary 8760 and capacity factor data for hourly resolution')
-    parser.add_argument('--reeds_path', help='ReEDS-2.0 directory')
-    parser.add_argument('--casedir', help='ReEDS-2.0/runs/{case} directory')
+    parser.add_argument('--reeds_path', help='ReEDS directory')
+    parser.add_argument('--casedir', help='ReEDS/runs/{case} directory')
     parser.add_argument('--t', type=int, default=2050, help='solve year to plot')
     parser.add_argument('--iteration', '-i', type=int, default=-1,
                         help='iteration to plot (default of -1 means latest iteration)')

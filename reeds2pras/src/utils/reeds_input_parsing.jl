@@ -5,7 +5,7 @@
     Parameters
     ----------
     x : String
-        Path to ReEDS case (e.g. "~/github/ReEDS-2.0/runs/name_of_reeds_case")
+        Path to ReEDS case (e.g. "~/github/ReEDS/runs/name_of_reeds_case")
     y : Int
         ReEDS model year
 

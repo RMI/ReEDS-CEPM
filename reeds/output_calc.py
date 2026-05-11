@@ -719,7 +719,7 @@ def calc_transmission_capacity(case,levels):
     return intraregional, interregional
 
 def get_level_map(case):
-    # for all regions available in ReEDS-2.0/inputs/hierarchy.csv, map them to a clean display name
+    # for all regions available in ReEDS/inputs/hierarchy.csv, map them to a clean display name
     level_map = pd.read_csv(
         os.path.join(reeds_path, 'postprocessing', 'plots', 'level_map.csv'), 
         index_col='raw').squeeze(1)

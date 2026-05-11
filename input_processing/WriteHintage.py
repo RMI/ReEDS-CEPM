@@ -294,7 +294,7 @@ def main(reeds_path, inputs_case):
     print('Starting WriteHintage.py')
 
     # #%% Settings for testing
-    # reeds_path = os.path.expanduser('~/github/ReEDS-2.0')
+    # reeds_path = os.path.expanduser('~/github/ReEDS')
     # inputs_case = os.path.join(
     #     reeds_path,'runs','v20231027_yamM0_Z45_h_d_365_transreg_z69_core','inputs_case')
 

@@ -39,7 +39,7 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
     '''
     # #%% Debugging
     # year = 2035
-    # case = os.path.expanduser('~/github2/ReEDS-2.0/runs/v20230305_reccM0_ref_seq')
+    # case = os.path.expanduser('~/github2/ReEDS/runs/v20230305_reccM0_ref_seq')
 
     #%% Get switches
     sw = reeds.io.get_switches(case)

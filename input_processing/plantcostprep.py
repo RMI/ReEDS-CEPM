@@ -23,10 +23,10 @@ reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing
-#reeds_path = os.path.expanduser('~/github2/ReEDS-2.0/')
+#reeds_path = os.path.expanduser('~/github2/ReEDS/')
 #inputs_case = os.path.join(reeds_path,'runs','v20220421_prmM0_ercot_seq','inputs_case')
-#reeds_path = '/Users/apham/Documents/GitHub/ReEDS/ReEDS-2.0/'
-#inputs_case = '/Users/apham/Documents/GitHub/ReEDS/ReEDS-2.0/runs/test_Pacific/inputs_case/'
+#reeds_path = '/Users/apham/Documents/GitHub/ReEDS/ReEDS/'
+#inputs_case = '/Users/apham/Documents/GitHub/ReEDS/ReEDS/runs/test_Pacific/inputs_case/'
 
 #%% Set up logger
 log = reeds.log.makelog(

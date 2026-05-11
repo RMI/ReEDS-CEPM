@@ -894,7 +894,7 @@ sc_cost_types = ['cost', 'cost_cap', 'cost_trans']
 
 ######################
 ### DERIVED INPUTS ###
-### Get the case name (ReEDS-2.0/runs/{casename}/inputscase/)
+### Get the case name (ReEDS/runs/{casename}/inputscase/)
 casename = inputs_case.split(os.sep)[-3]
 
 #%% Set up logger
