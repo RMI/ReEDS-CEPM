@@ -173,7 +173,7 @@ if __name__ == '__main__':
     import argparse
     description = """Run prep_data, ReEDS2PRAS, and PRAS as necessary.
     Example usage on the HPC:
-    `case=/projects/reedsweto/github/ReEDS-2.0/runs/v20230524_ntpH0_Pacific`
+    `case=/projects/reedsweto/github/ReEDS/runs/v20230524_ntpH0_Pacific`
     `for s in 100 1000; do python postprocessing/run_reeds2pras.py $case -s $s -r; done`
     """
     parser = argparse.ArgumentParser(
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     switch_mods = args.switch_mods
 
     # #%% Inputs for testing
-    # case = '/Users/pbrown/github2/ReEDS-2.0/runs/v20230605_ntpM1_Pacific'
+    # case = '/Users/pbrown/github2/ReEDS/runs/v20230605_ntpM1_Pacific'
     # year = 2026
     # iteration = None
     # samples = 0

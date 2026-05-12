@@ -41,7 +41,7 @@ def calc_financial_inputs(inputs_case):
     print('Starting calculation of financial parameters')
 
     # #%% Settings for testing
-    # reeds_path = '/Users/pbrown/github/ReEDS-2.0/'
+    # reeds_path = '/Users/pbrown/github/ReEDS/'
     # inputs_case = os.path.join(reeds_path,'runs','v20220621_NTPm0_ercot_seq_test','inputs_case')
 
     #%% Inputs from switches
@@ -502,8 +502,8 @@ if __name__ == '__main__':
 
     #%% Parse arguments
     parser = argparse.ArgumentParser(description="calc_financial_inputs.py")
-    parser.add_argument("reeds_path", help="ReEDS-2.0 directory")
-    parser.add_argument("inputs_case", help="ReEDS-2.0/runs/{case}/inputs_case directory")
+    parser.add_argument("reeds_path", help="ReEDS directory")
+    parser.add_argument("inputs_case", help="ReEDS/runs/{case}/inputs_case directory")
     
     args = parser.parse_args()
     reeds_path = args.reeds_path

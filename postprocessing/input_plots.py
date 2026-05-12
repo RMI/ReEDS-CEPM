@@ -957,7 +957,7 @@ if __name__ == '__main__':
         description='Check inputs.gdx parameters against objective_function_params.yaml',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument('case', help='ReEDS-2.0/runs/{case} directory')
+    parser.add_argument('case', help='ReEDS/runs/{case} directory')
     parser.add_argument(
         '--write', '-w', choices=['png', 'ppt', 'pptx'], default='png',
         help='Output format (png or pptx)')

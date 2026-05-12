@@ -18,9 +18,9 @@ Long-Term Electricity System Models. Golden, CO: National Renewable Energy Labor
 
 ## Usage
 
-- `cd` to the REEDS-2.0/postprocessing/retail_rate_module directory
+- `cd` to the ReEDS/postprocessing/retail_rate_module directory
 - Run the retail_rate_calculations.py script, with the name of a run folder as a required argument input. For example:
-  - `D:\username\ReEDS-2.0\postprocessing\retail_rate_module> python retail_rate_calculations.py v20200806_retailtest_MidCase`
+  - `D:\username\ReEDS\postprocessing\retail_rate_module> python retail_rate_calculations.py v20200806_retailtest_MidCase`
 
 ## Outputs
 

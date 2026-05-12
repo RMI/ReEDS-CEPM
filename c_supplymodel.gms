@@ -465,7 +465,7 @@ eq_loadsite_siting(loadsitereg,t)
 * ---------------------------------------------------------------------------
 
 *The following 3 equations apply to the flexibility of load in ReEDS, originally developed
-*as part of the EFS study in ReEDS heritage and adapted for ReEDS-2.0 here.
+*as part of the EFS study in ReEDS heritage and adapted for ReEDS here.
 
 * Additional work has been done to represent flexible load as a generator + storage
 * with boundaries on how many timeslices this generator may shift. See equations

@@ -923,8 +923,8 @@ if __name__ == '__main__':
     #%% Parse arguments
     parser = argparse.ArgumentParser(
         description='Create the necessary 8760 and capacity factor data for hourly resolution')
-    parser.add_argument('reeds_path', help='ReEDS-2.0 directory')
-    parser.add_argument('inputs_case', help='ReEDS-2.0/runs/{case}/inputs_case directory')
+    parser.add_argument('reeds_path', help='ReEDS directory')
+    parser.add_argument('inputs_case', help='ReEDS/runs/{case}/inputs_case directory')
 
     args = parser.parse_args()
     reeds_path = args.reeds_path

@@ -82,19 +82,19 @@ The first case in the list is treated as the base case, and other cases are all 
 Example for two cases:
 
 ```bash
-python postprocessing/compare_cases.py /Users/username/github/ReEDS-2.0/runs/v20250310_main_USA /Users/username/github/ReEDS-2.0/runs/v20250310_newthing_USA
+python postprocessing/compare_cases.py /Users/username/github/ReEDS/runs/v20250310_main_USA /Users/username/github/ReEDS/runs/v20250310_newthing_USA
 ```
 
 Example for three cases:
 
 ```bash
-python postprocessing/compare_cases.py /Users/username/github/ReEDS-2.0/runs/v20250310_main_USA /Users/username/github/ReEDS-2.0/runs/v20250310_newthing1_USA /Users/username/github/ReEDS-2.0/runs/v20250310_newthing2_USA
+python postprocessing/compare_cases.py /Users/username/github/ReEDS/runs/v20250310_main_USA /Users/username/github/ReEDS/runs/v20250310_newthing1_USA /Users/username/github/ReEDS/runs/v20250310_newthing2_USA
 ```
 
 Example for a .csv file of cases:
 
 ```bash
-python postprocessing/compare_cases.py /Users/username/github/ReEDS-2.0/postprocessing/example.csv
+python postprocessing/compare_cases.py /Users/username/github/ReEDS/postprocessing/example.csv
 ```
 
 ### Run PRAS: `postprocessing/run_reeds2pras.py`

@@ -166,7 +166,7 @@ if __name__ == '__main__':
     inputs_case = os.path.join(args.inputs_case, '')
 
     # #%% Settings for testing
-    # reeds_path = os.path.expanduser('~/github/ReEDS-2.0')
+    # reeds_path = os.path.expanduser('~/github/ReEDS')
     # inputs_case = os.path.join(reeds_path,'runs','v20220411_prmM0_USA2060','inputs_case')
 
     #%% Settings for debugging
@@ -200,7 +200,7 @@ if __name__ == '__main__':
     #%%###################
     ### Derived inputs ###
 
-    ### Get the case name (ReEDS-2.0/runs/{casename}/inputscase/)
+    ### Get the case name (ReEDS/runs/{casename}/inputscase/)
     casename = inputs_case.split(os.sep)[-3]
 
     ### DEBUG: Make the outputs directory

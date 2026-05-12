@@ -14,7 +14,7 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
     """
     """
     # #%% Arguments for testing
-    # casepath = os.path.expanduser('~/github/ReEDS-2.0/runs/v20230512_prasM0_ERCOT')
+    # casepath = os.path.expanduser('~/github/ReEDS/runs/v20230512_prasM0_ERCOT')
     # t = 2020
     # onlygams = 0
     # iteration = 0

@@ -96,7 +96,6 @@
   - **File Type:** Switches file
   - **Description:** Contains the configuration settings for the ReEDS run(s).
   - **Dollar year:** 2004
-  - **Citation:** [https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/38e6610a8c6a92291804598c95c11b707bf187b9/cases.csv](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/38e6610a8c6a92291804598c95c11b707bf187b9/cases.csv)
 ---
 
 - [cases_county.csv](/cases_county.csv)

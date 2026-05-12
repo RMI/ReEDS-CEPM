@@ -105,7 +105,7 @@ def errorcheck_reeds2pras(casedir, csvout, h5out):
 def main(t, casedir, iteration=0):
     #%%### DEBUGGING: Inputs
     # t = 2020
-    # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0')
+    # reeds_path = os.path.expanduser('~/github2/ReEDS')
     # casedir = os.path.join(reeds_path,'runs','v20230214_PRMaugurM0_Pacific_d7fIrh4_CC_y2012')
 
     #%%### Get inputs from ReEDS

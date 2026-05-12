@@ -127,7 +127,7 @@ TECH = {
 def main(reeds_path, inputs_case, agglevel, regions):
     
     # #%% Settings for testing
-    #reeds_path = "/Users/apham/Documents/GitHub/ReEDS/ReEDS-2.0/"
+    #reeds_path = "/Users/apham/Documents/GitHub/ReEDS/ReEDS/"
     #inputs_case = os.path.join(reeds_path,'runs','test_newNEMS_OR_water','inputs_case')
 
 

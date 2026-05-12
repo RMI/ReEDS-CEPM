@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(
     description='Check inputs.gdx parameters against objective_function_params.yaml',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
 )
-parser.add_argument('casepath', help='ReEDS-2.0/runs/{case} directory')
+parser.add_argument('casepath', help='ReEDS/runs/{case} directory')
 args = parser.parse_args()
 casepath = args.casepath
 

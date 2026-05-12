@@ -25,15 +25,15 @@ tic = datetime.datetime.now()
 #%% Parse arguments
 parser = argparse.ArgumentParser(description="""This file organizes fuel cost data by techonology""")
 
-parser.add_argument("reeds_path", help='ReEDS-2.0 directory')
-parser.add_argument("inputs_case", help='ReEDS-2.0/runs/{case}/inputs_case directory')
+parser.add_argument("reeds_path", help='ReEDS directory')
+parser.add_argument("inputs_case", help='ReEDS/runs/{case}/inputs_case directory')
 
 args = parser.parse_args()
 reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing
-# reeds_path = 'd:\\Danny_ReEDS\\ReEDS-2.0'
+# reeds_path = 'd:\\Danny_ReEDS\\ReEDS'
 # reeds_path = os.getcwd()
 # inputs_case = os.path.join('runs','nd5_ND','inputs_case')
 

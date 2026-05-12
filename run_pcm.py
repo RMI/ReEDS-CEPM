@@ -298,7 +298,7 @@ if __name__ == '__main__':
         description='Run ReEDS in PCM mode',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument('casepath', type=str, help='ReEDS-2.0/runs/{case} directory')
+    parser.add_argument('casepath', type=str, help='ReEDS/runs/{case} directory')
     parser.add_argument(
         '--year',
         '-t',

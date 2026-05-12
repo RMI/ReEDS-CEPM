@@ -18,11 +18,11 @@ function parse_commandline()
 
     @ArgParse.add_arg_table s begin
         "--reeds_path"
-            help = "Path to ReEDS-2.0 folder"
+            help = "Path to ReEDS folder"
             arg_type = String
             required = true
         "--reedscase"
-            help = "Path to ReEDS run (usually .../ReEDS-2.0/runs/{casename})"
+            help = "Path to ReEDS run (usually .../ReEDS/runs/{casename})"
             arg_type = String
             required = true
         "--solve_year"
@@ -441,11 +441,11 @@ end
 #%% Procedure
 if abspath(PROGRAM_FILE) == @__FILE__
     #%% Inputs for debugging
-    # julia --project=/path/to/ReEDS-2.0 --threads=1
+    # julia --project=/path/to/ReEDS --threads=1
     # args = Dict(
-    #     "reeds_path" => "/path/to/ReEDS-2.0",
+    #     "reeds_path" => "/path/to/ReEDS",
     #     "reedscase" => (
-    #         "/path/to/ReEDS-2.0/runs/"
+    #         "/path/to/ReEDS/runs/"
     #         *"runname"),
     #     "solve_year" => 2035,
     #     "weather_year" => 2007,

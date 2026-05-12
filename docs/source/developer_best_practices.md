@@ -3,7 +3,7 @@
 
 The following naming, rounding, and coding conventions apply to all new code contributed to ReEDS. Because these conventions were established after initial development, you may notice inconsistencies in the existing codebase--that's expected. The goal is consistency going forward, not comprehensiveness.
 
-Using the Ruff Python linter is recommended to improve code quality. To get started with Ruff, see the guide on [Installing Ruff](https://docs.astral.sh/ruff/installation/). Once installed, you can check for errors using the following command from the base ReEDS-2.0 directory: `ruff check`. If you need more information on a specific error, see the [Ruff Rules](https://docs.astral.sh/ruff/rules/).
+Using the Ruff Python linter is recommended to improve code quality. To get started with Ruff, see the guide on [Installing Ruff](https://docs.astral.sh/ruff/installation/). Once installed, you can check for errors using the following command from the base ReEDS directory: `ruff check`. If you need more information on a specific error, see the [Ruff Rules](https://docs.astral.sh/ruff/rules/).
 
 Since we have not yet adopted strict formatting guidelines, do not make code *formatting* changes to existing scripts using Ruff; use only the linter.
 
@@ -227,7 +227,7 @@ The goal is to keep ReEDS as lightweight as possible to facilitate faster clonin
 
 ## Version Control and Testing
 ### ReEDS Versioning & Releases
-This section outlines the current ReEDS approach to versioning. You can find current and past ReEDS versions here: {{ '[ReEDS-2.0 Releases]({}/releases)'.format(base_github_url) }}
+This section outlines the current ReEDS approach to versioning. You can find current and past ReEDS versions here: {{ '[ReEDS Releases]({}/releases)'.format(base_github_url) }}
 
 #### Versioning overview
 
@@ -332,7 +332,7 @@ If you would like to see what the documentation will look like when developing l
 2. Run the command `make html` to build the documentation locally
    - Ensure you have the 'reeds2' environment activated
   
-3. Open `/ReEDS-2.0/docs/build/html/index.html` to view the documentation.
+3. Open `/ReEDS/docs/build/html/index.html` to view the documentation.
    - If you make changes and wish to see how they are reflected in the documentation, you can run the `make html` command again and refresh the window you already have open
 
 4. If you would like to remove the generated html files, you can run the command `make clean` from the "docs/" folder
@@ -348,7 +348,7 @@ If you would like to see what the documentation will look like when developing l
 2. Request access to the ReEDS Zotero library from Brian, Patrick, or Wesley
 
 3. If you add any new references to the ReEDS Zotero library and cite them in the ReEDS docs, you'll need to:
-   a. Replace the contents of ReEDS-2.0/docs/source/references.bib with the contents of the .bib file at {your path}. Make sure to export your .bib file in a "Better BibTex" format.
+   a. Replace the contents of ReEDS/docs/source/references.bib with the contents of the .bib file at {your path}. Make sure to export your .bib file in a "Better BibTex" format.
 
 
 To add an in-text citation, find the citation key of the citation you would like to add in Zotero.
@@ -596,8 +596,8 @@ When using the python debugger, you will need to set a configuration. Here's an 
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "/Users/kminderm/ReEDS-2.0",
-                "/Users/kminderm/ReEDS-2.0/runs/main_Pacific/inputs_case"
+                "/Users/kminderm/ReEDS",
+                "/Users/kminderm/ReEDS/runs/main_Pacific/inputs_case"
             ],
             "purpose": ["debug-in-terminal"]
         },
