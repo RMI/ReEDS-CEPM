@@ -854,6 +854,7 @@ def setupEnvironment(
         single=single,
         skip_checks=skip_checks,
     )
+    all_case_names = list(df_cases.columns)
     ## Propagate debug setting
     if debug:
         df_cases.loc['debug'] = str(debug)
@@ -885,8 +886,8 @@ def setupEnvironment(
         for s in single.split(','):
             if s not in df_cases:
                 err = (
-                    f'Specified single={single} but available cases are:\n'
-                    + '\n> '.join([c for c in df_cases.columns])
+                    f'Specified single={single} but available cases are: '
+                    + ', '.join([c for c in df_cases.columns])
                 )
                 raise KeyError(err)
         df_cases = df_cases[single.split(',')].copy()
@@ -896,6 +897,9 @@ def setupEnvironment(
     outpaths = [os.path.join(reeds_path,'runs',f'{BatchName}_{case}') for case in casenames]
     existing_outpaths = [i for i in outpaths if os.path.isdir(i)]
     if len(existing_outpaths):
+        if len(existing_outpaths) == 0:
+            print('Existing output directories were not overwritten. Exiting without starting runs.')
+            quit()
         print(
             f'The following {len(existing_outpaths)} output directories already exist:\n'
             + 'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n'
@@ -908,6 +912,9 @@ def setupEnvironment(
                 shutil.rmtree(outpath)
         else:
             keep = [i for (i,c) in enumerate(outpaths) if c not in existing_outpaths]
+            if len(keep) == 0:
+                print('All output directories already exist and were not overwritten. Exiting without starting runs.')
+                quit()
             caseList = [caseList[i] for i in keep]
             casenames = [casenames[i] for i in keep]
             caseSwitches = [caseSwitches[i] for i in keep]
@@ -920,6 +927,11 @@ def setupEnvironment(
             skip = str(input('Do you want to run them and skip the rest? [y]/n: ') or 'y')
             if skip.lower() not in ['y','yes']:
                 raise IsADirectoryError('\n'+'\n'.join(existing_outpaths))
+
+    # Exit early if no runnable cases remain after filtering
+    if len(caseList) == 0:
+        print(f"All {len(all_case_names)} scenario(s) in {cases_filename} have ignore=1. Exiting without starting runs.")
+        quit()
 
     #%% User warnings
     if (df_cases.loc['cleanup_level'].astype(int) > 0).any() and not skip_checks:
@@ -951,6 +963,9 @@ def setupEnvironment(
         WORKERS = simult_runs
     else:
         WORKERS = int(input('Number of simultaneous runs [integer]: '))
+        if WORKERS <=0:
+            print('Number of simultaneous runs must be at least 1. Exiting.')
+            quit()
 
     if 'int' in df_cases.loc['timetype'].tolist() or 'win' in df_cases.loc['timetype'].tolist():
         ccworkers = int(input('Number of simultaneous CC/Curt runs [integer]: '))
