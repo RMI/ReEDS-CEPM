@@ -317,7 +317,6 @@ def plot_pras_samples(
     tend='2012-08-07',
     plottype='outage',
     drawload=False,
-    region='country/USA',
     year=2050,
     iteration='last',
     samples=None,
@@ -339,7 +338,7 @@ def plot_pras_samples(
         reeds.io.get_last_iteration(case, t) if iteration in [None, 'last']
         else iteration
     )
-    rs = reeds.inputs.parse_regions(region, case)
+    rs = reeds.inputs.parse_regions(case)
 
     bokehcolors, plotorder = reeds.reedsplots.get_tech_colors_order(order='fuel_storage_vre')
 

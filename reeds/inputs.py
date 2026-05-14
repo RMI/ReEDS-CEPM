@@ -17,47 +17,35 @@ import reeds
 from input_processing import mcs_sampler
 
 ### Functions
-def parse_regions(case_or_string, case=None):
+def parse_regions(case:str|Path|None=None, **kwargs) -> list:
     """
+    Get the list of active model zones.
+
     Inputs
     ------
-    case_or_string: path to a ReEDS case or a parseable string in the format of GSw_Region
-    case: path to a ReEDS case. Only used if case_or_string is not a ReEDS case. Should be
-        used if you want to select a subset of model zones from a ReEDS case that used
-        region aggregation.
+    case: Filepath to a ReEDS case or None. If None, the defaults from cases.csv are used.
+    **kwargs: key/value pairs from cases.csv that override the values in the provided case.
+        The only relevant switches here are GSw_ZoneSet and GSw_Region.
 
     Returns
     -------
-    np.array of zone names
-        - If case_or_string is a case, return the regions modeled in the run
-        - If case_or_string is a parseable string in the format of GSw_Region, return
-          the regions that obey that string
+    list of zone names
 
     Examples
     --------
-    parse_regions('transreg/NYISO') -> ['p127', 'p128']
-    parse_regions('st/PA') -> ['p115', 'p119', 'p120', 'p122']
-    parse_regions('st/PA', 'path/to/case/using/region/aggregation') -> ['p115', 'p120', 'z122']
+    parse_regions(GSw_ZoneSet='z134', GSw_Region='transreg/NYISO') -> ['p127', 'p128']
+    parse_regions(GSw_ZoneSet='z134', GSw_Region='st/PA') -> ['p115', 'p119', 'p120', 'p122']
+    parse_regions(GSw_ZoneSet='z132', GSw_Region='st/PA') -> ['p115', 'p120', 'z122']
     """
-    if os.path.exists(case_or_string):
-        sw = reeds.io.get_switches(case_or_string)
-        hierarchy = reeds.io.get_hierarchy(case_or_string)
-        GSw_Region = sw['GSw_Region']
-    ## Provide case argument if using aggregated regions
-    elif os.path.exists(str(case)):
-        hierarchy = reeds.io.get_hierarchy(case)
-        GSw_Region = case_or_string
-    else:
-        hierarchy = reeds.io.get_hierarchy()
-        GSw_Region = case_or_string
-
-    level, regions = GSw_Region.split('/')
-    regions = regions.split('.')
-    if level in ['r', 'ba']:
-        rs = [r for r in hierarchy.index if r in regions]
-    else:
-        rs = hierarchy.loc[hierarchy[level].isin(regions)].index
-    return rs
+    sw = reeds.io.get_switches(case, **kwargs)
+    hierarchy = reeds.io.assemble_hierarchy(case, **kwargs)
+    region_groups = sw.GSw_Region.split('//')
+    zones = []
+    for region_group in region_groups:
+        level, _regions = region_group.split('/')
+        regions = _regions.split('.')
+        zones.extend(hierarchy.loc[hierarchy[level].isin(regions), 'r'].tolist())
+    return zones
 
 
 def parse_yearset(yearset:str) -> list:

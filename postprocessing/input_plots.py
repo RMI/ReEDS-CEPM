@@ -98,7 +98,6 @@ def plot_profile(
     case,
     datum='demand',
     year=0,
-    region=None,
     weatheryears=None,
     color='k',
     hourly=False,
@@ -117,7 +116,7 @@ def plot_profile(
     ## Parse inputs
     sw = reeds.io.get_switches(case)
     t = reeds.io.get_years(case)[-1] if year in [0, None, 'last'] else year
-    rs = reeds.inputs.parse_regions((region if region else case), case)
+    rs = reeds.inputs.parse_regions(case)
     if weatheryears is None:
         weatheryears = sw.resource_adequacy_years_list
     elif isinstance(weatheryears, int):
