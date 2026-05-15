@@ -618,7 +618,6 @@ def get_distances(case=None, errors='raise', **kwargs) -> pd.DataFrame:
         errors=errors,
         **kwargs,
     )
-    ## TODO: Add offshore and onshore-to-offshore
     return distances_land
 
 

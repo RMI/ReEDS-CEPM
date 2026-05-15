@@ -558,6 +558,29 @@ def calculate_co2_storage_routes(dfzones, max_miles=200):
     return routes_cs
 
 
+def check_nonac_costs(trancap_fut, trancap_init_energy, transmission_cost_nonac):
+    """Make sure every non-AC transmission route has a cost"""
+    routecols = ['r', 'rr', 'trtype']
+    rename = {'r':'rr', 'rr':'r'}
+    ## Add both directions and sort them
+    routes = pd.concat([
+        trancap_fut[routecols],
+        trancap_fut.rename(columns=rename)[routecols],
+        trancap_init_energy[routecols],
+        trancap_init_energy.rename(columns=rename)[routecols],
+    ])
+    routes.r, routes.rr = routes[['r','rr']].min(axis=1), routes[['r','rr']].max(axis=1)
+    routes = routes.loc[routes.trtype != 'AC'].drop_duplicates()
+    ## Make sure each has a cost
+    dfcost = transmission_cost_nonac.copy()
+    dfcost.r, dfcost.rr = dfcost[['r','rr']].min(axis=1), dfcost[['r','rr']].max(axis=1)
+    dftest = routes.merge(dfcost, on=routecols, how='left').set_index(routecols).squeeze(1)
+    missing = dftest.loc[dftest.isnull()]
+    if len(missing):
+        print(missing)
+        raise ValueError(f'Missing non-AC transmission costs for {len(missing)} routes')
+
+
 #%% Main function
 def main(case):
     #%% Calculate parameters
@@ -583,6 +606,12 @@ def main(case):
             case=case, interface_params=interface_params, level=level,
         )
     outputs['trancap_init_prm'] = outputs['trancap_init_energy']
+
+    check_nonac_costs(
+        trancap_fut=outputs['trancap_fut'],
+        trancap_init_energy=outputs['trancap_init_energy'],
+        transmission_cost_nonac=outputs['transmission_cost_nonac'],
+    )
 
     ### TEMPORARY 20260402: Skip itlgrp functionality until we fix it
     # ### Also write itlgrp capacity
@@ -677,7 +706,8 @@ if __name__ == '__main__':
     case = Path(args.inputs_case).parent
 
     # #%% Settings for testing ###
-    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260507_transcostM2_MARICTNYNJPAOH_Offshore'))
+    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260514_transcostM0_MARICTNYNJPAOH_Offshore'))
+    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260515_transcostM0_USA_fast'))
 
     #%% Set up logger
     log = reeds.log.makelog(scriptname=__file__, logpath=Path(case, 'gamslog.txt'))
