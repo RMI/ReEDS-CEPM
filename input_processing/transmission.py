@@ -28,6 +28,17 @@ def keep_longer_entry(df:pd.DataFrame) -> pd.DataFrame:
     return dfout
 
 
+def include_reverse_direction(df:pd.Series, indices=['r', 'rr', 'trtype']):
+    """Add duplicate values for (rr,r) direction"""
+    assert (('r' in indices) and ('rr' in indices))
+    reverse = (
+        df.reset_index().rename(columns={'r':'rr', 'rr':'r'})
+        .set_index(indices).squeeze(1)
+    )
+    dfout = pd.concat([df, reverse])
+    return dfout
+
+
 def get_interface_params(case):
     """Get cost and distance for every interface that might be used in this run"""
     sw = reeds.io.get_switches(case)
@@ -125,6 +136,7 @@ def get_interface_params(case):
 
 
 def get_trancap_fut(case):
+    """Get certain and possible transmission additions"""
     sw = reeds.io.get_switches(case)
     scalars = reeds.io.get_scalars(case)
     ## Always-included lines
@@ -338,20 +350,8 @@ def get_trancap_init(case, interface_params, level='r'):
     return dfout
 
 
-def include_reverse_direction(df:pd.Series, indices=['r', 'rr', 'trtype']):
-    """Add duplicate values for (rr,r) direction"""
-    assert (('r' in indices) and ('rr' in indices))
-    reverse = (
-        df.reset_index().rename(columns={'r':'rr', 'rr':'r'})
-        .set_index(indices).squeeze(1)
-    )
-    dfout = pd.concat([df, reverse])
-    return dfout
-
-
 def get_transmission_fom(case, interface_params):
-    """
-    """
+    """Get transmission fixed operations & maintenance (FOM) costs"""
     sw = reeds.io.get_switches(case)
     scalars = reeds.io.get_scalars(case)
 
@@ -388,6 +388,7 @@ def get_transmission_fom(case, interface_params):
 
 
 def convert_to_tsc(interface_params, dollar_year=2004):
+    """Convert greenfield costs into single-bin transmission upgrade supply curves (TSC)"""
     transmission_cost_ac = interface_params.loc[
         interface_params.trtype=='AC',
         ['r', 'rr', f'USD{dollar_year}perMW']
@@ -412,8 +413,7 @@ def convert_to_tsc(interface_params, dollar_year=2004):
 
 
 def get_transmission_cost(case, interface_params):
-    """
-    """
+    """Get ReEDS-formatted AC transmission upgrade cost curves"""
     sw = reeds.io.get_switches(case)
     if sw.GSw_TransUpgradeMethod == 'greenfield':
         transmission_cost_ac = convert_to_tsc(interface_params, sw.dollar_year)
@@ -447,6 +447,7 @@ def get_transmission_cost(case, interface_params):
 
 
 def get_transmission_cost_nonac(case, interface_params):
+    """Get HVDC and B2B costs"""
     transmission_cost_nonac = interface_params.loc[
         interface_params.trtype != 'AC',
         ['r', 'rr', 'trtype', f'USD{reeds.io.get_switches(case).dollar_year}perMW']
@@ -456,6 +457,7 @@ def get_transmission_cost_nonac(case, interface_params):
 
 
 def get_hurdle_rates(case, hurdle_level=1):
+    """Get hurdle rates on transmission flows (wheeling charges) used in this run"""
     sw = reeds.io.get_switches(case)
     cost_hurdle_intra = (
         pd.read_csv(Path(reeds.io.reeds_path, 'inputs', 'transmission', 'cost_hurdle_intra.csv'))
@@ -733,7 +735,6 @@ if __name__ == '__main__':
     case = Path(args.inputs_case).parent
 
     # #%% Settings for testing ###
-    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260514_transcostM0_MARICTNYNJPAOH_Offshore'))
     # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260515_transcostM0_USA_fast'))
 
     #%% Set up logger
