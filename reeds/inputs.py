@@ -636,7 +636,12 @@ def get_hvdc_lines(filename='hvdc_lines.csv'):
     return dfdc
 
 
-def map_hvdc_lines_to_interfaces(case=None, filename='hvdc_lines.csv', **kwargs) -> pd.DataFrame:
+def map_hvdc_lines_to_interfaces(
+    case=None,
+    filename='hvdc_lines.csv',
+    dtype:Literal['capacity', 'cost']='capacity',
+    **kwargs,
+) -> pd.DataFrame:
     """
     Assign HVDC line capacity to interfaces by mapping start/end points to zones
 
@@ -664,15 +669,19 @@ def map_hvdc_lines_to_interfaces(case=None, filename='hvdc_lines.csv', **kwargs)
         dfdc.loc[dfdc.zone_from != dfdc.zone_to].dropna()
         .rename(columns={'zone_from':'r', 'zone_to':'rr'})
     ).copy()
-    ## Normalize from/to order and sum capacity for each interface
+    ## Normalize from/to order
     for index, row in dfcap.iterrows():
         for side, r in enumerate(['r', 'rr']):
             dfcap.loc[index, r] = sorted(row[['r','rr']])[side]
-    dfout = (
-        dfcap
-        .groupby(['r', 'rr', 'trtype', 'year_online', 'certain'])
-        [['name', 'MW']].agg({'MW':sum, 'name':list})
-    )
+    if dtype == 'capacity':
+        ## Sum capacity for each interface
+        dfout = (
+            dfcap
+            .groupby(['r', 'rr', 'trtype', 'year_online', 'certain'])
+            [['name', 'MW']].agg({'MW':sum, 'name':list})
+        )
+    else:
+        dfout = dfcap.copy()
     return dfout
 
 

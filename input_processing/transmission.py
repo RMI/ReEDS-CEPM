@@ -12,17 +12,44 @@ tic = datetime.datetime.now()
 
 
 #%% Functions
+def sort_regions(df:pd.DataFrame) -> pd.DataFrame:
+    """Sort r and rr columns alphabetically"""
+    dfout = df.copy()
+    dfout.r, dfout.rr = dfout[['r','rr']].min(axis=1), dfout[['r','rr']].max(axis=1)
+    return dfout
+
+
+def keep_longer_entry(df:pd.DataFrame) -> pd.DataFrame:
+    """For duplicate entries, keep the version with the longer route"""
+    dfout = (
+        df.sort_values('length_miles', ascending=False)
+        .drop_duplicates(['r','rr','polarity','voltage'], keep='first')
+    )
+    return dfout
+
+
 def get_interface_params(case):
-    """
-    """
+    """Get cost and distance for every interface that might be used in this run"""
     sw = reeds.io.get_switches(case)
     scalars = reeds.io.get_scalars(case)
 
     interface_params = reeds.inputs.get_distances(case)
     ## Swapping the start/end points sometimes gives slightly different routes,
     ## resulting in duplicate values. So drop duplicates, keeping the longer route.
+    interface_params = keep_longer_entry(interface_params)
+    ## Include info for individual lines
+    individual_lines = reeds.inputs.map_hvdc_lines_to_interfaces(
+        case=case, filename='transmission_cost_distance_lines.csv',
+        dtype='cost',
+    )
+    individual_lines = keep_longer_entry(sort_regions(individual_lines))
+    keepcols = ['r', 'rr', 'polarity', 'voltage', 'cost_MUSD', 'length_miles']
+    ## Only keep the individual-line values that are not already included.
+    ## (We want to use the zone-geometry-specific endpoints wherever possible;
+    ## the individual-line values are just a fallback.)
     interface_params = (
-        interface_params.sort_values('length_miles', ascending=False)
+        pd.concat([interface_params, individual_lines])
+        [keepcols]
         .drop_duplicates(['r','rr','polarity','voltage'], keep='first')
     )
     ## Make sure there are no duplicates
