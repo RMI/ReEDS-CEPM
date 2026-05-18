@@ -56,6 +56,12 @@ Calculated using the [TSC](https://github.nrel.gov/pbrown/TSC) model as describe
     - Costs for DC connections assume a 500 kV bipole architecture
     - Costs for AC connections use interface-dependent voltage assumptions.
     The voltage is given by the maximum voltage of an existing transmission line between the pair of zones defining the interface (using the same [NARIS](https://www.nrel.gov/docs/fy21osti/79224.pdf) dataset described above), with a floor of 138 kV.
+  - The MISO Transmission Cost Estimation Guide applies a 30% length adder to the straight-line distance between the endpoints of a candidate line to account for the "squiggliness" of line routes in practice.
+  Many of the least-cost routes from the reV model have a smaller squiggliness factor.
+  In `reeds/input_processing/transmission.py` (which is run at the beginning of each ReEDS run),
+  if the representative route between two zones has a squiggliness factor less than the user-provided `GSw_TransSquigglinessMin` switch (with a default of 1.3, matching the MISO guide),
+  the cost and distance of that route are scaled up by the ratio of (`GSw_TransSquigglinessMin` / (squiggliness of the least-cost route)),
+  such that every interzonal interface is represented by a line at least as squiggly as `GSw_TransSquigglinessMin`.
 
 - `transmission_cost_ac_500kv_z134.h5`: Example file illustrating the required format when using the transmission upgrade supply curve ([TSC](https://github.nrel.gov/ReEDS/TSC)) method for `GSw_ZoneSet = z134`
   - The full method is not yet supported; when implemented, it will only be supported for a limited number of `GSw_ZoneSet` definitions

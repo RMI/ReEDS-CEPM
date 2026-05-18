@@ -330,7 +330,7 @@ GSw_TransHurdleRate,Turn on (1) or off (0) hurdle rates between hierarchy region
 GSw_TransNetworkSource,Network source for the initial transmission network used in the model,NARIS2024,NARIS2024,
 GSw_TransRestrict,hierarchy level within which to allow new transmission lines,r; nercr; transreg; transgrp; cendiv; st; interconnect; country; usda_region,country,
 GSw_TransScen,Additional candidate interfaces for transmission expansion between zones,^(none|NTP_(MT|P2P))$,none,
-GSw_TransSquiggliness,Transmission distance multiplier to approximate the squigglier paths followed by actual lines (only applied to NEW lines),float,1,
+GSw_TransSquigglinessMin,Minimum squiggliness (straight-line length multiplier) to apply for interzonal transmission; the default value is from the MISO Transmission Cost Estimation Guide (https://www.misoenergy.org/planning/transmission-planning/mtep),float,1.3,
 GSw_TransUpgradeMethod,Method for calculating interzonal AC transmission expansion costs,^(greenfield|500kv)$,greenfield,
 GSw_TransGroupContraint,Indicate whether to apply flow constraint on groups of transmission interfaces,0; 1,1,
 GSw_TransGroupDerate,[fraction] amount by which to derate the capacity of grouped transmission flows for new transmission additions (0 = no derate),float,0.15,

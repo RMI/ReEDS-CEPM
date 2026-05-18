@@ -573,12 +573,13 @@ def get_interface_data(
     if dfin.index.duplicated().sum():
         raise ValueError(f'Duplicate entries in {datafile}')
     ### Get the zone hashes
+    zone_node = pd.read_csv(
+        Path(inputs, 'zones', sw.GSw_ZoneSet, 'zonehash.csv'),
+        index_col='r',
+    )
     if level == 'r':
         ## We save the zonehash for level == 'r' directly for peace of mind
-        zonehash = pd.read_csv(
-            Path(inputs, 'zones', sw.GSw_ZoneSet, 'zonehash.csv'),
-            index_col='r',
-        )[hashfunc]
+        zonehash = zone_node[hashfunc]
     else:
         ## For other levels, we calculate the zonehash from the hierarchy
         hierarchy = reeds.io.assemble_hierarchy(case, **kwargs).set_index('r')
@@ -602,7 +603,8 @@ def get_interface_data(
         dfout = dfout.merge(dfin, on=['start', 'end'], how='left')
     else:
         ## Include any connections to offshore zones for now
-        offshore_zones = reeds.io.get_offshore_zones().index.values.tolist()
+        dfoffshore = reeds.io.get_offshore_zones()
+        offshore_zones = dfoffshore.index.values.tolist()
         dfout = dfin.loc[
             (
                 dfin.start.isin(zonehash.tolist()+offshore_zones)
@@ -617,10 +619,15 @@ def get_interface_data(
         for r, side in [('r', 'start'), ('rr', 'end')]:
             dfout[r] = dfout[side].map(hash2zone)
         ## Keep them sorted
-        r = dfout[['r','rr']].min(axis=1)
-        rr = dfout[['r','rr']].max(axis=1)
-        dfout['r'] = r
-        dfout['rr'] = rr
+        dfout.r, dfout.rr = dfout[['r','rr']].min(axis=1), dfout[['r','rr']].max(axis=1)
+        ## Include the lat/lon for plotting and straight-line distance
+        zone2latlon = pd.concat([
+            dfoffshore[['node_lat','node_lon']],
+            zone_node.set_index(hashfunc)[['node_lat','node_lon']],
+        ])
+        for side in ['start', 'end']:
+            for datum in ['lat', 'lon']:
+                dfout[f'{side}_{datum}'] = dfout[side].map(zone2latlon[f'node_{datum}'])
     ### Make sure it worked
     missing = dfout.loc[dfout[datacols].isnull().any(axis=1)]
     if len(missing):
@@ -666,7 +673,7 @@ def get_itls(case=None, level:str='r', errors='raise', **kwargs) -> pd.DataFrame
 def get_distances(case=None, errors='raise', **kwargs) -> pd.DataFrame:
     """
     """
-    distances_land = get_interface_data(
+    distances = get_interface_data(
         case=case,
         datafile='transmission_cost_distance.csv',
         level='r',
@@ -674,7 +681,7 @@ def get_distances(case=None, errors='raise', **kwargs) -> pd.DataFrame:
         errors=errors,
         **kwargs,
     )
-    return distances_land
+    return distances
 
 
 def _make_line(row):

@@ -4,6 +4,7 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 import sys
+import shapely
 import datetime
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -39,12 +40,32 @@ def include_reverse_direction(df:pd.Series, indices=['r', 'rr', 'trtype']):
     return dfout
 
 
-def get_interface_params(case):
+def _make_line(row):
+    """Turn a lat/lon pair into a LineString geometry"""
+    return shapely.LineString([[row.start_lon, row.start_lat], [row.end_lon, row.end_lat]])
+
+
+def get_interface_params(case, **kwargs):
     """Get cost and distance for every interface that might be used in this run"""
-    sw = reeds.io.get_switches(case)
+    sw = reeds.io.get_switches(case, **kwargs)
     scalars = reeds.io.get_scalars(case)
 
     interface_params = reeds.inputs.get_distances(case)
+    ## Apply the minimum-squiggliness factor
+    interface_params['geometry'] = interface_params.apply(_make_line, axis=1)
+    interface_params = gpd.GeoDataFrame(interface_params, crs='EPSG:4326')
+    interface_params['straight_miles'] = (
+        interface_params.geometry.to_crs('EPSG:5070').length
+        / 1609.34
+    )
+    interface_params['squiggliness'] = interface_params.length_miles / interface_params.straight_miles
+    interface_params['multiplier'] = (
+        float(sw['GSw_TransSquigglinessMin']) / interface_params['squiggliness']
+    ).clip(lower=1)
+    interface_params.loc[:, ['cost_MUSD', 'length_miles']] = (
+        interface_params[['cost_MUSD', 'length_miles']]
+        .multiply(interface_params['multiplier'], axis=0)
+    )
     ## Swapping the start/end points sometimes gives slightly different routes,
     ## resulting in duplicate values. So drop duplicates, keeping the longer route.
     interface_params = keep_longer_entry(interface_params)
@@ -59,8 +80,7 @@ def get_interface_params(case):
     ## (We want to use the zone-geometry-specific endpoints wherever possible;
     ## the individual-line values are just a fallback.)
     interface_params = (
-        pd.concat([interface_params, individual_lines])
-        [keepcols]
+        pd.concat([interface_params[keepcols], individual_lines[keepcols]])
         .drop_duplicates(['r','rr','polarity','voltage'], keep='first')
     )
     ## Make sure there are no duplicates
@@ -109,9 +129,6 @@ def get_interface_params(case):
         interface_params['cost_MUSD'] * 1e6 / interface_params['length_miles']
     )
 
-    ## Apply the distance multiplier
-    interface_params['miles'] = interface_params['length_miles'] * float(sw.GSw_TransSquiggliness)
-
     ### Calculate losses
     tranloss_fixed = {
         'AC': 1 - scalars['converter_efficiency_ac'],
@@ -130,7 +147,7 @@ def get_interface_params(case):
         on a LCC DC line). There are two endpoints per line, so multiply fixed losses by 2.
         Note that this approach only applies for LCC DC lines; VSC AC/DC losses are applied later.
         """
-        return row.miles * tranloss_permile[row.trtype] + tranloss_fixed[row.trtype] * 2
+        return row.length_miles * tranloss_permile[row.trtype] + tranloss_fixed[row.trtype] * 2
 
     interface_params = pd.concat({
         trtype: interface_params.loc[interface_params.polarity == polarity]
@@ -138,7 +155,7 @@ def get_interface_params(case):
     }, names=('trtype', 'drop')).reset_index().drop(columns=['drop'])
     interface_params['loss'] = interface_params.apply(lambda row: _getloss(row), axis=1)
 
-    return interface_params
+    return interface_params.rename(columns={'length_miles':'miles'})
 
 
 def get_trancap_fut(case):
@@ -723,7 +740,7 @@ if __name__ == '__main__':
     case = Path(args.inputs_case).parent
 
     # #%% Settings for testing ###
-    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260515_transcostM0_USA_fast'))
+    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260518_transcostM0_Pacific'))
 
     #%% Set up logger
     log = reeds.log.makelog(scriptname=__file__, logpath=Path(case, 'gamslog.txt'))
