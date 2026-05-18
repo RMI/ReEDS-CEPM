@@ -897,9 +897,6 @@ def setupEnvironment(
     outpaths = [os.path.join(reeds_path,'runs',f'{BatchName}_{case}') for case in casenames]
     existing_outpaths = [i for i in outpaths if os.path.isdir(i)]
     if len(existing_outpaths):
-        if len(existing_outpaths) == 0:
-            print('Existing output directories were not overwritten. Exiting without starting runs.')
-            quit()
         print(
             f'The following {len(existing_outpaths)} output directories already exist:\n'
             + 'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n'
