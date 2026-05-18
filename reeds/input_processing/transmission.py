@@ -71,16 +71,22 @@ def get_interface_params(case):
         print(dup)
         raise Exception(f'{len(dup)} duplicate entries in interface_params')
 
-    ## Calculate $/MW
+    ## Get representative line capacity [MW] and calculate $/MW
     _line_params = {
         polarity: pd.read_csv(
             Path(reeds.io.reeds_path, 'inputs', 'transmission', f'conductor_{polarity}.csv'),
-            index_col='voltage_kv',
         )
         for polarity in ['ac', 'dc']
     }
+    _line_params['ac']['MVA'] = (
+        _line_params['ac'].voltage_kv * _line_params['ac'].amp
+        * np.sqrt(3) / 1e3
+    )
     _line_params['ac']['MW'] = _line_params['ac']['MVA'] * scalars['power_factor_ac']
-    line_params = pd.concat(_line_params, names=('polarity','voltage')).MW
+    line_params = pd.concat(
+        {key: df.set_index('voltage_kv') for key, df in _line_params.items()},
+        names=('polarity','voltage'),
+    ).MW
     interface_params = interface_params.merge(line_params, on=['polarity','voltage'], how='left')
 
     ## Convert to output dollaryear
