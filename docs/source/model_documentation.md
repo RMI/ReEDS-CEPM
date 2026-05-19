@@ -2460,10 +2460,11 @@ Adapted from {cite}`maiIncorporatingStressfulGrid2024`.
 
 The calculation of capacity credit for VRE is described in the [VRE capacity credit](#vre-capacity-credit) section;
 the method for storage is described in the [storage capacity credit](#storage-capacity-credit) section.
-Thermal generators are given a capacity credit of 100% in ReEDS;
-technology-specific [outage rates](#outage-rates) for thermal generators are not considered in this method
-and are instead assumed to be factored into the [planning reserve margin](#planning-reserve-margins).
 
+
+#### Thermal generation capacity credit
+
+For thermal generators (i.e. combined cycle, combustion turbine, nuclear (conventional and SMR), and steam (coal)), ReEDS estimates a seasonal capacity credit for each region/technology combination based on temperature-dependent forced outage rates (described in detail in [outage rates](#outage-rates)). To calculate each technology's contribution to the seasonal reserve margin, its nameplate capacity for each technology is multiplied by $(1 - \bar{FOR})$, where $\bar{FOR}$ is the mean forced outage rate during the top 20 net load hours cross all modeled [weather years](#weather-years) for each season. 
 
 
 #### VRE capacity credit
