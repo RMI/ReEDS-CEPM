@@ -1068,14 +1068,14 @@ def rgba2hex(rgba):
 def pre_runtime(dictin, **kw):
     """
     ### Use the code below to redefine the colormap when new scripts are added
-    augur_start = df.index.tolist().index('ReEDS_Augur/prep_data.py')
+    ra_start = df.index.tolist().index('ra/prep_data.py')
     for i, row in enumerate(df.index):
-        if i < augur_start:
+        if i < ra_start:
             colors[row.lower()] = rgba2hex(plt.cm.tab20b(i))
-        elif i < augur_start + 20:
-            colors[row.lower()] = rgba2hex(plt.cm.tab20c(i-augur_start))
+        elif i < ra_start + 20:
+            colors[row.lower()] = rgba2hex(plt.cm.tab20c(i-ra_start))
         else:
-            colors[row.lower()] = rgba2hex(plt.cm.tab20(i-augur_start-20))
+            colors[row.lower()] = rgba2hex(plt.cm.tab20(i-ra_start-20))
     """
     df = dictin['runtime'].copy()
 

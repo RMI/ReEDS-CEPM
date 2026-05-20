@@ -30,7 +30,7 @@ Hourlize is run by a call to `run_hourlize.py`, which assembles information on t
 1. Update settings in `config_base.json` as needed ([details](#config-jsons)), including `load_source`.
 1. If running on the HPC, specify run allocation or other submission settings in `inputs/configs/srun_template.sh` ([details](#config-jsons)).
 1. Run using `run_hourlize.py load` ([details](#running-hourlize)).
-1. Outputs are written to `ReEDS-2.0/inputs/load`.
+1. Outputs are written to `ReEDS/inputs/load`.
     1. If the results are intended to be used on the main branch, then after testing and quality control, upload the new profiles to the remote host as described in `preprocessing/README.md`.
     1. If the results are not intended for general use, they can still be used locally in ReEDS by setting the `GSw_LoadProfiles` switch to the absolute filepath of the resulting hourly demand file.
 
@@ -51,12 +51,12 @@ Before running resource hourlize the reV runs should be copied from their origin
 Under the appropriate tech folder (UPV, ONSHORE, OFFSHORE, etc.) create a directory with a descrptive name for the supply curves (e.g., 2023_06_06_Update). Then copy the reV supply curves and profiles into a folder called `reV`. A good approach is to use rsync; below is an example copying original reV files from Eagle to Kestrel:
 
 ```bash
-rsync -aPu [username]@eagle.hpc.nrel.gov://shared-projects/rev/projects/seto/fy23/rev/standard_scenarios/aggregation/  /projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_06_06_Update/reV
+rsync -aPu [username]@kestrel.nlr.gov://shared-projects/rev/projects/seto/fy23/rev/standard_scenarios/aggregation/  /kfs2/shared-projects/reeds/Supply_Curve_Data/UPV/2023_06_06_Update/reV
 ```
 
 ### 2. Update the rev_paths files
 
-Update the reV paths file at `ReEDS-2.0/inputs/supply_curve/rev_paths.csv`. Typically this means updating the information for whichever techs (e.g., upv, wind-ons, wind-ofs) and access cases (e.g., reference, open, limited) you want to run.
+Update the reV paths file at `ReEDS/inputs/supply_curve/rev_paths.csv`. Typically this means updating the information for whichever techs (e.g., upv, wind-ons, wind-ofs) and access cases (e.g., reference, open, limited) you want to run.
 
 Some details on the additional columns to update:
 
@@ -80,7 +80,7 @@ By default hourlize will copy the required files in your ReEDS repository (`copy
 Note that hourlize copies to only one of the shared locations (either the HPC or nrelnas01, depending on where you are running it), so even with `copy_to_shared=True` you'll want to sync up the two shared folders. When starting from the HPC, be sure to open up permissions to the supply curve outputs you've just created (e.g., `chmod -R 777 UPV/2023_06_06_Update`). Then, from your local computer, use WinSCP or rsync to copy the files from Kestrel to nrelnas01:
 
 ```bash
-rsync -aPu [username]@kestrel.nrel.gov://projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_11_02_LandCover /Volumes/ReEDS/Supply_Curve_Data/UPV
+rsync -aPu [username]@kestrel.nlr.gov://projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_11_02_LandCover /Volumes/ReEDS/Supply_Curve_Data/UPV
 ```
 
 ## Running hourlize
@@ -140,7 +140,7 @@ Each entry should be given a `casename` for the supply curve run in the format [
 
 * Supported values for `tech`: upv, wind-ofs, wind-ons.
 * Typical values for `access_case`: reference, open, or limited.
-  * Other values allowed but must match values in `access_case` column of the rev_paths file (typically at `ReEDS-2.0/inputs/supply_curve/rev_paths.csv` but can be specified in `config_base.json`).
+  * Other values allowed but must match values in `access_case` column of the rev_paths file (typically at `ReEDS/inputs/supply_curve/rev_paths.csv` but can be specified in `config_base.json`).
 
 To link a case to a custom set of config files users can add entries for `config_base` and `config_tech` in the case definition. For example, adding `config_base:test` would link that case to the settings in `config_base_test.json` instead of the typical `config_base.json` file.
 

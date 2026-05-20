@@ -3,7 +3,7 @@ caa_coal_retire_year,2032,"--year-- year in which coal capacity is forced to eit
 caa_first_year,2024,"--year-- first year in which the emissions requirements under Clean Air Act, Section 111 are active"
 caa_rate_emis_standard,0.1039,"--metric tons CO2 per MWh-- rate equivalent to average emissions from a new coal-CCS plant, assuming 90% capture rate. Emissions rate from new coal-CCS plant is 0.051956 metric tons CO2 per MWh (see emit_rate) which assumes 95% capture. For 90% capture, the emissions rate is double that or 0.1039 metric tons CO2 per MWh."
 caa_gas_max_cf,0.40,"--fraction-- maximum cf that new gas plants (CCs or CTs) can operate at without being regulated under Clean Air Act, Section 111"
-co2_capture_incentive_length,12,'--years-- length for the co2 captured incentive to be extended in d_solveoneyear if an upgrade occurs
+co2_capture_incentive_length,12,'--years-- length for the co2 captured incentive to be extended in 4_post_solve_adjustments.gms if an upgrade occurs
 co2_capture_incentive_last_year_,2038,'--year-- last year the co2 captured incentive is available
 co2_emissions_2022,1539.251,"--million metric tons CO2-- 2022 emissions (used for tax credit phaseout)"
 coal_fom_adj,97.05,"--2004$/MW-year-- FOM cost annual escalation factor for coal. The product of this number and the coal plant's age is added to the plant's FOM cost. See page 17 of Assumptions to the Annual Energy Outlook 2025: Electricity Market Module."
@@ -66,7 +66,7 @@ normfuelbinmin,0.6,"bottom cutoff for natural gas supply curve"
 nuke_fom_adj,13261.21,"--2004$/MW-- FOM cost escalation factor for nuclear. This is added to the FOM cost of nuclear plants that are older than the scalar nuke_fom_adj_age_threshold. See page 17 of Assumptions to the Annual Energy Outlook 2025: Electricity Market Module."
 nuke_fom_adj_age_threshold,50,"Age beyond which the scalar nuke_fom_adj is added to the FOM cost of nuclear plants. See page 17 of Assumptions to the Annual Energy Outlook 2025: Electricity Market Module."
 reduced_resource_frac,0.5,"--fraction-- fraction by which to reduce resource when Sw_ReducedResource=1"
-reg_energy_frac,0.15,"--fraction-- fraction of regulating reserves that produces energy. from Page 7 (pdf page 16) of https://www.nrel.gov/docs/fy14osti/60568.pdf"
+reg_energy_frac,0.15,"--fraction-- fraction of regulating reserves that produces energy. from Page 7 (pdf page 16) of https://www.nlr.gov/docs/fy14osti/60568.pdf"
 RGGI_start_yr,2012,"--year-- RGGI start year"
 rhs_tolerance,1e-6,"--unitless-- tolerance for setting the right-hand-side (rhs) values of specified equations to be zero"
 smr_capture_rate,0.9,"--fraction-- capture rate of CO2 for SMR with CCS"

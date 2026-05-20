@@ -1,7 +1,7 @@
 # Transmission input files
 
 - `b2b_converters.csv`: Power capacity and location of back-to-back (B2B) AC/DC/AC converters in the USA.
-  - Power capacities are from [Brinkman et al. 2020](https://docs.nrel.gov/docs/fy21osti/78161.pdf) for converters at the eastern/western interface and [ERCOT 2020](https://www.ercot.com/files/docs/2020/07/30/ERCOT_DC_Tie_Operations_Document.docx) for converters at the eastern/texas interface.
+  - Power capacities are from [Brinkman et al. 2020](https://docs.nlr.gov/docs/fy21osti/78161.pdf) for converters at the eastern/western interface and [ERCOT 2020](https://www.ercot.com/files/docs/2020/07/30/ERCOT_DC_Tie_Operations_Document.docx) for converters at the eastern/texas interface.
   - Locations are from the [Open Infrastructure Map](https://openinframap.org/#4.1/40.65/-97.11).
   The `osm_id` column gives the OpenStreetMap ID of the converter; for example, the "Miles City, MT" converter (with `osm_id = 137835349`) can be found at <https://www.openstreetmap.org/way/137835349>.
   This file is used to validate the interface-level B2B capacity for different spatial resolutions stored at `inputs/zones/{GSw_ZoneSet}/b2b.csv`.
@@ -17,7 +17,7 @@ These lines are mapped to ReEDS zone interfaces during input processing.
 Metadata only; not used directly in ReEDS.
 
 - `itl_NARIS.csv`: Database of initial forward/reverse AC ITLs [MW] between pairs of connected ReEDS model zones for all supported zone resolutions.
-Calculated using the [TSC](https://github.nrel.gov/pbrown/TSC) model as described by [Brown et al.](https://arxiv.org/abs/2308.03612) using nodal network data from [NARIS](https://www.nrel.gov/docs/fy21osti/79224.pdf).
+Calculated using the [TSC](https://github.nrel.gov/pbrown/TSC) model as described by [Brown et al.](https://arxiv.org/abs/2308.03612) using nodal network data from [NARIS](https://www.nlr.gov/docs/fy21osti/79224.pdf).
   - The zone identifier is the md5 hash of the ','-delimited sorted list of 5-digit FIPS codes for the counties that define the zone.
     - For example, Delaware is 3 counties, with FIPS codes 10001, 10003, and 10005.
     Its delimited string is `10001,10003,10005`, and the md5 hash of that string is `a182e260da3f30b54260bf499f0db584`.

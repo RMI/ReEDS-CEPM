@@ -13,7 +13,7 @@ from pathlib import Path
 from warnings import warn
 sys.path.append(str(Path(__file__).parent.parent))
 import reeds
-from input_processing import mcs_sampler
+from reeds.input_processing import mcs_sampler
 
 ### Functions
 def parse_regions(case_or_string, case=None):
@@ -336,6 +336,62 @@ def parse_cases(
     )
 
     return dfcases_out
+
+
+def solvestring_sequential(
+        batch_case, caseSwitches,
+        cur_year, next_year, prev_year, restartfile,
+        toLogGamsString=' logOption=4 logFile=gamslog.txt appendLog=1 ',
+        hpc=0, iteration=0, stress_year=None,
+        temporal_inputs='rep',
+    ):
+    """
+    Typical inputs:
+    * restartfile: batch_case if first solve year else {batch_case}_{prev_year}
+    * caseSwitches: loaded from {batch_case}/inputs_case/switches.csv
+    """
+    savefile = f"{batch_case}_{cur_year}i{iteration}"
+    _stress_year = f"{cur_year}i0" if stress_year is None else stress_year
+    out = (
+        f"gams {Path('reeds','core','solve','3_solve_oneyear.gms')}"
+        + (" license=gamslice.txt" if hpc else '')
+        + " o=" + os.path.join("lstfiles", f"{savefile}.lst")
+        + " r=" + os.path.join("g00files", restartfile)
+        + " gdxcompress=1"
+        + " xs=" + os.path.join("g00files", savefile)
+        + toLogGamsString
+        + f" --case={batch_case}"
+        + f" --cur_year={cur_year}"
+        + f" --next_year={next_year}"
+        + f" --prev_year={prev_year}"
+        + f" --stress_year={_stress_year}"
+        + f" --temporal_inputs={temporal_inputs}"
+        + ''.join([f" --{s}={caseSwitches[s]}" for s in [
+            'GSw_Canada',
+            'GSw_ClimateHydro',
+            'GSw_ClimateWater',
+            'GSw_gopt',
+            'GSw_HourlyChunkLengthRep',
+            'GSw_HourlyChunkLengthStress',
+            'GSw_HourlyType',
+            'GSw_HourlyWrapLevel',
+            'GSw_MGA_CostDelta',
+            'GSw_MGA_Direction',
+            'GSw_PVB_Dur',
+            'GSw_SkipRAyear',
+            'GSw_StateCO2ImportLevel',
+            'GSw_StartMarkets',
+            'GSw_ValStr',
+            'solver',
+            'debug',
+            'startyear',
+            'diagnose',
+            'diagnose_year'
+        ]])
+        + '\n'
+    )
+
+    return out
 
 
 def get_bin(

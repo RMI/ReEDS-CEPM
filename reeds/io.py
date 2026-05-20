@@ -8,7 +8,6 @@ import ctypes
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-from glob import glob
 from pathlib import Path
 from pandas.api.types import is_float_dtype
 
@@ -490,12 +489,13 @@ def read_output(
                     df[col] = df[col].str.decode('utf-8')
         except KeyError:
             ## Empty dataframes aren't written to h5 file, so make one ourselves
-            e_report_params = pd.read_csv(
-                os.path.join(case, 'e_report_params.csv'),
-                comment='#',
-            )
-            _index = e_report_params.loc[
-                e_report_params.param.map(lambda x: x.split('(')[0]) == key, 'param'
+            fpath = Path(case, 'reeds', 'core', 'terminus', 'report_params.csv')
+            ## Fall back to older params list if necessary for backwards compatibility
+            if not fpath.is_file():
+                fpath = Path(case, 'e_report_params.csv')
+            report_params = pd.read_csv(fpath, comment='#')
+            _index = report_params.loc[
+                report_params.param.map(lambda x: x.split('(')[0]) == key, 'param'
             ].squeeze()
             if not len(_index):
                 raise KeyError(f"{filename} is not in {h5path}")
@@ -619,10 +619,9 @@ def standardize_case(case=None):
     return case
 
 
-def get_switches(case=None, **kwargs):
+def get_switches_base(case=None, **kwargs):
     """
-    Get pd.Series of switch values from switches.csv, augur_switches.csv,
-    and CPLEX opt file.
+    Get pd.Series of switch values from switches.csv.
     Accepts either {case} or {case}/inputs_case as input.
 
     If {case} is None, the default switch values listed in cases.csv are retrieved.
@@ -646,11 +645,49 @@ def get_switches(case=None, **kwargs):
             index_col=0,
             header=None,
         ).squeeze(1)
-    ### Augur-specific switches
+    return sw
+
+
+def get_optfile(case=None, **kwargs):
+    """
+    Get the name of the optfile used by GAMS, formatted as described by
+    https://gams.com/49/docs/UG_GamsCall.html#GAMSAOoptfile
+    """
+    sw = get_switches_base(case, **kwargs)
+    GSw_gopt = int(sw.GSw_gopt)
+    if GSw_gopt == 1:
+        suffix = 'opt'
+    elif len(str(GSw_gopt)) == 1:
+        suffix = f'op{GSw_gopt}'
+    elif len(str(GSw_gopt)) == 2:
+        suffix = f'o{GSw_gopt}'
+    else:
+        suffix = str(GSw_gopt)
+    optfile = f'{sw.solver}.{suffix}'.lower()
+    return optfile
+
+
+def get_switches(case=None, **kwargs):
+    """
+    Get pd.Series of switch values from switches.csv, ra_switches.csv,
+    and solver settings file.
+    Accepts either {case} or {case}/inputs_case as input.
+
+    If {case} is None, the default switch values listed in cases.csv are retrieved.
+
+    If additional keyword arguments are provided, they replace the values specified
+    in {case}. This behavior can be used to read all the switches for a case (or all
+    the default settings) but change a single switch to a different value (when
+    making plots for different input settings, for example). If a key is provided
+    that is not a valid switch name, it is ignored.
+    """
+    case = standardize_case(case)
+    sw = get_switches_base(case)
+    ### Resource-adequacy-specific switches
     try:
         fpath_asw = os.path.join(
             (case if case is not None else reeds_path),
-            'ReEDS_Augur', 'augur_switches.csv',
+            'reeds', 'resource_adequacy', 'ra_switches.csv',
         )
         asw = pd.read_csv(fpath_asw, index_col='key')
         for i, row in asw.iterrows():
@@ -670,7 +707,7 @@ def get_switches(case=None, **kwargs):
                 row.value = float(row.value)
         sw = pd.concat([sw, asw.value])
     except FileNotFoundError:
-        print(f"{fpath_asw} not found so leaving out Augur switches")
+        print(f"{fpath_asw} not found so leaving out resource adequacy switches")
     ### Add derivative switches
     sw['resource_adequacy_years_list'] = [int(y) for y in sw['resource_adequacy_years'].split('_')]
     sw['num_resource_adequacy_years'] = len(sw['resource_adequacy_years_list'])
@@ -679,22 +716,27 @@ def get_switches(case=None, **kwargs):
     sw['future_hydcf_rep_years_list'] = [
         int(y) for y in sw.get('GSw_FutureHydCF_RepYears', _fallback).split('_')
     ]
-    ### Get number of threads to use in PRAS
-    opt_file = 'cplex.opt' if int(sw.GSw_gopt) == 1 else f'cplex.op{sw.GSw_gopt}'
-    try:
-        threads = get_param_value(os.path.join(case, opt_file), "threads", dtype=int)
-    except (FileNotFoundError, TypeError):
-        threads = get_param_value(os.path.join(reeds_path, opt_file), "threads", dtype=int)
+    ## Get number of threads to use in PRAS
+    ## (read from case folder; fall back to repo if case folder doesn't exist yet)
+    opt_file = get_optfile(case)
+    fpath_repo = Path(reeds_path, 'reeds', 'solver', opt_file)
+    if case is None:
+        fpath_opt = fpath_repo
+    else:
+        fpath_opt = Path(case, opt_file)
+        if not fpath_opt.is_file():
+            fpath_opt = fpath_repo
+    threads = get_param_value(fpath_opt, "threads", dtype=int)
     sw['threads'] = threads
-    ### Determine whether run is on HPC
+    ## Determine whether run is on HPC
     sw['hpc'] = True if int(os.environ.get('REEDS_USE_SLURM', 0)) else False
-    ### Add the run location
+    ## Add the run location
     sw['casedir'] = case
     sw['reeds_path'] = reeds_path if case is None else os.path.dirname(os.path.dirname(case))
-    ### Get the number of hours per period to use in plots
+    ## Get the number of hours per period to use in plots
     sw['hoursperperiod'] = {'day': 24, 'wek': 120, 'year': 24}[sw['GSw_HourlyType']]
     sw['periodsperyear'] = {'day': 365, 'wek': 73, 'year': 365}[sw['GSw_HourlyType']]
-
+    ### Overwrite values with keyword arguments if provided
     for key, value in kwargs.items():
         if key in sw.keys():
             sw[key] = value
@@ -1228,15 +1270,21 @@ def get_last_iteration(case, year=2050, datum=None, samples=None):
     """Get the last iteration of PRAS for a given case/year"""
     if datum not in [None,'flow','energy']:
         raise ValueError(f"datum must be in [None,'flow','energy'] but is {datum}")
-    infile = sorted(glob(
-        os.path.join(
-            case, 'ReEDS_Augur', 'PRAS',
-            f"PRAS_{year}i*"
-            + (f'-{samples}' if samples is not None else '')
-            + (f'-{datum}' if datum is not None else '')
-            + '.h5'
-        )
-    ))[-1]
+    pattern = (
+        f"PRAS_{year}i*"
+        + (f'-{samples}' if samples is not None else '')
+        + (f'-{datum}' if datum is not None else '')
+        + '.h5'
+    )
+    matches = list(Path(case, 'handoff', 'PRAS').glob(pattern))
+    if not matches:
+        raise ValueError(f"{case} has not solved year {year}")
+    infile = max(
+        matches,
+        ## File names are formatted as 'PRAS_{year}i{iteration}.h5' or
+        ## 'PRAS_{year}i{iteration}-{other_identifiers}.h5'; keep the largest iteration
+        key=lambda f: int(f.stem[f.stem.rfind('i')+1:].split('-')[0])
+    )
     iteration = int(
         os.path.splitext(os.path.basename(infile))[0]
         .split('-')[0].split('_')[1].split('i')[1]
@@ -1254,11 +1302,11 @@ def get_pras_system(case, year=None, iteration='last', verbose=0):
         get_last_iteration(case, t)[1] if iteration in [None, 'last']
         else iteration
     )
-    infile = os.path.join(case, 'ReEDS_Augur', 'PRAS', f"PRAS_{t}i{_iteration}.pras")
+    infile = os.path.join(case, 'handoff', 'PRAS', f"PRAS_{t}i{_iteration}.pras")
     if not os.path.exists(infile):
         raise FileNotFoundError(
             f'{infile} does not exist; run postprocessing/run_reeds2pras.py or rerun '
-            'the ReEDS case with keep_augur_files=1'
+            'the ReEDS case with keep_resource_adequacy_files=1'
         )
     pras = {}
     with h5py.File(infile,'r') as f:
@@ -1451,7 +1499,7 @@ def assemble_supplycurve(
         if skip_if_complete:
             return dfin
         else:
-            dfin = dfin[['class', 'capacity', 'capital_adder_per_mw']].copy()
+            dfin = dfin[['class', 'capacity', 'capital_adder_per_mw', 'cf']].copy()
 
     county2zone = reeds.io.get_county2zone(case if agg else None, **kwargs)
 

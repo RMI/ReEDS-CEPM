@@ -16,6 +16,7 @@ GSw_LoadProfiles,,,,,EER2025_100by2050,EER2025_IRAlow,EER2025_IRAlow,EER2025_IRA
 GSw_NG_CRF_penalty,,,,,ramp_2045,,ramp_2023_2035,,,,,,,,,,,,,,ramp_2023_2035,,,,,,,,
 GSw_PRM_NetImportLimit,,,,,0,,,,,,,,,,,,,,,,,,,,,,,,
 GSw_RetirePenalty,,,,,0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_FakeData,,,,,,1,1,1,,,,,,,,,,,,,,,,,,,,,
 GSw_PRM_CapCredit,,,,,,,,1,1,,,,,,,,1,,,,,,,,,,,,
 GSw_PRM_scenario,,,,,,,,,static,,,,,,,,static,,,,,,,,,,,,
 GSw_HourlyType,,,,,,,,,,wek,year,,,,,,,,,,,,,,,,,,
