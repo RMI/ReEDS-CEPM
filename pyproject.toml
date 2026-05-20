@@ -28,6 +28,10 @@ dependencies = [
   "geopandas==0.14.0",
   "pulp==2.7.0",
   "shapely==2.0.1",
+  # etoolbox provides a number of useful tools for working with data. It also includes
+  # functions and infrastructure for accessing PUDL data stored on GCS so the sqlite
+  # database is not requried
+  "rmi.etoolbox @ git+https://github.com/rmi/etoolbox.git",
 ]
 
 [project.optional-dependencies]
