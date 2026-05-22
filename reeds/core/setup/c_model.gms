@@ -2017,7 +2017,7 @@ eq_POI_cap(r,t)
 * to make sure we account for the existing spur line capacity already included in poi_cap_init)...
     + sum{x$[xfeas(x)$x_r(x,r)$Sw_SpurScen], CAP_SPUR(x,t) }
 * and AC/DC converter capacity for VSC...
-    + CAP_CONVERTER(r,t)
+    + CAP_CONVERTER(r,t)$val_converter(r,t)
 * and LCC (INVTRAN(r,rr) == INVTRAN(rr,r) for DC so only need to add one direction)
     + sum{(rr,tt)$[routes_inv(r,rr,"LCC",t)$(yeart(tt)<=yeart(t))$(tmodel(tt) or tfix(tt))],
           INVTRAN(r,rr,"LCC",tt)
