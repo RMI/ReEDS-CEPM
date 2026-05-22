@@ -336,28 +336,6 @@ def optimize_period_weights(
     return profiles_day, iweights, weights
 
 
-def optimize_defined_period_weights(
-    basis_periods,
-    target_feature_mean,
-    numperiods=365,
-):
-    """
-    Similar to optimize_period_weights(), but here we provide the basis set instead of
-    letting the solver do it.
-    """
-    ### Get weights
-    weights = minimize_abs_error_in_means(basis_periods, target_feature_mean)
-
-    ### Truncate based on numperiods, scale appropriately, and convert to integers
-    ### Keep the the 'numperiods' highest-weighted days
-    rweights = (weights.sort_values(ascending=False)[:len(basis_periods)])
-    ### Scale so that the weights sum to numperiods (have to do if numperiods is small)
-    rweights *= numperiods / rweights.sum()
-    iweights = round_to_integers(rweights, numperiods)
-
-    return iweights, weights
-
-
 def match_act2rep_milp(profiles_day, iweights):
     """
     Assign representative periods to actual periods to minimize sum of errors in
