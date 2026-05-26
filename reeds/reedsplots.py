@@ -230,25 +230,6 @@ def plot_diff(
         'Runtime by year (hours)': 1,
         'NEUE (ppm)': 1,
     }
-    outputs_unit_converstion = {
-        'Error Check': 1,
-        'Generation (TWh)': 1,
-        'Capacity (GW)': 1,
-        'New Annual Capacity (GW)': 1,
-        'Annual Retirements (GW)': 1,
-        'Final Gen by timeslice (GW)': 1,
-        'Firm Capacity (GW)': 1,
-        'Curtailment Rate': 1,
-        'Transmission (GW-mi)': 0.001,
-        'Transmission (PRM) (GW-mi)': 0.001,
-        'Bulk System Electricity Pric': 1,
-        'National Average Electricity': 1,
-        '2022-2050 Present Value of S': 1,
-        'Present Value of System Cost': 1,
-        'Runtime (hours)': 1,
-        'Runtime by year (hours)': 1,
-        'NEUE (ppm)': 1,
-    }
 
     output_formatting = reeds.io.get_plot_formatting()
 
@@ -272,7 +253,6 @@ def plot_diff(
 
     ### Load the data
     dfbase = reeds.io.read_report(casebase, sheet, val2sheet).rename(columns={'trtype':'type','i':'tech'})
-    dfbase[ycol[val]]*=outputs_unit_converstion[val]
     if 'tech' in dfbase.columns:
         dfbase.tech = simplify_techs(dfbase.tech, display_level = simple_techs)
         dfbase = (
@@ -291,7 +271,6 @@ def plot_diff(
         dfbase = dfbase.loc[dfbase[col] == fixval].copy()
 
     dfcomp = reeds.io.read_report(casecomp, sheet, val2sheet).rename(columns={'trtype':'type','i':'tech'})
-    dfcomp[ycol[val]]*=outputs_unit_converstion[val]
     if 'tech' in dfcomp.columns:
         dfcomp.tech = simplify_techs(dfcomp.tech, display_level = simple_techs)
         dfcomp = (
