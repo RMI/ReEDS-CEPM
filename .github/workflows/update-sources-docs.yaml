@@ -1,0 +1,48 @@
+# This workflow will install and set up conda and gams, run ReEDS, and run tests
+name: Update sources documentation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/sources.csv'
+      - 'docs/source/documentation_tools/generate_markdown.py'
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs: 
+    update-sources-docs:
+        runs-on: ubuntu-latest
+        
+        steps:
+            - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+              with: 
+                fetch-depth: 1
+                # for PRs, we need to check out the actual PR branch so we can push back to it
+                ref: ${{ github.event.pull_request.head.ref }}
+                token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Set up Python 3.12
+              uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+              with: 
+                  python-version: "3.12"
+
+            - name: Install dependencies
+              run: |
+                python -m pip install --upgrade pip
+                pip install argparse
+                
+            - name: Generate & commit sources_documentation.md
+              run: |
+                python docs/source/documentation_tools/generate_markdown.py
+                git config user.name  "github-actions[bot]"
+                git config user.email "github-actions[bot]@users.noreply.github.com"
+                git add docs/source/sources_documentation.md
+                git diff --cached --quiet && echo "No changes to commit" || \
+                git commit -m "docs: regenerate sources_documentation.md [skip ci]" && git push

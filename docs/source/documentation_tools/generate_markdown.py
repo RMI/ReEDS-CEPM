@@ -1,6 +1,17 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# Note: this script does not need to be run manually, 
+# sources_documentation.md is updated automatically as part of the update-sources-docs.yaml workflow
+
+# How to use this script to get an updated sources_documentation.md file: 
+# 1. update docs/sources.csv
+# 2. from the docs/source/documentation_tools folder, run: python generate_markdown.py
+#    optional args: 
+#   -g/--githubURL <base_url>   Base URL prepended to file links in markdown.
+#   -r/--reedsPath <path>       Path used to find sources.csv and write output.
+
+
 # In[1]:
 
 import os
@@ -10,7 +21,7 @@ import re
 
 def slugify(text: str) -> str:
     """
-    Convert a string to a stable anchor id for markdow.
+    Convert a string to a stable anchor id for markdown.
     Lowercase, replace spaces and slashes with hyphens, remove special characters except hyphens, and collapse multiple hyphens into one.
 
     Args:
