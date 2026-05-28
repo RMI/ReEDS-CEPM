@@ -252,7 +252,7 @@ def plot_pras_eue_timeseries_full(
     else:
         _iteration = iteration
     infile = os.path.join(
-        case, 'ReEDS_Augur', 'PRAS',
+        case, 'handoff', 'PRAS',
         f"PRAS_{year}i{_iteration}" + (f'-{samples}' if samples is not None else '') + '.h5'
     )
     dfpras = reeds.io.read_pras_results(infile)
@@ -363,7 +363,7 @@ def plot_pras_samples(
 
     ### Get unit availability
     filebase = os.path.join(
-        case, 'ReEDS_Augur', 'PRAS',
+        case, 'handoff', 'PRAS',
         f"PRAS_{t}i{_iteration}"
         f"{f'-{samples}' if isinstance(samples, int) else ''}"
     )

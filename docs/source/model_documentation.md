@@ -9,7 +9,7 @@ We are especially grateful to Walter Short who first envisioned and developed th
 Finally, we are grateful to all those who helped sponsor ReEDS model development and analysis, particularly supporters from the U.S. Department of Energy (DOE) but also others who have funded our work over the years.
 
 ```{admonition} Suggested Citation
-National Laboratory of the Rockies. ({{ cite_date_last_updated }}). *Model documentation — ReEDS 2.0*. https://natlabrockies.github.io/ReEDS-2.0/model_documentation.html
+National Laboratory of the Rockies. ({{ cite_date_last_updated }}). *Model documentation — ReEDS 2.0*. https://reeds-model.github.io/ReEDS/model_documentation.html
 
 ```
 
@@ -153,11 +153,11 @@ National Laboratory of the Rockies. ({{ cite_date_last_updated }}). *Model docum
 
 ## Introduction
 
-This documentation describes the structure and key data elements of the [Regional Energy Deployment System](https://www.nrel.gov/analysis/reeds/) (ReEDS) model, which is maintained and operated by the National Laboratory of the Rockies (NLR).
+This documentation describes the structure and key data elements of the [Regional Energy Deployment System](https://www.nlr.gov/analysis/reeds/) (ReEDS) model, which is maintained and operated by the National Laboratory of the Rockies (NLR).
 In this introduction, we provide a high-level overview of ReEDS objectives, capabilities, and applications.
 We also provide a short discussion of important caveats that apply to any ReEDS analysis.
 
-The ReEDS model code and input data can be accessed at <https://github.com/NatLabRockies/ReEDS-2.0>.
+The ReEDS model code and input data can be accessed at <https://github.com/ReEDS-Model/ReEDS>.
 
 
 ### Overview
@@ -199,7 +199,7 @@ ReEDS has been the primary analytical tool in numerous studies, including the Re
 ReEDS has also been used to examine the impacts of a range of existing and proposed energy policies {cite:p}`lantzImplicationsPTCExtension2014, maiImpactFederalTax2015, gagnonImpactRetailElectricity2017, steinbergEvaluatingImpactsInflation2023, denholmExaminingSupplySideOptions2022`.
 Transmission and grid integration studies often require scenarios of future power systems, and ReEDS has been used in such studies, e.g., the National Transmission Planning Study {cite}`doeNationalTransmissionPlanning2024`, the Atlantic Offshore Wind Transmission Study {cite}`brinkmanAtlanticOffshoreWind2024a`, and the North American Renewable Integration Study {cite}`brinkmanNorthAmericanRenewable2021a`.
 Many other studies, conducted by NLR and non-NLR researchers, use ReEDS to evaluate diverse topics relevant to the power sector.
-The [ReEDS website](https://www.nrel.gov/analysis/reeds/) includes a list of publications with NLR co-authorship that use ReEDS.
+The [ReEDS website](https://www.nlr.gov/analysis/reeds/) includes a list of publications with NLR co-authorship that use ReEDS.
 
 
 ### Summary of Caveats
@@ -1196,7 +1196,7 @@ As a result, its capital cost is uprated by the ratio of a 15-year evaluation wi
 Batteries are assumed to have a round-trip efficiency of 85% and a representative size of 60 MW.
 
 Existing PSH capacity is represented in the model according to the input plant database.
-New PSH potential is derived from a national PSH resource assessment described in {cite}`rosenliebClosedLoopPumpedStorage2022` and at <https://www.nrel.gov/gis/psh-supply-curves.html>.
+New PSH potential is derived from a national PSH resource assessment described in {cite}`rosenliebClosedLoopPumpedStorage2022` and at <https://www.nlr.gov/gis/psh-supply-curves.html>.
 Several PSH supply curves are available in ReEDS, including alternative storage durations (8, 10, or 12 hours) and alternative environmental site exclusions specifying whether new PSH reservoir construction can occur where there are ephemeral streams as defined by the National Hydrography Dataset, or whether to include sites that utilize existing reservoirs.
 The PSH resource assessment includes site-level capital costs calculated from a detailed bottom-up cost model that incorporates dam, reservoir, and other site characteristics {cite}`cohenComponentLevelBottomUpCost2023`.
 PSH fixed O&M costs and round-trip efficiency are taken from {cite}`mongird2020GridEnergy2020`, and PSH cost and resource assumptions are taken from the ATB {cite}`nrelAnnualTechnologyBaseline2024`.
@@ -1341,7 +1341,7 @@ At least 1% of the region's land area must overlap with the storage availability
 ReEDS requires any hydrogen storage be sized to hold at least 24 hours' worth of hydrogen to run the H<sub>2</sub>-CTs in a given region.
 
 ReEDS also allows the modeling of interzonal hydrogen transport.
-Transport requires the construction of hydrogen pipelines, and the model assumes cost estimates based on the H<sub>2</sub> [SERA model](https://www.nrel.gov/hydrogen/sera-model.html).
+Transport requires the construction of hydrogen pipelines, and the model assumes cost estimates based on the H<sub>2</sub> [SERA model](https://www.nlr.gov/hydrogen/sera-model.html).
 Modeling hydrogen transport in ReEDS is an experimental feature and, because this feature adds significant runtime, the model includes the option to model zonal balancing with transport disabled or a fixed \$/kg hydrogen transport cost.
 
 
@@ -1572,7 +1572,7 @@ Note the difference in color scales.
 
 
 Scheduled (planned and maintenance) outage rates are derived from the NERC GADS database {cite}`nercGeneratingAvailabilityData2023`.
-Scheduled outage rates for combined cycle, combustion turbine, nuclear, steam (coal), and hydro technologies are measured and applied at monthly resolution using GADS data from 2013 to 2023 {cite}`murphyGridReliabilityStatistics2025`.
+Scheduled outage rates for combined cycle, combustion turbine, nuclear, steam (coal), and hydro technologies are measured and applied at monthly resolution using GADS data from 2013 to 2023 {cite}`murphyGridReliabilityStatistics2025` (see the [scheduled outages](https://github.com/NatLabRockies/grid-reliability-statistics/blob/main/notebooks/scheduled_outages.ipynb) notebook for specific details).
 Scheduled outage rates for other technologies are measured as time-independent average values using GADS data from 2014 to 2018;
 scheduled outages for these technologies are applied only during spring and fall, with the outage rates during those months scaled to reproduce the measured time-independent averages.
 {numref}`figure-outage_scheduled` shows scheduled outage rates for the technologies used by default.
@@ -1627,7 +1627,7 @@ Although there is no explicit representation of natural gas demand beyond the el
 For details, see the [Natural Gas Supply Curves](#natural-gas-supply-curves) section of the appendix.
 
 [^ref32]: Supply curves are nonlinear in practice, but a linear regression approximation has been observed to be satisfactory under most conditions.
-The elasticity coefficients are derived from AEO2025 scenarios via a demeaned fixed-effects OLS regression, and the price-demand setpoints are taken from any one single scenario of the AEO.
+The elasticity coefficients are derived from AEO2025 scenarios via a demeaned fixed-effects ordinancy least squares regression, and the price-demand setpoints are taken from any one single scenario of the AEO.
 
 ReEDS includes options for other types of fuel supply curve representations.
 Supply curves can be national-only, census-division-only, or static.
@@ -2908,7 +2908,7 @@ We do not model banking of allowances, emissions offsets, or recycling of initia
 #### Federal tax credits for clean electricity and captured carbon
 
 Existing federal tax incentives are included in ReEDS, aligned with the One Big Beautiful Bill Act (OBBBA) passed in the summer of 2025.
-These include the production tax credit (PTC) and the ITC for several electricity generation technologies, the 45Q credit for capturing and storing carbon, the 45U credits for existing nuclear generation, the 45V credit for producing hydrogen, and the Modified Accelerated Cost Recovery System (MACRS) depreciation schedules.
+These include the production tax credit (PTC) and the ITC for several electricity generation technologies, the 45Q credit for capturing and storing carbon, the 45U credits for existing nuclear generation, the 45V credit for producing hydrogen, and the Modified Accelerated Cost Recovery System (MACRS) depreciation schedules.[^ref52]
 
 [^ref52]: Note the eligible cost basis for MACRS is reduced by one-half the value of the tax credit.
 
@@ -3139,7 +3139,7 @@ For these states, the nuclear power plants are not allowed to retire until after
 The policy end dates are taken from EIA {cite:year}`eiaElectricPowerMonthly2019a`.
 
 In addition, there are [several states that do not allow new nuclear power](https://www.ncsl.org/environment-and-natural-resources/states-restrictions-on-new-nuclear-power-facility-construction).
-These states include California, Connecticut, Illinois, Maine, Massachusetts, Minnesota, New Jersey, New York (Long Island only), Oregon, Rhode Island, and Vermont.
+These states include California, Illinois, Maine, Massachusetts, Minnesota, New York (Long Island only), Oregon, Rhode Island, and Vermont. Nuclear ban is not imposed for Connecticut since Act25-127 allows construction of advanced nuclear facilities in municipalities with referendums.
 
 
 ### Other Policy Capabilities
@@ -3408,7 +3408,7 @@ To enable more detailed study of system operations, NLR has developed a translat
 expansion solution for any solve year in production cost models (PCMs).
 R2X supports translations to two PCMs: Sienna and PLEXOS.
 
-[Sienna](https://www.nrel.gov/analysis/sienna) is an open-source NLR modeling tool for scientific energy system analysis.
+[Sienna](https://www.nlr.gov/analysis/sienna) is an open-source NLR modeling tool for scientific energy system analysis.
 As part of its core capabilities, `Sienna\Ops` supports the simulation of system scheduling---including unit commitment and economic dispatch, automatic generation control, and nonlinear optimal power flow---along with sequential problem specifications to enable production cost modeling techniques.
 NLR has used Sienna in several analyses such as Puerto Rico 100 and the National Transmission Planning Study
 where it was used as the PCM tool for transmission planning and operational analysis for future scenarios {cite:p}`muralibagguPuertoRicoGrid2024, doeNationalTransmissionPlanning2024`.
@@ -3446,7 +3446,7 @@ such as a long-run marginal emission rate.[^ref64]
 [^ref64]: The long-run marginal emission rate is a metric designed to help estimate the emissions induced (or avoided) by a persistent change in electricity consumption.
 Unlike the short-run marginal emission rate, the long-run marginal emission rate reflects the structural changes to the grid that can be induced by a persistent change in electricity consumption.
 
-Datasets derived through Cambium can be viewed and downloaded at <https://cambium.nrel.gov/>.
+Datasets derived through Cambium can be viewed and downloaded at <https://www.nlr.gov/analysis/cambium/>.
 The documentation for Cambium contains descriptions of the metrics reported in the databases and the methods for calculating those metrics {cite}`gagnonCambium2022Scenario2023`.
 
 
@@ -3499,7 +3499,7 @@ P_{r,t} = \alpha + \alpha_r + \alpha_t + \alpha_{r,t} + \beta_{\text{nat}}Q_{\te
 where $P_{r,t}$ is the price of natural gas (in \$/MMBtu) in region $r$ and year $t$; the $\alpha$ parameters are the intercept terms of the supply curves with adjustments made based on region ($\alpha_r$), year ($\alpha_t$), and the region-year interaction ($\alpha_{r,t}$); $\beta_{\text{nat}}$ is the coefficient for the national NG demand ($Q_{\text{nat}}$, in quads); and $\beta_r$ is the coefficient for the regional NG demand ($Q_{r,t}$) in region $r$.
 Note that the four $\alpha$ parameters in {eq}`ng-price-consumption` can in practice be represented using only $\alpha_{r,t}$.
 
-The $\beta$ terms are regressed from AEO scenarios using a demeaned fixed-effects OLS approach in two stages.
+The $\beta$ terms are regressed from AEO scenarios using a demeaned fixed-effects ordinary least squares approach in two stages.
 
 **Stage 1 — Beta regression.** The price-consumption relationship is modeled as:
 
@@ -3518,7 +3518,7 @@ yielding the demeaned regression:
 
 $$d\text{Price}(r, t, s) = \beta_{\text{reg}}(r) \cdot dQ_{\text{reg}}(r, t, s) + \beta_{\text{nat}} \cdot dQ_{\text{nat}}(t, s)$$
 
-The 9 regional $\beta_{\text{reg}}$ values and 1 national $\beta_{\text{nat}}$ are then estimated jointly via OLS.
+The 9 regional $\beta_{\text{reg}}$ values and 1 national $\beta_{\text{nat}}$ are then estimated jointly via ordinary least squares.
 The national and regional $\beta$ terms are reported in {numref}`figure-census-division-values`.
 
 [^ref65]: A quad is a quadrillion Btu, or 10<sup>15</sup> Btu.
@@ -3542,6 +3542,11 @@ For the ReEDS start year (2010), the supply curve regression is not applied; ins
 This provides a fixed initial price point from which the supply curve responds to subsequent demand changes, consistent with how ReEDS initializes its NG price model.
 
 All monetary values are deflated to 2004 dollars.
+
+```{seealso}
+The natural gas price regression implementation can be found in the
+[`aeo_updates/natural_gas_price_regression`](https://github.com/ReEDS-Model/ReEDS_Input_Processing/tree/main/aeo_updates/natural_gas_price_regression) folder of the ReEDS_Input_Processing repository.
+```
 
 #### Comparison of elasticities from regression approach to literature values
 
@@ -3773,7 +3778,9 @@ For all ReEDS system cost results, we assume the operational costs for the nonmo
 The marginal electricity prices in ReEDS are taken as the shadow prices from the constraints in the model that are directly impacted by the need to serve electricity. These include the load balance constraint, the operating reserve requirement, the RPS and CES requirements, and the planning reserve margin requirement (applied either in stress periods or seasonally via capacity credits). Taken together, these values show the total marginal cost of serving electricity in a given region and time slice. Weighted average versions are also calculated to report national annual marginal electricity prices. These marginal prices are most analogous to wholesale electricity prices but within a model that has full coordination and foresight.
 
 ```{admonition} Marginal Price Outputs
-Marginal electricity price outputs are calculated with `reqt_price` in `e_report.gms` and are outputs in `reqt_price.csv`. The quantity required by the model is reported in the `reqt_quant.csv` output. These two taken together can be used to calculate a $/MWh electricity price, which is done in make of the ReEDS outputs and reported as "Bulk System Electricity Price" in bokehpivot HTML outputs and in other output locations.
+Marginal electricity price outputs are recorded in `reqt_price.csv`.
+The quantity required by the model is reported in `reqt_quant.csv`.
+These two can be combined to calculate a \$/MWh electricity price.
 ```
 
 
@@ -3876,7 +3883,7 @@ In the example in {numref}`figure-energy-capacity-requirements-for-storage`, 5,0
 
 We repeat this process in each region for each season over a large range of storage power capacities (from 0% to 90% of peak demand in 100-MW increments).
 The result of each dispatch is used to produce the "power-energy curve" in {numref}`figure-storage-peak-capacity-determination`, which allows us to calculate the marginal capacity credit for additional storage.
-The curve gives storage energy capacity that is required for full capacity credit as a function of total storage capacity.[^ref45]
+The curve gives storage energy capacity that is required for full capacity credit as a function of total storage capacity.
 At any point along the curve, the slope of the tangent to the curve represents the number of hours needed for marginal storage to receive full capacity credit.
 The incremental capacity credit of an additional unit of storage is equal to the duration of the additional unit installed divided by the duration requirement (slope) at the point on the curve corresponding to the installed storage capacity.
 

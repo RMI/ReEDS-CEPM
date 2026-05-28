@@ -2,15 +2,7 @@
 import os
 import sys
 import pandas as pd
-import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib import patheffects as pe
 import geopandas as gpd
-from glob import glob
-import traceback
-import gdxpds
-import cmocean
 from tqdm import tqdm
 import time
 import datetime
@@ -21,22 +13,13 @@ pd.options.display.max_columns = 200
 
 import warnings
 warnings.filterwarnings("ignore")
-## trying to get rid of the Fiona messages whenever I read in the .gpkg file
-import logging
-# Set the logging level for Fiona to WARNING or ERROR
-logging.getLogger("fiona").setLevel(logging.WARNING)
-logging.disable(logging.CRITICAL)
 
 ### Local imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import reeds
 from reeds import plots
 plots.plotparams()
-from reeds import reedsplots
 
-## read in bokeh functionality
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..','postprocessing/bokehpivot')))
-import reeds2
 
 #%%### GENERAL FUNCTIONS
 
@@ -77,7 +60,7 @@ def create_scenarios_csv(output_dir,cases):
             # Assign a Load Profile
             try:
                 df.loc[df['machine_readable_scenario_name'] == scenario, 'Demand'] = sw.GSw_LoadProfiles
-            except:
+            except Exception:
                 df.loc[df['machine_readable_scenario_name'] == scenario, 'Demand'] = sw.GSw_EFS1_AllYearLoad
             
             # Assign a Policy
@@ -148,10 +131,7 @@ def produce_shapefiles():
     try:
         for x in ['US_PCA']:
             os.mkdir(os.path.join(output_dir,'shapefiles',x))
-            src_file  = os.path.join(reeds_path,'inputs','shapefiles',x,f'{x}.shp')
             # read in the source file and check its columns
-            x_cols = gpd.read_file(src_file).columns.tolist()
-
             dst_file  = os.path.join(output_dir,'shapefiles',x,f'{x}.shp')
             # Read the shapefile
             gdf = reeds.io.get_zonemap(cases[basecase])
@@ -251,7 +231,7 @@ def add_custom_palette(file_path, palette_name, color_list, overwrite):
     Adds a custom color palette to a Tableau Preferences.tps file.
     """
     # If the Prefences.tps file has not already been created, create a new one with a basic structure
-    file_path = os.path.join(output_dir, f'Preferences.tps')
+    file_path = os.path.join(output_dir, 'Preferences.tps')
     if not os.path.exists(file_path):
         root = ET.Element('workbook')
         tree = ET.ElementTree(root)
@@ -437,7 +417,7 @@ def calc_peakload(
     ).rename(columns=int)
 
     dictout = {}
-    level_map = reeds.output_calc.get_level_map(case)
+    level_map = reeds.results.get_level_map(case)
     for level in levels:
         df_level = df.loc[level,years].stack().rename_axis(['r','t']).rename('Value').reset_index().astype({'t':int}).set_index(['r','t']).squeeze().reset_index()
         df_level['Spatial Resolution'] = level_map[level]
@@ -446,7 +426,7 @@ def calc_peakload(
     df = pd.concat(dictout.values(), axis=0, ignore_index=True) 
 
     # # convert MW to GW for national data
-    df = reeds2.scale_column(df,**{'scale_factor': 1e-3, 'column':'Value'})
+    df = reeds.results.scale_column(df,**{'scale_factor': 1e-3, 'column':'Value'})
 
     return df
 
@@ -497,7 +477,7 @@ def calc_transmission_map(case,level='transgrp'):
     trans_total_new = pd.concat([trans_total_new, tran_new], axis=0)
 
     # convert MW to GW
-    trans_total_new = reeds2.scale_column(trans_total_new,**{'scale_factor': 1e-3, 'column':'Value'})   
+    trans_total_new = reeds.results.scale_column(trans_total_new,**{'scale_factor': 1e-3, 'column':'Value'})   
 
     return trans_total_new
     
@@ -511,7 +491,7 @@ def export(dictin,output_dir):
         try:
             df = pd.concat(dictin_data.values(), axis=0, ignore_index=True)
             df.to_csv(os.path.join(output_dir,'data',f'{metric}.csv'),index=False)
-        except Exception as error:
+        except Exception:
             print(f'{metric} is empty, not printing this to csv.')
             # create a blank df to export so that the csv still gets created and Tableau does not break when trying to read in the data
             df_blank = pd.DataFrame(columns=['Metric','Scenario','County','BA','Year','Value'])
@@ -530,10 +510,10 @@ if __name__ == '__main__':
         description='Create the necessary csv files for Tableau to ingest and visualize from ReEDS outputs')
     parser.add_argument(
         '--reeds_path', default=os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')), 
-        help='ReEDS-2.0 directory')
+        help='ReEDS directory')
     parser.add_argument(
         '--tableau_path', default=os.path.expanduser('~\Documents\My Tableau Repository'), 
-        help='ReEDS-2.0 directory')    
+        help='ReEDS directory')    
     parser.add_argument(
         'caselist', type=str, nargs='+',
         help=('space-delimited list of cases to plot, OR shared casename prefix, '
@@ -581,9 +561,9 @@ if __name__ == '__main__':
 
     #%%### Inputs for debugging
     # reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-    # caselist = r'C:\Users\ahamilto\Documents\GitHub\ReEDS-2.0\postprocessing\example.csv'
+    # caselist = r'C:\Users\ahamilto\Documents\GitHub\ReEDS\postprocessing\example.csv'
     # years = list(range(2025-2050))
-    # python tableau_viz_suite.py C:\Users\ahamilto\Documents\GitHub\ReEDS-2.0\postprocessing\example.csv --reeds_path C:\Users\ahamilto\Documents\GitHub\ReEDS-2.0
+    # python tableau_viz_suite.py C:\Users\ahamilto\Documents\GitHub\ReEDS\postprocessing\example.csv --reeds_path C:\Users\ahamilto\Documents\GitHub\ReEDS
     
     #%%###os globals
     this_dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -599,7 +579,7 @@ if __name__ == '__main__':
     os.mkdir(os.path.join(output_dir,'shapefiles'))
 
     # copy this script, the inputs cases .csv file (if applicable) to the output directory
-    shutil.copy2(os.path.join(this_dir_path, f'tableau_viz_suite.py'), os.path.join(output_dir))
+    shutil.copy2(os.path.join(this_dir_path, 'tableau_viz_suite.py'), os.path.join(output_dir))
     shutil.copy2(caselist[0], os.path.join(output_dir))
 
     #%%### formatting
@@ -622,7 +602,7 @@ if __name__ == '__main__':
     create_scenarios_csv(output_dir,cases)
 
     # Grab clean display names for the levels
-    level_map = reeds.output_calc.get_level_map(cases[basecase])
+    level_map = reeds.results.get_level_map(cases[basecase])
 
     # import some key inputs from ReEDS
     dictin_sw = {case: reeds.io.get_switches(cases[case]) for case in cases}
@@ -650,7 +630,7 @@ if __name__ == '__main__':
     dictin_cap = {}
     metric = 'Capacity (GW)'
     for case in tqdm(cases, desc=metric):
-        dictin_cap[case] = reeds.output_calc.calc_cap(cases[case])
+        dictin_cap[case] = reeds.results.calc_cap(cases[case])
         dictin_cap[case] = reformat(dictin_cap[case],case,metric,years[case])
     dictin_cap = set_zero_values(dictin_cap)
     dictin[metric] = dictin_cap
@@ -659,7 +639,7 @@ if __name__ == '__main__':
     dictin_gen = {}
     metric = 'Generation (TWh)'
     for case in tqdm(cases, desc=metric):
-        dictin_gen[case] = reeds.output_calc.calc_gen(cases[case])
+        dictin_gen[case] = reeds.results.calc_gen(cases[case])
         dictin_gen[case] = reformat(dictin_gen[case],case,metric,years[case])
     dictin_gen = set_zero_values(dictin_gen)
     dictin[metric] = dictin_gen
@@ -668,7 +648,7 @@ if __name__ == '__main__':
     dictin_emissions = {}
     metric = 'Emissions (million metric tonnes)'
     for case in tqdm(cases, desc=metric):
-        dictin_emissions[case] = reeds.output_calc.calc_emissions(cases[case])
+        dictin_emissions[case] = reeds.results.calc_emissions(cases[case])
         dictin_emissions[case] = dictin_emissions[case].loc[dictin_emissions[case]['e'] != 'H2'] # remove hydrogen emissions from the dataframe
         dictin_emissions[case] = reformat(dictin_emissions[case],case,metric,years[case])
     dictin[metric] = dictin_emissions
@@ -685,7 +665,7 @@ if __name__ == '__main__':
     dictin_annualload = {}
     metric = 'Annual End-Use Electricity Demand (TWh)'
     for case in tqdm(cases, desc=metric):
-        dictin_annualload[case] = reeds.output_calc.calc_annualload(cases[case],dictin_scalars[case]) 
+        dictin_annualload[case] = reeds.results.calc_annualload(cases[case],dictin_scalars[case]) 
         dictin_annualload[case] = reformat(dictin_annualload[case],case,metric,years[case])
     dictin[metric] = dictin_annualload
 
@@ -693,7 +673,7 @@ if __name__ == '__main__':
     dictin_systemcost = {}
     metric = 'System Cost (billion $)'
     for case in tqdm(cases, desc=metric):
-        dictin_systemcost[case] = reeds.output_calc.calc_systemcost(cases[case],group_r=False,drop_zeros=False).rename(columns={'year':'t','Discounted Cost (Bil $)':'Value'})
+        dictin_systemcost[case] = reeds.results.calc_systemcost(cases[case],group_r=False,drop_zeros=False).rename(columns={'year':'t','Discounted Cost (Bil $)':'Value'})
         del dictin_systemcost[case]['Cost (Bil $)']
         dictin_systemcost[case].cost_cat = dictin_systemcost[case].cost_cat.map(lambda x: output_formatting['cost_cat_map'].get(x,x))
         dictin_systemcost[case] = reformat(dictin_systemcost[case],case,metric,years[case])
@@ -723,7 +703,7 @@ if __name__ == '__main__':
     metric = 'Transmission Capacity (TW-miles)'
     for case in tqdm(cases, desc=metric):
         # pull the total installed transmission capacity from ReEDS outputs
-        dictin_trans_total[case], _ = reeds.output_calc.calc_transmission_capacity(cases[case],levels=['transgrp'])
+        dictin_trans_total[case], _ = reeds.results.calc_transmission_capacity(cases[case],levels=['transgrp'])
         tran_total = dictin_trans_total[case]
         tran_total['Measure'] = 'Total installed'
         # make one df with the new capacity 
@@ -746,7 +726,7 @@ if __name__ == '__main__':
     dictin_h2prod = {}
     metric = 'Hydrogen Production (million metric tonnes)'
     for case in tqdm(cases, desc=metric):
-        dictin_h2prod[case] = reeds.output_calc.calc_h2prod(cases[case])
+        dictin_h2prod[case] = reeds.results.calc_h2prod(cases[case])
         dictin_h2prod[case] = reformat(dictin_h2prod[case],case,metric,years[case])
     dictin[metric] = dictin_h2prod
 
@@ -754,7 +734,7 @@ if __name__ == '__main__':
     dictin_sited_load = {}
     metric = 'Load Site Capacity (MW)'
     for case in tqdm(cases, desc=metric):
-        dictin_sited_load[case] = reeds.output_calc.calc_sited_load(cases[case])
+        dictin_sited_load[case] = reeds.results.calc_sited_load(cases[case])
         dictin_sited_load[case] = reformat(dictin_sited_load[case],case,metric,years[case])
     dictin[metric] = dictin_sited_load
 
