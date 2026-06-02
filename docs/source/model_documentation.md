@@ -1627,7 +1627,7 @@ Although there is no explicit representation of natural gas demand beyond the el
 For details, see the [Natural Gas Supply Curves](#natural-gas-supply-curves) section of the appendix.
 
 [^ref32]: Supply curves are nonlinear in practice, but a linear regression approximation has been observed to be satisfactory under most conditions.
-The elasticity coefficients are derived from AEO2025 scenarios via a demeaned fixed-effects ordinary least squares regression, and the price-demand setpoints are taken from any one single scenario of the AEO.
+The elasticity coefficients are derived from AEO2026 scenarios via a demeaned fixed-effects ordinary least squares regression, and the price-demand setpoints are taken from any one single scenario of the AEO.
 
 ReEDS includes options for other types of fuel supply curve representations.
 Supply curves can be national-only, census-division-only, or static.
