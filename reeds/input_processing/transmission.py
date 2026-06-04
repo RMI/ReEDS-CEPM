@@ -407,7 +407,6 @@ def convert_to_tsc(interface_params, dollar_year=2004):
         .assign(**{f'USD{dollar_year}perMW_reverse':transmission_cost_ac[f'USD{dollar_year}perMW']})
         .assign(tscbin='t0')
         .assign(**{f'binwidth_USD{dollar_year}':1e12})
-        .rename(columns={})
         [[
             'r', 'rr', 'tscbin', f'binwidth_USD{dollar_year}',
             f'USD{dollar_year}perMW_forward', f'USD{dollar_year}perMW_reverse',

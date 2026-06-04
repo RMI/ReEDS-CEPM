@@ -16,6 +16,8 @@
 
 - `cost_hurdle_intra.csv`: Hurdle rate for transmission flows [\$/MWh] between ReEDS spatial hierarchy levels.
 
+- `dollaryear.scv`: U.S. dollar year for cost-related input files
+
 - `hvdc_existing.csv`: Power capacity and start/end locations of [high-voltage direct current (HVDC) lines](https://en.wikipedia.org/wiki/List_of_HVDC_projects#North_America) in the USA.
 These lines are mapped to ReEDS zone interfaces during input processing.
 
@@ -57,6 +59,9 @@ Calculated using the [TSC](https://github.nrel.gov/pbrown/TSC) model as describe
 - `newlinks_offshore_backbone.csv`: Candidate connections between offshore zones
   - Similarly formatted files for candidate connections between offshore and coastal land-based zones are found at `inputs/zones/{GSw_ZoneSet}/newlinks_offshore_radial.csv`
 
+- `transmission_cost_ac_500kv_z134.h5`: Example file illustrating the required format when using the transmission upgrade supply curve ([TSC](https://github.nrel.gov/ReEDS/TSC)) method for `GSw_ZoneSet = z134`
+  - The full method is not yet supported; when implemented, it will only be supported for a limited number of `GSw_ZoneSet` definitions
+
 - `transmission_cost_distance.csv`: Cost [USD2024] and distance [miles] for greenfield interzonal single-circuit transmission lines of the specified polarity (AC or DC) and voltage [kV] between nodes of the specified zone hashes
   - Node locations are described in `inputs/zones/README.md` and found in the `inputs/zones/{GSw_ZoneSet}/zonehash.csv` files
   - Least-cost paths between nodes (and integrated land/terrain-dependent costs along those paths) are determined using the [reV Routing (reVRt) model](https://github.com/NatLabRockies/reVRt)
@@ -72,5 +77,6 @@ Calculated using the [TSC](https://github.nrel.gov/pbrown/TSC) model as describe
   the cost and distance of that route are scaled up by the ratio of (`GSw_TransSquigglinessMin` / (squiggliness of the least-cost route)),
   such that every interzonal interface is represented by a line at least as squiggly as `GSw_TransSquigglinessMin`.
 
-- `transmission_cost_ac_500kv_z134.h5`: Example file illustrating the required format when using the transmission upgrade supply curve ([TSC](https://github.nrel.gov/ReEDS/TSC)) method for `GSw_ZoneSet = z134`
-  - The full method is not yet supported; when implemented, it will only be supported for a limited number of `GSw_ZoneSet` definitions
+- `transmission_cost_distance_lines.csv`: Similar to `transmission_cost_distance.csv`, but for individual existing and planned/possible HVDC lines, with latitude/longitude for start/end points instead of zone hashes
+  - Voltages are in kilovolts [kV]
+  - Costs and lengths (and underlying routes, not included in the file) are from the [reV Routing (reVRt) model](https://github.com/NatLabRockies/reVRt) and are not expected to exactly match the actual costs, lengths, or routes of existing lines
