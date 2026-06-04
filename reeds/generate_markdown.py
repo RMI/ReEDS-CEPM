@@ -168,7 +168,7 @@ def main(app=None):
         githubURL = args.githubURL
         reedsPath = args.reedsPath
     else:
-        githubURL = os.environ.get("BASE_URL", "")
+        githubURL = os.environ.get("https://github.com/reeds-model/reeds/", "")
         reedsPath = ''
 
     #Conversion of latest version of sources.csv to markdown/readme format

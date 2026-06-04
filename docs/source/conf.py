@@ -41,15 +41,10 @@ numfig = True  # auto number figures when true
 # get GAMSLICE from environment variable
 gamslice_secret = os.getenv("GAMSLICE", "")
 
-# get BASE_URL from environment variable
-base_url = os.environ.get("BASE_URL", "https://github.com/ReEDS-Model/ReEDS")
-github_releases_url = base_url + "/releases"
 
 myst_enable_extensions = ["substitution", "dollarmath", "html_image"]
 
 myst_substitutions = {
-    "base_github_url": base_url,
-    "github_releases_url": github_releases_url,
     "gamslice": gamslice_secret,
     "cite_date_last_updated": datetime.date.today().strftime("%Y, %B"),
 }
@@ -66,10 +61,6 @@ html_css_files = [
 ]
 
 html_theme_options = {"navigation_depth": 3, "logo_only": True}
-
-html_context = {
-    "base_url": base_url,
-}
 
 html_logo = "_static/reeds-logo-white.png"
 

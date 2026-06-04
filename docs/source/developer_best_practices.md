@@ -228,7 +228,7 @@ The goal is to keep ReEDS as lightweight as possible to facilitate faster clonin
 
 ## Version Control and Testing
 ### ReEDS Versioning & Releases
-This section outlines the current ReEDS approach to versioning. You can find current and past ReEDS versions here: {{ '[ReEDS Releases]({}/releases)'.format(base_github_url) }}
+This section outlines the current ReEDS approach to versioning. You can find current and past ReEDS versions here: '[ReEDS Releases](https://github.com/reeds-model/reeds/releases)
 
 #### Versioning overview
 
