@@ -636,29 +636,27 @@ def subset_to_valid_regions(
             val_st=val_st_ba,
             filename=filename
         )
-        if True:
-            # Filter function parameters to only include county resolution regions
-            valid_regions_county = {level: (hier[hier['r']
-                                    .isin(agglevel_variables['county_regions'])][level].unique()) for level in levels}
-            val_st_county = valid_regions_county['st']
-            val_r_all_county = []
-            for value in valid_regions_county.values():
-                val_r_all_county.extend(value)
-            val_r_all_county = list(dict.fromkeys(val_r_all_county))
+        # Filter function parameters to only include county resolution regions
+        valid_regions_county = {level: (hier[hier['r']
+                                .isin(agglevel_variables['county_regions'])][level].unique()) for level in levels}
+        val_st_county = valid_regions_county['st']
+        val_r_all_county = []
+        for value in valid_regions_county.values():
+            val_r_all_county.extend(value)
+        val_r_all_county = list(dict.fromkeys(val_r_all_county))
 
-            df_county = filter_data(
-                df_county,
-                region_col,
-                fix_cols,
-                levels,
-                val_r_all=val_r_all_county,
-                valid_regions=valid_regions_county,
-                val_st=val_st_county,
-                filename=filename
-            )
+        df_county = filter_data(
+            df_county,
+            region_col,
+            fix_cols,
+            levels,
+            val_r_all=val_r_all_county,
+            valid_regions=valid_regions_county,
+            val_st=val_st_county,
+            filename=filename
+        )
 
-         # Combine BA and county data
-
+        # Combine BA and county data
         # The filter data function returns a dataframe with NAN values to prevent empty H5 files
         # If either the BA data or county data are populated we can drop the nan data
         if df_county.isna().all().all() and not df_ba.isna().all().all():
@@ -1096,34 +1094,26 @@ def write_region_indexed_file(
     # Get the filetype of the output file from the filename string
     filetype_out = os.path.splitext(filename)[1].strip('.')
 
-    transmission_files = [
-        'transmission_capacity_future.csv',
-        'transmission_capacity_future_baseline.csv',
-        'transmission_cost_ac.csv',
-        'transmission_cost_dc.csv',
-        'transmission_distance.csv',
-    ]
-    if filename not in transmission_files:
-        region_col = region_file_entry['region_col']
-        fix_cols = region_file_entry['fix_cols'].split(',')
+    region_col = region_file_entry['region_col']
+    fix_cols = region_file_entry['fix_cols'].split(',')
 
-        if region_file_entry['disaggfunc'] != 'ignore':
-            df = reeds.spatial.downscale_from_legacy_zone_to_county(
-                df=df,
-                region_col=region_col,
-                fix_cols=fix_cols,
-                inputs_case=inputs_case,
-                disaggfunc=region_file_entry['disaggfunc']
-            )
+    if region_file_entry['disaggfunc'] != 'ignore':
+        df = reeds.spatial.downscale_from_legacy_zone_to_county(
+            df=df,
+            region_col=region_col,
+            fix_cols=fix_cols,
+            inputs_case=inputs_case,
+            disaggfunc=region_file_entry['disaggfunc']
+        )
 
-        if region_file_entry['aggfunc'] != 'ignore':
-            df = reeds.spatial.upscale_from_county_to_zone(
-                df=df,
-                region_col=region_col,
-                fix_cols=fix_cols,
-                inputs_case=inputs_case,
-                aggfunc=region_file_entry['aggfunc']
-            )
+    if region_file_entry['aggfunc'] != 'ignore':
+        df = reeds.spatial.upscale_from_county_to_zone(
+            df=df,
+            region_col=region_col,
+            fix_cols=fix_cols,
+            inputs_case=inputs_case,
+            aggfunc=region_file_entry['aggfunc']
+        )
 
     #---- Write data to dir_dst (inputs_case) folder ----
     if filetype_out == 'h5':

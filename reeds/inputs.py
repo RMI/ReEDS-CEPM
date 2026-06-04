@@ -606,11 +606,8 @@ def get_interface_data(
         dfoffshore = reeds.io.get_offshore_zones()
         offshore_zones = dfoffshore.index.values.tolist()
         dfout = dfin.loc[
-            (
-                dfin.start.isin(zonehash.tolist()+offshore_zones)
-                & dfin.end.isin(zonehash.tolist()+offshore_zones)
-            )
-            | (dfin.start.isin(offshore_zones) & (dfin.end.isin(offshore_zones)))
+            dfin.start.isin(zonehash.tolist()+offshore_zones)
+            & dfin.end.isin(zonehash.tolist()+offshore_zones)
         ].copy()
         hash2zone = pd.Series(
             data=zonehash.index.tolist()+offshore_zones,
@@ -664,7 +661,7 @@ def get_itls(case=None, level:str='r', errors='raise', **kwargs) -> pd.DataFrame
         case=case,
         datafile='itl_NARIS.csv',
         level=level,
-        interaces=True,
+        interfaces=True,
         errors=errors,
         **kwargs,
     )
