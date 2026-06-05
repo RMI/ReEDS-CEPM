@@ -42,7 +42,7 @@ def plot_interface_flows(
             case=case, year=year, datum='flow', samples=samples)
         dfflow = reeds.io.read_pras_results(infile).set_index(timeindex)
         ## Filter out AC/DC converters from scenarios with VSC
-        dfflow = dfflow[[c for c in dfflow if '"DC_' not in c]].copy()
+        dfflow = dfflow[[c for c in dfflow if '"DC|' not in c]].copy()
         ## Normalize the interface names
         renamer = {i: '→'.join(i.replace('"','').split(' => ')) for i in dfflow}
     else:
