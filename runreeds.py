@@ -293,8 +293,6 @@ def check_compatibility(sw):
 
     if sw['GSw_RegionResolution'] in ['county','mixed']:
         err_switch_configs = []
-        if int(sw['GSw_OffshoreZones']):
-            err_switch_configs.append('GSw_OffshoreZones=1')
         if sw['GSw_LoadAllocationMethod'] == 'state_lpf':
             err_switch_configs.append('GSw_LoadAllocationMethod=state_lpf')
 
@@ -1285,7 +1283,6 @@ def write_batch_script(
         for s in [
             'copy_files',
             'mcs_sampler',
-            'aggregate_regions',
             'hydcf',
             'h2_storage',
             'calc_financial_inputs',
