@@ -115,10 +115,11 @@ Instantiate the Julia environment:
 julia --project=. instantiate.jl
 ```
 
-Optional: download remote data files up front:
+Link large data files from shared folder, so we each don't store separate instances of this ~95GB of input data. Note you cannot do this in git bash as 
+there are some type of strange permission issues, so use powershell:
 
-```bash
-uv run python reeds/remote.py
+```powershell
+New-Item -ItemType Junction -Path ".inputs\remote" -Target "C:\Users\Public\Documents\reeds_data\remote"
 ```
 
 Several large data files are hosted remotely. These files are downloaded automatically as needed during a ReEDS run, but the command above finishes all internet-requiring steps up front.
@@ -127,7 +128,7 @@ Additional details on remote files and other topics can be found in the [user gu
 
 ### 5. Run ReEDS
 
-ReEDS currently expects Conda-style environment variables. When using UV, set these variables before running ReEDS:
+ReEDS currently expects Conda-style environment variables. When using UV, set these variables before running ReEDS or ideally in your dotenv file, so you don't ahve to do this before every run.
 
 ```bash
 export CONDA_DEFAULT_ENV=reeds2
@@ -146,7 +147,7 @@ For one-line operation:
 uv run python runbatch.py -b v20250314_main -c test
 ```
 
-In this example, `v20250314_main` is the prefix for this batch of cases, and `test` is the suffix of the cases file, in this case `cases_test.csv`, located in the root of the repository.
+In this example, `v20250314_main` is the prefix for this batch of cases, and `test` is the suffix of the cases file, in this case `cases_test.csv`, located in the root of the repository. For the batch prefix, we should follow the convention `vYYYYMMDD_`, and note that the case ID from the cases file will be appended to the batch prefix for file naming purposes. Our cases are stored in the `cases_cepm.csv` file.
 
 Run the following for information on other optional command-line arguments:
 
