@@ -156,10 +156,13 @@ def reeds_cc(t, tnext, casedir):
     forced_outage_rate = reeds.io.get_outage_hourly(inputs_case,'forced')
     
     tech_subset_table = reeds.techs.expand_GAMS_tech_groups(
-    reeds.techs.get_tech_subset_table(casedir).reset_index()
+        reeds.techs.get_tech_subset_table(casedir).reset_index()
     ).set_index('tech_group').i
-    techs_to_keep = tech_subset_table.loc['THERMAL'].tolist()
-    techs_to_drop = [col for col in forced_outage_rate.columns.levels[0] if col not in techs_to_keep]
+    techs_to_keep = tech_subset_table.loc['TEMP_DERATE'].tolist()
+    techs_to_drop = [
+        col for col in forced_outage_rate.columns.get_level_values('i').unique()
+        if col not in techs_to_keep
+    ]
     
     forced_outage_rate = forced_outage_rate.drop(columns=techs_to_drop, level=0, errors='ignore')
     
@@ -170,8 +173,6 @@ def reeds_cc(t, tnext, casedir):
 
     # Temporal definitions
     h_dt_szn = pd.read_csv(os.path.join('inputs_case', 'rep', 'h_dt_szn.csv'))
-    hmap_allyrs = pd.read_csv(os.path.join('inputs_case','rep','hmap_allyrs.csv'))
-
     ccseasons = []
     if sw['cc_calc_annual']:
         ccseasons += ['year']
