@@ -27,7 +27,11 @@ tic = datetime.datetime.now()
 
 #%% Functions
 def smear(dfzones, dfgroups, decay_km:float=150, decay_func=np.exp) -> pd.DataFrame:
-    """Smear zones into multiple higher hierarchy levels"""
+    """
+    Calculate a weighted-average parameter between dfzones and dfgroups, where the weighting
+    between a zone in dfzones and all groups in dfgroups is determined by decay_func (default
+    is exponential decay) and decay_km.
+    """
     weights = {}
     distances_km_all = {}
 
@@ -52,172 +56,162 @@ def smear(dfzones, dfgroups, decay_km:float=150, decay_func=np.exp) -> pd.DataFr
     return weight_norm
 
 
-def get_zone_level_frac(
-    case=None, level='cendiv', decay_km:float=150, decay_func=np.exp,
-) -> pd.DataFrame:
-    """Smear zones for a case into higher hierarchy levels"""
-    dfmap = reeds.io.get_dfmap(reeds.io.standardize_case(case))
-    weight_norm = smear(
-        dfzones=dfmap['r'],
-        dfgroups=dfmap[level],
-        decay_km=decay_km,
-        decay_func=decay_func,
-    )
-    return weight_norm
-
-
 #%% Procedure
-#%% Parse arguments
-parser = argparse.ArgumentParser(description="""This file organizes fuel cost data by techonology""")
+if __name__ == '__main__':
+    #%% Parse arguments
+    parser = argparse.ArgumentParser(description="""This file organizes fuel cost data by techonology""")
 
-parser.add_argument("reeds_path", help='ReEDS directory')
-parser.add_argument("inputs_case", help='ReEDS/runs/{case}/inputs_case directory')
+    parser.add_argument("reeds_path", help='ReEDS directory')
+    parser.add_argument("inputs_case", help='ReEDS/runs/{case}/inputs_case directory')
 
-args = parser.parse_args()
-reeds_path = args.reeds_path
-inputs_case = args.inputs_case
+    args = parser.parse_args()
+    reeds_path = args.reeds_path
+    inputs_case = args.inputs_case
 
-# #%% Settings for testing
-# reeds_path = reeds.io.reeds_path
-# inputs_case = os.path.join(reeds_path,'runs','nd5_ND','inputs_case')
+    # #%% Settings for testing
+    # reeds_path = reeds.io.reeds_path
+    # inputs_case = os.path.join(reeds_path,'runs','v20260609_cendivM0_Pacific','inputs_case')
 
-#%% Set up logger
-log = reeds.log.makelog(
-    scriptname=__file__,
-    logpath=os.path.join(inputs_case,'..','gamslog.txt'),
-)
-print("Starting fuelcostprep.py")
+    #%% Set up logger
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+    )
+    print("Starting fuelcostprep.py")
 
-#%% Inputs from switches
-sw = reeds.io.get_switches(inputs_case)
+    #%% Inputs from switches
+    sw = reeds.io.get_switches(inputs_case)
 
-# Load valid regions
-val_r = reeds.io.read_input(inputs_case, 'r').squeeze(1).tolist()
-val_cendiv = reeds.io.read_input(inputs_case, 'cendiv').squeeze(1).tolist()
+    # Load valid regions
+    val_r = reeds.io.read_input(inputs_case, 'r').squeeze(1).tolist()
+    val_cendiv = reeds.io.read_input(inputs_case, 'cendiv').squeeze(1).tolist()
 
-r_cendiv = pd.read_csv(os.path.join(inputs_case,"r_cendiv.csv"))
+    r_cendiv = pd.read_csv(os.path.join(inputs_case,"r_cendiv.csv"))
 
-dollaryear = pd.read_csv(os.path.join(inputs_case, "dollaryear_fuel.csv"))
-deflator = pd.read_csv(os.path.join(inputs_case,'deflator.csv'))
-deflator.columns = ["Dollar.Year","Deflator"]
-dollaryear = dollaryear.merge(deflator,on="Dollar.Year",how="left")
+    dollaryear = pd.read_csv(os.path.join(inputs_case, "dollaryear_fuel.csv"))
+    deflator = pd.read_csv(os.path.join(inputs_case,'deflator.csv'))
+    deflator.columns = ["Dollar.Year","Deflator"]
+    dollaryear = dollaryear.merge(deflator,on="Dollar.Year",how="left")
 
-#%% ===========================================================================
-### --- PROCEDURE: FUEL PRICE CALCULATIONS ---
-### ===========================================================================
+    #%% ===========================================================================
+    ### --- PROCEDURE: FUEL PRICE CALCULATIONS ---
+    ### ===========================================================================
 
-####################
-#    -- Coal --    #
-####################
-coal = pd.read_csv(os.path.join(inputs_case, 'coal_price.csv'))
-coal = coal.melt(id_vars = ['year']).rename(columns={'variable':'cendiv'})
-coal = coal.loc[coal['cendiv'].isin(val_cendiv)]
+    ####################
+    #    -- Coal --    #
+    ####################
+    coal = pd.read_csv(os.path.join(inputs_case, 'coal_price.csv'))
+    coal = coal.melt(id_vars = ['year']).rename(columns={'variable':'cendiv'})
+    coal = coal.loc[coal['cendiv'].isin(val_cendiv)]
 
-# Adjust prices to 2004$
-deflate = dollaryear.loc[dollaryear['Scenario'] == sw.coalscen,'Deflator'].values[0]
-coal.loc[:,'value'] = coal['value'] * deflate
+    # Adjust prices to 2004$
+    deflate = dollaryear.loc[dollaryear['Scenario'] == sw.coalscen,'Deflator'].values[0]
+    coal.loc[:,'value'] = coal['value'] * deflate
 
-coal = coal.merge(r_cendiv,on='cendiv',how='left')
-coal = coal.drop('cendiv', axis=1)
-coal = coal[['year','r','value']].rename(columns={'year':'t','value':'coal'})
-coal.coal = coal.coal.round(6)
+    coal = coal.merge(r_cendiv,on='cendiv',how='left')
+    coal = coal.drop('cendiv', axis=1)
+    coal = coal[['year','r','value']].rename(columns={'year':'t','value':'coal'})
+    coal.coal = coal.coal.round(6)
 
-#######################
-#    -- Uranium --    #
-#######################
-uranium = pd.read_csv(os.path.join(inputs_case, 'uranium_price.csv'))
+    #######################
+    #    -- Uranium --    #
+    #######################
+    uranium = pd.read_csv(os.path.join(inputs_case, 'uranium_price.csv'))
 
-# Adjust prices to 2004$
-deflate = dollaryear.loc[dollaryear['Scenario'] == sw.uraniumscen,'Deflator'].values[0]
-uranium.loc[:,'cost'] = uranium['cost'] * deflate
-uranium = pd.concat([uranium.assign(r=i) for i in val_r], ignore_index=True)
-uranium = uranium[['year','r','cost']].rename(columns={'year':'t','cost':'uranium'})
-uranium.uranium = uranium.uranium.round(6)
+    # Adjust prices to 2004$
+    deflate = dollaryear.loc[dollaryear['Scenario'] == sw.uraniumscen,'Deflator'].values[0]
+    uranium.loc[:,'cost'] = uranium['cost'] * deflate
+    uranium = pd.concat([uranium.assign(r=i) for i in val_r], ignore_index=True)
+    uranium = uranium[['year','r','cost']].rename(columns={'year':'t','cost':'uranium'})
+    uranium.uranium = uranium.uranium.round(6)
 
-#############################
-#    -- H2-Combustion --    #
-#############################
-# note that these fuel inputs are not used when H2 production is run endogenously in ReEDS (GSw_H2 > 0)
-h2fuel = pd.read_csv(os.path.join(inputs_case, 'hydrogen_price.csv'), index_col='year')
+    #############################
+    #    -- H2-Combustion --    #
+    #############################
+    # note that these fuel inputs are not used when H2 production is run endogenously in ReEDS (GSw_H2 > 0)
+    h2fuel = pd.read_csv(os.path.join(inputs_case, 'hydrogen_price.csv'), index_col='year')
 
-#Adjust prices to 2004$
-deflate = dollaryear.loc[dollaryear['Scenario'] == sw.h2combustionfuelscen,'Deflator'].squeeze()
-h2fuel['cost'] = h2fuel['cost'] * deflate
-# Reshape from [:,[t,cost]] to [:,[t,r,cost]]
-h2fuel = (
-    pd.concat({r:h2fuel for r in val_r}, axis=0, names=['r'])
-    .reset_index().rename(columns={'year':'t','cost':'h2fuel'})
-    [['t','r','h2fuel']]
-    .round(6)
-)
+    #Adjust prices to 2004$
+    deflate = dollaryear.loc[dollaryear['Scenario'] == sw.h2combustionfuelscen,'Deflator'].squeeze()
+    h2fuel['cost'] = h2fuel['cost'] * deflate
+    # Reshape from [:,[t,cost]] to [:,[t,r,cost]]
+    h2fuel = (
+        pd.concat({r:h2fuel for r in val_r}, axis=0, names=['r'])
+        .reset_index().rename(columns={'year':'t','cost':'h2fuel'})
+        [['t','r','h2fuel']]
+        .round(6)
+    )
 
-###########################
-#    -- Natural Gas --    #
-###########################
+    ###########################
+    #    -- Natural Gas --    #
+    ###########################
 
-ngprice = pd.read_csv(os.path.join(inputs_case,'natgas_price_cendiv.csv'))
-ngprice = ngprice.melt(id_vars=['year']).rename(columns={'variable':'cendiv'})
-ngprice = ngprice.loc[ngprice['cendiv'].isin(val_cendiv)]
+    ngprice = pd.read_csv(os.path.join(inputs_case,'natgas_price_cendiv.csv'))
+    ngprice = ngprice.melt(id_vars=['year']).rename(columns={'variable':'cendiv'})
+    ngprice = ngprice.loc[ngprice['cendiv'].isin(val_cendiv)]
 
-# Adjust prices to 2004$
-deflate = dollaryear.loc[dollaryear['Scenario'] == sw.ngscen,'Deflator'].values[0]
-ngprice.loc[:,'value'] = ngprice['value'] * deflate
+    # Adjust prices to 2004$
+    deflate = dollaryear.loc[dollaryear['Scenario'] == sw.ngscen,'Deflator'].values[0]
+    ngprice.loc[:,'value'] = ngprice['value'] * deflate
 
-# Save Natural Gas prices by census region
-ngprice_cendiv = ngprice.copy()
-ngprice_cendiv = ngprice_cendiv.pivot_table(index='cendiv',columns='year',values='value')
-ngprice_cendiv = ngprice_cendiv.round(6)
+    # Save Natural Gas prices by census region
+    ngprice_cendiv = ngprice.copy()
+    ngprice_cendiv = ngprice_cendiv.pivot_table(index='cendiv',columns='year',values='value')
+    ngprice_cendiv = ngprice_cendiv.round(6)
 
-# Map census regions to model regions
-ngprice = ngprice.merge(r_cendiv,on='cendiv',how='left')
-ngprice = ngprice.drop('cendiv', axis=1)
-ngprice = ngprice[['year','r','value']].rename(columns={'year':'t','value':'naturalgas'})
-ngprice.naturalgas = ngprice.naturalgas.round(6)
+    # Map census regions to model regions
+    ngprice = ngprice.merge(r_cendiv,on='cendiv',how='left')
+    ngprice = ngprice.drop('cendiv', axis=1)
+    ngprice = ngprice[['year','r','value']].rename(columns={'year':'t','value':'naturalgas'})
+    ngprice.naturalgas = ngprice.naturalgas.round(6)
 
-# Census division weights
-cendivweights = get_zone_level_frac(
-    inputs_case, level='cendiv', decay_km=float(sw.GSw_GasRegionSmooth),
-).round(3)
+    # Census division weights
+    dfmap = reeds.io.get_dfmap(reeds.io.standardize_case(inputs_case))
+    cendivweights = smear(
+        dfzones=dfmap['r'],
+        dfgroups=dfmap['cendiv'],
+        decay_km=float(sw.GSw_GasRegionSmooth),
+    ).round(3)
 
-# Combine all fuel data
-fuel = coal.merge(uranium,on=['t','r'],how='left')
-fuel = fuel.merge(ngprice,on=['t','r'],how='left')
-fuel = fuel.merge(h2fuel,on=['t','r'],how='left')
-fuel = fuel.sort_values(['t','r'])
+    # Combine all fuel data
+    fuel = coal.merge(uranium,on=['t','r'],how='left')
+    fuel = fuel.merge(ngprice,on=['t','r'],how='left')
+    fuel = fuel.merge(h2fuel,on=['t','r'],how='left')
+    fuel = fuel.sort_values(['t','r'])
 
-#%%#################################### 
-### Natural Gas Demand Calculations ###
+    #%%#################################### 
+    ### Natural Gas Demand Calculations ###
 
-# Natural Gas demand
-ngdemand = pd.read_csv(os.path.join(inputs_case,'ng_demand_elec.csv'), index_col='year')
-ngdemand = ngdemand[ngdemand.columns[ngdemand.columns.isin(val_cendiv)]]
-ngdemand = ngdemand.transpose()
-ngdemand = ngdemand.round(6)
+    # Natural Gas demand
+    ngdemand = pd.read_csv(os.path.join(inputs_case,'ng_demand_elec.csv'), index_col='year')
+    ngdemand = ngdemand[ngdemand.columns[ngdemand.columns.isin(val_cendiv)]]
+    ngdemand = ngdemand.transpose()
+    ngdemand = ngdemand.round(6)
 
-# Total Natural Gas demand
-ngtotdemand = pd.read_csv(os.path.join(inputs_case, 'ng_demand_tot.csv'), index_col='year')
-ngtotdemand = ngtotdemand[ngtotdemand.columns[ngtotdemand.columns.isin(val_cendiv)]]
-ngtotdemand = ngtotdemand.transpose()
-ngtotdemand = ngtotdemand.round(6)
+    # Total Natural Gas demand
+    ngtotdemand = pd.read_csv(os.path.join(inputs_case, 'ng_demand_tot.csv'), index_col='year')
+    ngtotdemand = ngtotdemand[ngtotdemand.columns[ngtotdemand.columns.isin(val_cendiv)]]
+    ngtotdemand = ngtotdemand.transpose()
+    ngtotdemand = ngtotdemand.round(6)
 
-### Natural Gas Alphas (already in 2004$)
-alpha = pd.read_csv(os.path.join(inputs_case, 'alpha.csv'), index_col='t')
-alpha = alpha[alpha.columns[alpha.columns.isin(val_cendiv)]]
-alpha = alpha.round(6)
+    ### Natural Gas Alphas (already in 2004$)
+    alpha = pd.read_csv(os.path.join(inputs_case, 'alpha.csv'), index_col='t')
+    alpha = alpha[alpha.columns[alpha.columns.isin(val_cendiv)]]
+    alpha = alpha.round(6)
 
-#%%###################
-### Data Write-Out ###
-######################
+    #%%###################
+    ### Data Write-Out ###
+    ######################
 
-fuel.to_csv(os.path.join(inputs_case,'fprice.csv'),index=False)
-ngprice_cendiv.to_csv(os.path.join(inputs_case,'gasprice_ref.csv'))
+    fuel.to_csv(os.path.join(inputs_case,'fprice.csv'),index=False)
+    ngprice_cendiv.to_csv(os.path.join(inputs_case,'gasprice_ref.csv'))
 
-ngdemand.to_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
-ngtotdemand.to_csv(os.path.join(inputs_case,'ng_demand_tot.csv'))
-alpha.to_csv(os.path.join(inputs_case,'alpha.csv'))
-cendivweights.to_csv(os.path.join(inputs_case,'cendivweights.csv'))
+    ngdemand.to_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
+    ngtotdemand.to_csv(os.path.join(inputs_case,'ng_demand_tot.csv'))
+    alpha.to_csv(os.path.join(inputs_case,'alpha.csv'))
+    cendivweights.to_csv(os.path.join(inputs_case,'cendivweights.csv'))
 
-reeds.log.toc(tic=tic, year=0, process='input_processing/fuelcostprep.py', 
-    path=os.path.join(inputs_case,'..'))
+    reeds.log.toc(tic=tic, year=0, process='input_processing/fuelcostprep.py', 
+        path=os.path.join(inputs_case,'..'))
 
-print('Finished fuelcostprep.py')
+    print('Finished fuelcostprep.py')
