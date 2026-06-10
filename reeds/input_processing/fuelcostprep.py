@@ -56,6 +56,40 @@ def smear(dfzones, dfgroups, decay_km:float=150, decay_func=np.exp) -> pd.DataFr
     return weight_norm
 
 
+def plot_cendivweights(inputs_case, dfmap, cendivweights):
+    import cmocean
+    import matplotlib.pyplot as plt
+    cmap = cmocean.cm.rain
+    cendivs = dfmap['cendiv'].bounds.minx.sort_values().index
+    nrows, ncols, coords = reeds.plots.get_coordinates(cendivs, aspect=1)
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, sharex=True, sharey=True, figsize=(3*ncols, 2.5*nrows),
+        gridspec_kw={'hspace':0, 'wspace':0},
+    )
+    for cendiv in cendivs:
+        _ax = ax[coords[cendiv]] if len(cendivs) > 1 else ax
+        _ax.axis('off')
+        dfmap['cendiv'].plot(ax=_ax, facecolor='none', edgecolor='k', lw=0.5, zorder=1e6)
+        dfplot = dfmap['r'].copy()
+        dfplot['value'] = dfplot.index.map(cendivweights[cendiv])
+        dfplot = dfplot[['value','geometry']].replace(0,np.nan).dropna()
+        dfplot.plot(ax=_ax, column='value', vmin=0, vmax=1, cmap=cmap)
+        _ax.set_title(cendiv, fontsize=12, weight='bold', y=0.92)
+    cax = ax if len(cendivs) == 1 else ax[-1, 1]
+    reeds.plots.addcolorbarhist(
+        f, cax, dfplot.value,
+        cmap=cmap, vmin=0, vmax=1,
+        orientation='horizontal', cbarbottom=-0.1, cbarheight=2, cbarwidth=0.1,
+        histratio=0.1, histcolor='w', title='Weight [fraction]',
+        labelpad=1.3, title_fontsize=12, ticklabel_fontsize=12,
+    )
+    figpath = Path(inputs_case, '..', 'outputs', 'figures', 'inputs', 'cendivweights.png')
+    figpath.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(figpath)
+    return f, ax
+
+
 #%% Procedure
 if __name__ == '__main__':
     #%% Parse arguments
@@ -172,6 +206,11 @@ if __name__ == '__main__':
         dfgroups=dfmap['cendiv'],
         decay_km=float(sw.GSw_GasRegionSmooth),
     ).round(3)
+    if int(sw.debug):
+        try:
+            plot_cendivweights(inputs_case, dfmap, cendivweights)
+        except Exception as err:
+            print(err)
 
     # Combine all fuel data
     fuel = coal.merge(uranium,on=['t','r'],how='left')
