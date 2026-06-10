@@ -69,8 +69,9 @@ GAMS typically installs directly into the top level directory, with a version nu
 
 ```bash
 $currentPath = [Environment]::GetEnvironmentVariable("Path","User") #This gets the PATH Environment variable at the user scope
-$addPath = 'C:/GAMS/53' # or wherever your gams installis
+$addPath = 'C:/GAMS/53' # or wherever your gams install is
 [Environment]::SetEnvironmentVariable("Path","$addPath;$currentPath","User")
+```
 
 ### 3. Install Julia
 
