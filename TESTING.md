@@ -5,11 +5,16 @@ developer guide, PR template, CI workflows, and subsystem READMEs.
 
 Primary references:
 
-- `docs/source/developer_best_practices.md`, especially "Testing Guidelines"
-- `.github/PULL_REQUEST_TEMPLATE.md`
-- `.github/workflows/python-app.yaml`
-- `reeds2pras/README.md`
-- `AGENT.md`
+- `docs/source/developer_best_practices.md`: developer testing levels, code
+  conventions, and GAMS change guidance.
+- `.github/PULL_REQUEST_TEMPLATE.md`: expected PR test evidence and comparison
+  report expectations.
+- `.github/workflows/python-app.yaml`: CI's concrete test-run and artifact
+  validation commands.
+- `reeds2pras/README.md`: Julia/ReEDS2PRAS setup and test entry points.
+- `AGENT.md`: repository orientation and quick debugging map.
+- `REPORT_OUTPUT_LOGIC.md`: bokehpivot report sections, input files, and
+  conditions required for sections to render.
 
 ## Prerequisites
 
@@ -44,6 +49,12 @@ Run these when the change is Python-only and does not require a model solve:
 ```powershell
 uv run python -m pytest tests/test_read_h5_files.py
 uv run python -m pytest hourlize/tests
+```
+
+For narrow Python syntax/import checks after touching postprocessing modules:
+
+```powershell
+uv run python -m py_compile postprocessing/bokehpivot/core.py postprocessing/bokehpivot/reeds2.py postprocessing/bokehpivot/reeds_bokeh.py
 ```
 
 Run ReEDS2PRAS tests when changing `reeds2pras/`, `ReEDS_Augur/`, PRAS-related
@@ -94,7 +105,17 @@ uv run python -m pytest tests/test_outputs.py --casepath runs/vYYYYMMDD_test_USA
 `tests/test_outputs.py` checks that expected reported CSVs, bokehpivot reports,
 retail outputs, and selected figures exist in the completed case's `outputs/`
 folder. It is not a substitute for reviewing whether model results changed in
-the expected way.
+the expected way, and it is not a guarantee that every bokehpivot report section
+rendered without errors.
+
+A passing run looks like this:
+
+```text
+tests\test_outputs.py . [100%]
+```
+
+Dependency warnings, such as matplotlib or pyparsing deprecation warnings, do
+not indicate a test failure unless pytest reports a failed test.
 
 This output validation is aimed at standard `cases_test.csv` workflows. Very
 small or custom smoke-test cases, such as runs based on `cases_small.csv`, can
@@ -111,6 +132,50 @@ When using a small smoke test, distinguish three outcomes:
 - The solve and postprocessing completed enough for the intended smoke test, but
   `tests/test_outputs.py` still fails because it expects standard-case
   deliverables that the small case does not produce.
+
+## Report Validation
+
+Bokehpivot reports are built section by section. The builder catches individual
+section failures, writes red `ERROR!` blocks into `report.html`, logs tracebacks
+in `report.log`, and continues building later sections. This means a report file
+can exist, and `tests/test_outputs.py` can pass, even when some report sections
+failed.
+
+For report-focused changes, rerun the standard expanded report against a
+completed case:
+
+```powershell
+uv run python postprocessing/bokehpivot/reports/interface_report_model.py "ReEDS 2.0" runs/<case> all No none postprocessing/bokehpivot/reports/templates/reeds2/standard_report_expanded.py html,excel one runs/<case>/outputs/reeds-report-manual No
+```
+
+Then inspect:
+
+- `runs/<case>/outputs/reeds-report-manual/report.log`
+- `runs/<case>/outputs/reeds-report-manual/report.html`
+- `runs/<case>/outputs/reeds-report-manual/report.xlsx`
+
+Useful PowerShell scan for report logs:
+
+```powershell
+Select-String -Path runs/<case>/outputs/reeds-report-manual/report.log -Pattern "\*\*\*Error in section|Done building report|Traceback|FileNotFoundError|KeyError|ValueError|IndexError" -Context 0,2
+```
+
+When a section fails because an output file is missing, compare the failure
+against the effective switches in `runs/<case>/inputs_case/switches.csv`, not
+only the default values in `cases.csv`. Case files and case columns can override
+defaults.
+
+Known switch-driven or input-driven report gaps:
+
+- `cap_iter` is not produced for sequential `timetype=seq` runs.
+- `land_use_total.csv` is skipped when `land_use_analysis=0`.
+- OpRes sections can fail when representative operating-reserve periods are
+  empty. Check `inputs_case/rep/opres_periods.csv`, `outputs/opRes_supply_h.csv`,
+  `Sw_OpRes`, and generated equation counts in `lstfiles/`.
+- Current `health_damages_caused_r.csv` outputs use the air-quality schema with
+  fields such as `ba`, `pollutant`, `tons`, `md`, `damage_$`, and `mortality`.
+  Bokehpivot normalizes these to legacy report display names in
+  `postprocessing/bokehpivot/reeds2.py`.
 
 ## Change-Based Guidance
 

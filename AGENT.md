@@ -6,8 +6,21 @@ orchestrates runs, and postprocesses outputs; GAMS contains the optimization mod
 Julia translates solved ReEDS systems into PRAS resource adequacy systems.
 
 Use this file as the first stop for agent orientation. Deeper references:
-@README.md, @docs/source/setup.md, @docs/source/user_guide.md,
-@docs/source/developer_best_practices.md, @sources_documentation.md.
+
+- @README.md: repository overview, installation entry points, and basic run
+  instructions.
+- @docs/source/setup.md: user-facing setup, dependency, and environment
+  instructions.
+- @docs/source/user_guide.md: scenario configuration, run options, switches,
+  outputs, and common workflows.
+- @docs/source/developer_best_practices.md: coding conventions, testing
+  expectations, and GAMS development guidance.
+- @sources_documentation.md: data-source documentation expectations and input
+  provenance notes.
+- @TESTING.md: local testing commands, model-run validation, and report-debugging
+  workflow.
+- @REPORT_OUTPUT_LOGIC.md: bokehpivot report output dependencies and conditions
+  for sections to render.
 
 ## Project Structure
 
@@ -105,6 +118,10 @@ download large files, and write substantial data under `runs/`.
 - CI runs a test ReEDS scenario with `python runbatch.py -b "$batch" -c test -s "$SCENARIO"`
   and then validates outputs with `tests/test_outputs.py`.
 
+`tests/test_outputs.py` is a completed-case artifact check, not a guarantee that
+every bokehpivot report section rendered cleanly. For report health, inspect
+`runs/<case>/outputs/reeds-report/report.log` and the generated HTML directly.
+
 When changing GAMS objective-function inputs, check
 `tests/objective_function_params.yaml`; it documents parameters that
 `input_processing/check_inputs.py` validates for missing values.
@@ -197,6 +214,19 @@ Inputs and CSVs:
   the script call generated in `call_<case>.bat` or `call_<case>.sh`.
 - For output/report failures, compare `outputs/`, `e_report_params.csv`, and
   `postprocessing/bokehpivot` report logs.
+- When an expected output is missing, first check the effective run switches in
+  `runs/<case>/inputs_case/switches.csv`; repository defaults in `cases.csv`
+  may have been overridden by `cases_test.csv`, study cases, or the case column.
+- Some report gaps are switch-driven and expected. For example, sequential
+  `timetype=seq` runs do not produce `cap_iter`, and `land_use_analysis=0` skips
+  `land_use_total.csv`.
+- OpRes report failures can come from empty representative reserve periods:
+  check `inputs_case/rep/opres_periods.csv`, `opRes_supply_h.csv`, `Sw_OpRes`,
+  and the generated equation counts in `lstfiles/1_Inputs.lst` or solve `.lst`
+  files before assuming `GSw_OpRes` itself is wrong.
+- Current `health_damages_caused_r.csv` files use the air-quality postprocessor
+  schema (`ba`, `pollutant`, `tons`, `md`, `damage_$`, `mortality`); bokehpivot
+  normalizes this to legacy report display columns in `postprocessing/bokehpivot/reeds2.py`.
 - `runstatus.py` summarizes running/failed/finished cases for a batch prefix.
 - `postprocessing/check_error.py` reads the `error_check` output for solved
   cases.
@@ -246,4 +276,3 @@ Inputs and CSVs:
   changed.
 - Do not use destructive git commands or delete generated data unless the user
   asks for that specific action.
-
