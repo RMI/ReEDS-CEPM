@@ -360,7 +360,15 @@ def get_src(scen, src):
     if 'transpose' in src and src['transpose'] is True:
         df_src = df_src.T
     if 'columns' in src:
-        df_src.columns = src['columns']
+        if len(df_src.columns) == len(src['columns']):
+            df_src.columns = src['columns']
+        elif not src.get('allow_mismatched_columns', False):
+            df_src.columns = src['columns']
+        else:
+            # Some newer outputs are normalized in their preprocess functions.
+            # For those opt-in sources, preserve CSV headers when legacy report
+            # columns no longer match the generated file width.
+            pass
     df_src.replace('Eps',0, inplace=True)
     df_src.replace('Undf',0, inplace=True)
     df_src = df_src.apply(pd.to_numeric, errors='ignore')
