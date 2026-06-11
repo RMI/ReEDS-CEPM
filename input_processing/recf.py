@@ -369,6 +369,9 @@ def main(reeds_path, inputs_case):
             resource_adequacy_years
         )
         df_windofs.columns = ['wind-ofs_' + col for col in df_windofs]
+    else:
+        # Keep concat inputs consistent when offshore wind is disabled.
+        df_windofs = pd.DataFrame(index=df_windons.index)
 
     ### UPV
     df_upv = calculate_class_region_cf_hourly(
