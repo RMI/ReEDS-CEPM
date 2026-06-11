@@ -17,10 +17,6 @@ Use this file as the first stop for agent orientation. Deeper references:
   expectations, and GAMS development guidance.
 - @sources_documentation.md: data-source documentation expectations and input
   provenance notes.
-- @TESTING.md: local testing commands, model-run validation, and report-debugging
-  workflow.
-- @REPORT_OUTPUT_LOGIC.md: bokehpivot report output dependencies and conditions
-  for sections to render.
 
 ## Project Structure
 
