@@ -27,7 +27,7 @@ import bokeh.palettes as bpa
 import bokeh.resources as br
 import bokeh.embed as be
 import datetime
-import six.moves.urllib.parse as urlp
+import urllib.parse as urlp
 import subprocess as sp
 import jinja2 as ji
 import reeds_bokeh as rb
@@ -612,14 +612,35 @@ def vizit_report(data_type, data_source, vizit_data, output_dir, auto_open):
     vizit_commit = '7011d363e40386264bedb3155629729b225fd22e'
     vizit_url = f'https://raw.githubusercontent.com/mmowers/vizit/{vizit_commit}/index.html'
     f_out_str = requests.get(vizit_url).text
-    data_str = json.dumps(data_dict, separators=(',',':'))
-    config_str = json.dumps(vizit_config, separators=(',',':'))
-    f_out_str = re.sub('let config_load = .*;\n', f'let config_load = {config_str};\n', f_out_str, 1)
-    f_out_str = re.sub('let rawData = .*;\n', f'let rawData = {data_str};\n', f_out_str, 1)
+    # Vizit report data can contain NumPy scalars/arrays from pandas outputs;
+    # normalize them before JSON encoding so report generation does not fail.
+    data_str = json.dumps(data_dict, separators=(',',':'), default=json_scalar)
+    config_str = json.dumps(vizit_config, separators=(',',':'), default=json_scalar)
+    # Use callable replacements so backslashes in generated JSON are treated as
+    # literal text rather than regex replacement escapes.
+    f_out_str = re.sub(
+        'let config_load = .*;\n',
+        lambda _: f'let config_load = {config_str};\n',
+        f_out_str,
+        1,
+    )
+    f_out_str = re.sub(
+        'let rawData = .*;\n',
+        lambda _: f'let rawData = {data_str};\n',
+        f_out_str,
+        1,
+    )
     with open(f'{output_dir}report_vizit.html', 'w') as f_out:
         f_out.write(f_out_str)
     if auto_open == 'Yes':
         sp.Popen(os.path.abspath(f'{output_dir}report_vizit.html'), shell=True)
+
+def json_scalar(obj):
+    if isinstance(obj, np.generic):
+        return obj.item()
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    raise TypeError(f'Object of type {obj.__class__.__name__} is not JSON serializable')
 
 def preset_wdg(preset, download_full_source=False):
     '''
