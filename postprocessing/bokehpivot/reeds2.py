@@ -1111,49 +1111,8 @@ def net_co2(dfs, **kw):
     co2['Cumulative CO2e (MMton)'] /= 1e6
     return co2
 
-# health_damages_caused_r.csv is now written with the current 9-column schema
-# from postprocessing/air_quality, while these report paths still use the older
-# bokehpivot display names downstream. Keep both lists explicit at the boundary.
-HEALTH_DAMAGE_SOURCE_COLUMNS = [
-    'rb', 'year', 'e', 'Emissions (thousand metric tons)',
-    'model', 'cr', 'Marginal damage ($/metric ton)',
-    'Health damages (billion $)', 'Health damages (lives)'
-]
-HEALTH_DAMAGE_LEGACY_COLUMNS = [
-    'rb', 'st', 'year', 'e', 'Emissions (thousand metric tons)',
-    'model', 'cr', 'Marginal damage ($/metric ton)',
-    'Health damages (billion $)', 'Health damages (lives)'
-]
-
-def normalize_health_damage_schema(df):
-    # Accept either current generator headers or legacy report headers, then
-    # return the legacy names expected by the existing report calculations.
-    df = df.copy()
-    df.rename(columns={
-        'ba': 'rb',
-        'pollutant': 'e',
-        'tons': 'Emissions (thousand metric tons)',
-        'md': 'Marginal damage ($/metric ton)',
-        'damage_$': 'Health damages (billion $)',
-        'mortality': 'Health damages (lives)',
-    }, inplace=True)
-
-    if 'st' not in df.columns:
-        # Current health-damage outputs do not include state. Keep a placeholder
-        # for older bokehpivot paths; derive this from hierarchy if it is used.
-        df['st'] = df['rb'] if 'rb' in df.columns else ''
-
-    required = HEALTH_DAMAGE_SOURCE_COLUMNS + ['st']
-    missing = [col for col in required if col not in df.columns]
-    if missing:
-        raise KeyError('health_damages_caused_r.csv missing columns: {}'.format(missing))
-
-    return df[required]
-
 # function to process health damage estimates
 def process_health_damage(df, **kw):
-    df = normalize_health_damage_schema(df)
-
     # convert to billion $ and inflate series
     df['Health damages (billion $)'] = inflate_series(df['Health damages (billion $)']) * 1e-9
 
@@ -1176,27 +1135,24 @@ def process_health_damage(df, **kw):
     rows = product(*allRows.values())
     df_all = pd.DataFrame.from_records(rows, columns=allRows.keys())
     df_new = df.merge(df_all, how='outer', on=['model', 'cr', 'e', 'rb', 'year'])
-    df_new['st'] = df_new['st'].ffill()
+    df_new['st'] = df_new['st'].interpolate(method="ffill")
     
     # sort by category and year
     df_new = df_new.sort_values(['model', 'cr', 'e', 'rb', 'year'])
 
     # interpolate any missing values 
-    df_new = df_new.groupby(
-        ['model', 'cr', 'e', 'rb'], group_keys=False
-    ).apply(lambda group: group.interpolate(method='ffill'))
+    df_new = df_new.groupby(['model', 'cr', 'e', 'rb']).apply(lambda group: group.interpolate(method='ffill'))
 
     # sum over rb
-    df_out = df_new.groupby(['model', 'cr', 'e', 'year'])[[
-        'Emissions (thousand metric tons)', 'Health damages (billion $)',
-        'Health damages (lives)', 'Discounted health damages (billion $)'
-    ]].sum().reset_index()
+    df_out = df_new.groupby(['model', 'cr', 'e', 'year'])[
+            'Emissions (thousand metric tons)', 'Health damages (billion $)', 
+            'Health damages (lives)', 'Discounted health damages (billion $)'
+        ].sum().reset_index()
 
     # also sum over pollutant   
-    df_poll_agg = df_new.groupby(['model', 'cr', 'year'])[[
-        'Health damages (billion $)', 'Health damages (lives)',
-        'Discounted health damages (billion $)'
-    ]].sum().reset_index()
+    df_poll_agg = df_new.groupby(['model', 'cr', 'year'])[
+            'Health damages (billion $)', 'Health damages (lives)', 'Discounted health damages (billion $)'
+        ].sum().reset_index()
 
     df_poll_agg.rename(columns={'Health damages (billion $)' : 'Total health damages (billion $)', 
                                 'Health damages (lives)' : 'Total health damages (lives)',
@@ -1218,9 +1174,7 @@ def process_social_costs(dfs, **kw):
     system_costs_agg.rename(columns={'Cost (Bil $)' : 'Cost (Bil $)-system', 
                                     'Discounted Cost (Bil $)' : 'Discounted Cost (Bil $)-system'}, inplace=True)
 
-    health_costs_agg = health_costs.groupby(['year', 'model', 'cr'])[[
-        'Health damages (billion $)', 'Discounted health damages (billion $)'
-    ]].sum().reset_index()
+    health_costs_agg = health_costs.groupby(['year', 'model', 'cr'])['Health damages (billion $)', 'Discounted health damages (billion $)'].sum().reset_index()
     health_costs_agg.rename(columns={'Health damages (billion $)' : 'Cost (Bil $)-health', 
                                     'Discounted health damages (billion $)' : 'Discounted Cost (Bil $)-health'}, inplace=True)
 
@@ -2113,10 +2067,7 @@ results_meta = collections.OrderedDict((
 
     ('Health Damages from Emissions',
         {'file':'health_damages_caused_r.csv',
-        'columns': HEALTH_DAMAGE_LEGACY_COLUMNS,
-        # Preserve the CSV's real headers when the current 9-column output is
-        # present; process_health_damage normalizes the schema before plotting.
-        'allow_mismatched_columns': True,
+        'columns': ['rb', 'st', 'year', 'e', 'Emissions (thousand metric tons)', 'model', 'cr', 'Marginal damage ($/metric ton)', 'Health damages (billion $)', 'Health damages (lives)'],
         'preprocess': [
             {'func': process_health_damage, 'args':{}},
         ],
@@ -2139,9 +2090,7 @@ results_meta = collections.OrderedDict((
             {'name': 'df_capex_init', 'file': '../inputs_case/df_capex_init.csv'},
             {'name': 'switches', 'file': '../inputs_case/switches.csv', 'header':None, 'columns': ['switch', 'value']},
             {'name': 'scalars', 'file': '../inputs_case/scalars.csv', 'header':None, 'columns': ['scalar', 'value', 'comment']},
-            # See the Health Damages source above: keep current headers intact
-            # and normalize them inside process_social_costs/process_health_damage.
-            {'name': 'health_damages', 'file': 'health_damages_caused_r.csv', 'columns': HEALTH_DAMAGE_LEGACY_COLUMNS, 'allow_mismatched_columns': True},
+            {'name': 'health_damages', 'file': 'health_damages_caused_r.csv', 'columns': ['rb', 'st', 'year', 'e', 'Emissions (thousand metric tons)', 'model', 'cr', 'Marginal damage ($/metric ton)', 'Health damages (billion $)', 'Health damages (lives)']},
         ],  
         'preprocess': [
             {'func': process_social_costs, 'args': {}},
