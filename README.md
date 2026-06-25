@@ -151,7 +151,7 @@ This script performs the following steps in order:
 6. Runs `julia --project=. instantiate.jl`.
 7. Forwards all arguments to `runbatch.py`.
 
-Passing `-y` / `--bypass` skips Step 5 (`uv sync --extra dev`) and Step 6 (`julia --project=. instantiate.jl`).
+Passing `-y` (or `--skip-setup` / `--bypass`) skips Step 5 (`uv sync --extra dev`) and Step 6 (`julia --project=. instantiate.jl`).
 All other checks and setup steps still run, and remaining arguments are still passed to `runbatch.py`
 
 ```powershell
