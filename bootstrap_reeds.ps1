@@ -23,6 +23,8 @@ Usage examples:
     .\bootstrap_reeds.ps1 --bypass -b v20260625_test -c test
 #>
 
+# Initializing functions and variables for this script.
+
 # Accept and forward all remaining command-line args to runbatch.py.
 param(
     [switch]$y, # Bypass mode for skipping uv sync and Julia instantiate. We use y to prevent collision with runbatch options.
@@ -182,6 +184,8 @@ if ($y) {
     }
 }
 
+Write-Host 'Bootstrap complete. Starting ReEDS runbatch.py with forwarded arguments...'
+
 # Step 7: Start ReEDS with any arguments passed to this bootstrap script.
 Write-Host '[run] uv run python runbatch.py ...'
 Set-Location $repoRoot
@@ -190,4 +194,4 @@ if ($LASTEXITCODE -ne 0) {
     throw 'runbatch.py failed.'
 }
 
-Write-Host 'Bootstrap complete.'
+
