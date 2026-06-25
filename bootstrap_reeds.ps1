@@ -11,8 +11,8 @@ What this script does:
 7) Starts runbatch.py and forwards any arguments passed to this script.
 
 
-Bypass option:
-    -y, -Bypass, or --bypass
+BYPASS option:
+    -y, --skip-setup, or --bypass
     Skips Step 5 (`uv sync --extra dev`) and Step 6 (`julia --project=. instantiate.jl`).
     Other checks and setup steps still run, and remaining args are forwarded to runbatch.py.
 
@@ -25,18 +25,21 @@ Usage examples:
 
 # Accept and forward all remaining command-line args to runbatch.py.
 param(
-    [Alias('y')]
-    [switch]$Bypass,
+    [switch]$y, # Bypass mode for skipping uv sync and Julia instantiate. We use y to prevent collision with runbatch options.
 
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$RunbatchArgs
 )
 
-# Copy forwarded args and handle explicit --bypass token if provided.
+# Copy forwarded args and handle explicit bypass tokens if provided.
 $ForwardArgs = @($RunbatchArgs)
 if ($ForwardArgs -contains '--bypass') {
-    $Bypass = $true
+    $y = $true
     $ForwardArgs = @($ForwardArgs | Where-Object { $_ -ne '--bypass' })
+}
+if ($ForwardArgs -contains '--skip-setup') {
+    $y = $true
+    $ForwardArgs = @($ForwardArgs | Where-Object { $_ -ne '--skip-setup' })
 }
 
 # Fail immediately on PowerShell errors so setup issues do not get masked.
@@ -161,7 +164,7 @@ if (-not $hasPinned311) {
 }
 
 # Step 5: Run uv sync unless bypass mode is enabled.
-if ($Bypass) {
+if ($y) {
     Write-Warning 'Bypass mode enabled: skipping uv sync --extra dev and julia --project=. instantiate.jl.'
 } else {
     # This is safe and ensures Python deps match lock/project files.
