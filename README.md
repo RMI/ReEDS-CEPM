@@ -121,7 +121,6 @@ Instantiate the Julia environment:
 julia --project=. instantiate.jl
 ```
 
-
 Link large data files from shared folder, so we each don't store separate instances of this ~95GB of input data. Note you cannot do this in git bash as 
 there are some type of strange permission issues, so use powershell:
 
@@ -187,7 +186,6 @@ Run the following for information on other optional command-line arguments:
 ```bash
 uv run python runbatch.py -h
 ```
-
 
 PowerShell users can run setup + launch in one command with the bootstrap helper:
 
