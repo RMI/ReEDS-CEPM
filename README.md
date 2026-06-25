@@ -123,6 +123,7 @@ Instantiate the Julia environment:
 julia --project=. instantiate.jl
 ```
 
+
 Link large data files from shared folder, so we each don't store separate instances of this ~95GB of input data. Note you cannot do this in git bash as 
 there are some type of strange permission issues, so use powershell:
 
@@ -133,6 +134,32 @@ New-Item -ItemType Junction -Path ".inputs\remote" -Target "C:\Users\Public\Docu
 Several large data files are hosted remotely. These files are downloaded automatically as needed during a ReEDS run, but the command above finishes all internet-requiring steps up front.
 
 Additional details on remote files and other topics can be found in the [user guide](https://reeds-model.github.io/ReEDS/user_guide.html#large-input-files).
+
+### 4.5 Optional PowerShell bootstrap command
+
+Once you've cloned the repository, you can use an optional PowerShell bootstrap helper to 
+ensure supporting software is up to date and then immediately run runbatch.py:
+
+```powershell
+.\bootstrap_reeds.ps1
+```
+
+This script performs the following steps in order:
+1. Verifies GAMS is on PATH, checks GAMS license status, and prints a detected version string.
+2. Verifies Julia is on PATH and checks that the version is `1.12.1`.
+3. Sets ReEDS environment variables for the current PowerShell session.
+4. Checks that Python is pinned to 3.11 and runs `uv python pin 3.11` if needed.
+5. Runs `uv sync --extra dev`.
+6. Runs `julia --project=. instantiate.jl`.
+7. Forwards all arguments to `runbatch.py`.
+
+Passing `-y` / `--bypass` skips Step 5 (`uv sync --extra dev`) and Step 6 (`julia --project=. instantiate.jl`).
+All other checks and setup steps still run, and remaining arguments are still passed to `runbatch.py`
+
+```powershell
+.\bootstrap_reeds.ps1 -y -b v20250314_main -c test
+.\bootstrap_reeds.ps1 --bypass -b v20250314_main -c test
+```
 
 ### 5. Run ReEDS
 
@@ -161,6 +188,13 @@ Run the following for information on other optional command-line arguments:
 
 ```bash
 uv run python runbatch.py -h
+```
+
+
+PowerShell users can run setup + launch in one command with the bootstrap helper:
+
+```powershell
+.\bootstrap_reeds.ps1 -b v20250314_main -c test
 ```
 
 ## Troubleshooting
