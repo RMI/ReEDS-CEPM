@@ -66,7 +66,6 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#documentation-guidelines">Documentation Guidelines</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#how-to-use-sources-documentation">How to Use Sources Documentation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#updating-the-reeds-documentation">Updating the ReEDS Documentation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#viewing-the-documentation-locally">Viewing the Documentation Locally</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#adding-citations-in-the-documentation">Adding Citations in the Documentation</a></li>
@@ -93,7 +92,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="user_guide.html">User guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Analysis tools and helper scripts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="publications.html">ReEDS publications</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
@@ -128,7 +127,7 @@
 <section id="coding-standards-and-conventions">
 <h2>Coding Standards and Conventions<a class="headerlink" href="#coding-standards-and-conventions" title="Link to this heading"></a></h2>
 <p>The following naming, rounding, and coding conventions apply to all new code contributed to ReEDS. Because these conventions were established after initial development, you may notice inconsistencies in the existing codebase–that’s expected. The goal is consistency going forward, not comprehensiveness.</p>
-<p>Using the Ruff Python linter is recommended to improve code quality. To get started with Ruff, see the guide on <a class="reference external" href="https://docs.astral.sh/ruff/installation/">Installing Ruff</a>. Once installed, you can check for errors using the following command from the base ReEDS-2.0 directory: <code class="docutils literal notranslate"><span class="pre">ruff</span> <span class="pre">check</span></code>. If you need more information on a specific error, see the <a class="reference external" href="https://docs.astral.sh/ruff/rules/">Ruff Rules</a>.</p>
+<p>Using the Ruff Python linter is recommended to improve code quality. To get started with Ruff, see the guide on <a class="reference external" href="https://docs.astral.sh/ruff/installation/">Installing Ruff</a>. Once installed, you can check for errors using the following command from the base ReEDS directory: <code class="docutils literal notranslate"><span class="pre">ruff</span> <span class="pre">check</span></code>. If you need more information on a specific error, see the <a class="reference external" href="https://docs.astral.sh/ruff/rules/">Ruff Rules</a>.</p>
 <p>Since we have not yet adopted strict formatting guidelines, do not make code <em>formatting</em> changes to existing scripts using Ruff; use only the linter.</p>
 <section id="naming-rounding-and-coding-conventions">
 <h3>Naming, Rounding, and Coding Conventions<a class="headerlink" href="#naming-rounding-and-coding-conventions" title="Link to this heading"></a></h3>
@@ -153,7 +152,7 @@
 </tr>
 <tr class="row-even"><td><p>GAMS Files</p></td>
 <td><p>letter-underscore prefix by category, alpha-ordered; numbering can help communicate ordering when multiple files share a category</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">d1_financials.gms</span></code>, <code class="docutils literal notranslate"><span class="pre">d2_varfix.gms</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">2_financials.gms</span></code>, <code class="docutils literal notranslate"><span class="pre">5_varfix.gms</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p>Parameters</p></td>
 <td><p>lowercase with underscores, noun first; costs prefixed with “cost”</p></td>
@@ -293,7 +292,7 @@
 <li><p>GAMS functions such as sum, max, smax, etc. should use {}; Example: avg_outage(i) = sum{h,hours(h)*outage(i,h)} / 8760 ;</p></li>
 <li><p>When including the semicolon on the end of a line there should be a space between the semicolon and the last character of the line (see previous example)</p></li>
 <li><p>When using <code class="docutils literal notranslate"><span class="pre">/</span> <span class="pre">/</span></code> for a parameter declaration, place the closing semicolon on the same line as the final slash: <code class="docutils literal notranslate"><span class="pre">/</span> <span class="pre">;</span></code></p></li>
-<li><p>Sums outside of equations (e.g., in e_reports) need not be split over multiple lines if they do not exceed the line limit</p></li>
+<li><p>Sums outside of equations (e.g., in <code class="docutils literal notranslate"><span class="pre">report.gms</span></code>) need not be split over multiple lines if they do not exceed the line limit</p></li>
 <li><p>Do not use hard-coded numbers in equations or calculations. Values should be assigned to an appropriate parameter name that is subsequently used in the code.</p></li>
 <li><p>Large input data tables should be loaded from individual data files for each table, preferably in *.csv format. Large data tables should not be manually written into the code but can be written dynamically by scripts or inserted with a $include statement.</p></li>
 <li><p>Compile-time conditionals should always use a tag (period + tag name) to clearly define the relationships between compile-time conditional statements. Failure to do so hurts readability sometimes leads to compilation errors. Example:</p>
@@ -358,21 +357,22 @@ $onlisting
 </ul>
 </li>
 <li><p>If preprocessing is needed to create an input file that is placed in the ReEDS repository, the preprocessing scripts or workbooks should be included in the <a class="reference external" href="https://github.com/ReEDS-Model/ReEDS_Input_Processing">ReEDS_Input_Processing repository</a>. Data from external sources should be downloaded programmatically when possible.</p></li>
-<li><p>Any scripts that preprocess data after a ReEDS run is started should be placed in the input_processing folder.</p>
+<li><p>Any scripts that preprocess data after a ReEDS run is started should be placed in the <code class="docutils literal notranslate"><span class="pre">reeds/input_processing</span></code> folder.</p>
 <ul class="simple">
 <li><p>Input processing scripts should start with a block of descriptive comments describing the purpose and methodology, and internal functions should use docstrings and liberal comments on functionality and assumptions.</p></li>
 </ul>
 </li>
 <li><p>Any costs read into b_inputs should already be in 2004$.  Cost adjustments in preprocessing scripts should rely on the deflator.csv file rather than have hard-coded conversions.</p></li>
 <li><p>In general, if inputs require calculations before they are ingested into b_inputs, those calculations should be done in Python rather than in GAMS. GAMS can be used for calculations where the GAMS syntax simplifies the calculation or where upstream dependencies make it challenging for the calculations to happen in Python preprocessing scripts.</p></li>
-<li><p>In Python, file paths should be added using os.path.join() rather than writing out the filepath with slashes.</p></li>
+<li><p>In Python, file paths should be specified using <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">pathlib</span> <span class="pre">import</span> <span class="pre">Path</span></code> and <code class="docutils literal notranslate"><span class="pre">Path(reeds.io.reeds_path,</span> <span class="pre">'foldername',</span> <span class="pre">'maybe_more_foldernames',</span> <span class="pre">'filename.extension')</span></code> instead of writing out the filepath as a string with slashes.
+Use absolute filepaths whenever possible.</p></li>
 <li><p>Data column headers should use the ReEDS set names when practical.</p>
 <ul class="simple">
 <li><p>Example: data that include regions should use “r” for the column name rather than “ba”, “reeds_ba”, or “region”.</p></li>
 </ul>
 </li>
 <li><p>Preprocessing scripts in input_processing should not change the working directory or use relative filepaths; absolute filepaths should be used wherever possible.</p></li>
-<li><p>When feasible, inputs used in the objective function (c_supplyobjective.gms) should be included in tests/objective_function_params.yaml. Inputs included in this .yaml file will be checked for missing values using input_processing/check_inputs.py.</p></li>
+<li><p>When feasible, inputs used in the objective function (<code class="docutils literal notranslate"><span class="pre">d_objective.gms</span></code>) should be included in tests/objective_function_params.yaml. Inputs included in this .yaml file will be checked for missing values using input_processing/check_inputs.py.</p></li>
 </ul>
 </section>
 <section id="input-data">
@@ -448,7 +448,7 @@ $onlisting
 <h2>Version Control and Testing<a class="headerlink" href="#version-control-and-testing" title="Link to this heading"></a></h2>
 <section id="reeds-versioning-releases">
 <h3>ReEDS Versioning &amp; Releases<a class="headerlink" href="#reeds-versioning-releases" title="Link to this heading"></a></h3>
-<p>This section outlines the current ReEDS approach to versioning. You can find current and past ReEDS versions here: <a class="reference external" href="https://github.com/ReEDS-Model/ReEDS/releases">ReEDS-2.0 Releases</a></p>
+<p>This section outlines the current ReEDS approach to versioning. You can find current and past ReEDS versions here: ‘<a class="reference external" href="https://github.com/reeds-model/reeds/releases">ReEDS Releases</a></p>
 <section id="versioning-overview">
 <h4>Versioning overview<a class="headerlink" href="#versioning-overview" title="Link to this heading"></a></h4>
 <p>GitHub Releases are used to create ReEDS versions on a monthly cadence after a suite of tests are performed. More information on GitHub Releases can be found in the <a class="reference external" href="https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases">GitHub Doc</a>.</p>
@@ -541,28 +541,6 @@ $onlisting
 </section>
 <section id="documentation-guidelines">
 <h2>Documentation Guidelines<a class="headerlink" href="#documentation-guidelines" title="Link to this heading"></a></h2>
-<p>When making changes to ReEDS, you should generate and update the sources.csv and sources_documentation.md files before merging.</p>
-<section id="how-to-use-sources-documentation">
-<h3>How to Use Sources Documentation<a class="headerlink" href="#how-to-use-sources-documentation" title="Link to this heading"></a></h3>
-<ol class="arabic simple">
-<li><p>Before running the .bat script, please ensure the sources.csv file is closed. If open, the script will be unable to replace the file and will throw an error.</p></li>
-<li><p>Run <strong>generate_sources_md_file.bat</strong> script (for Mac and Linux users <strong>generate_sources_md_file.sh</strong>)located within the documentation_tools folder (ReEDS-2.0/docs/source/documentation_tools). You will need navigate to that directory prior to running.</p></li>
-<li><p>This will run the first script <strong>generate_new_sources.py</strong>. generating a new <strong>sources.csv</strong> file at the top directory of the repository, please note,the existing sources.csv in your Repository root will be renamed to sources_{timestamp}.csv format. This can be deleted manually if no longer required; or can be held on to if required for comparison. Tree change files are generated in the documentations_tools folder to indicate files not included in the prior sources file (<strong>sources_files_added.csv</strong>), files removed from the prior sources file (<strong>sources_files_deleted.csv</strong>), and files not included in the sources file because they aren’t committed (<strong>sources_untracked_files.csv</strong>). These change files should not be committed and can be deleted when no longer needed.</p></li>
-<li><p>Once this has finished running, please proceed to update relevant fields in the <em>sources.csv</em> file</p></li>
-<li><p>Once relevant fields have been updated, please save sources.csv and close it.</p></li>
-<li><p>Run <strong>generate_markdown.bat</strong> (for Mac and Linux users <strong>generate_markdown.sh</strong>)located within the documentation_tools folder. This will generate a README file <em>sources_documentation.md</em> with all the Source files and their details for the Repository by running the script <strong>generate_markdown.py</strong>. The markdown file will be generated in the ReEDS-2.0/docs/source/ location.</p></li>
-<li><p>Commit and push the updated <strong>sources.csv</strong> and <strong>sources_documentation.md</strong> files.</p></li>
-</ol>
-<hr class="docutils" />
-<section id="how-to-update-relevant-fields-in-sources-csv">
-<h4>How to Update Relevant Fields in sources.csv<a class="headerlink" href="#how-to-update-relevant-fields-in-sources-csv" title="Link to this heading"></a></h4>
-<ol class="arabic simple">
-<li><p>Once prompted by the .bat script, open <strong>sources.csv</strong> (found at the Repository root).</p></li>
-<li><p>Using the Added Files List, <strong>sources_files_added.csv</strong> (found within the documentation_tools folder) which displays all the input files added by the user, enter relevant details in corresponding columns of <strong>sources.csv</strong>. Fields that do not apply can be left blank. Do not add new columns to sources.csv without also updating the scripts to support the expanded fields.</p></li>
-<li><p>Save the sources.csv and close the file.</p></li>
-</ol>
-</section>
-</section>
 <section id="updating-the-reeds-documentation">
 <h3>Updating the ReEDS Documentation<a class="headerlink" href="#updating-the-reeds-documentation" title="Link to this heading"></a></h3>
 <p>The ReEDS documentation lives in the “docs/source” folder within the repo. Depending on the changes you’re making to the model, please update the documentation here accordingly. See the <a class="reference internal" href="markdown_cheat_sheet.html"><span class="std std-doc">Getting Started with Markdown in VSCode</span></a> if you’re unfamiliar with markdown.</p>
@@ -576,6 +554,7 @@ $onlisting
 </ul>
 </li>
 </ol>
+<p>Make sure to update the <code class="docutils literal notranslate"><span class="pre">docs/sources.csv</span></code> file when applicable.</p>
 </section>
 <section id="viewing-the-documentation-locally">
 <h3>Viewing the Documentation Locally<a class="headerlink" href="#viewing-the-documentation-locally" title="Link to this heading"></a></h3>
@@ -600,7 +579,7 @@ $onlisting
 <li><p>Ensure you have the ‘reeds2’ environment activated</p></li>
 </ul>
 </li>
-<li><p>Open <code class="docutils literal notranslate"><span class="pre">/ReEDS-2.0/docs/build/html/index.html</span></code> to view the documentation.</p>
+<li><p>Open <code class="docutils literal notranslate"><span class="pre">/ReEDS/docs/build/html/index.html</span></code> to view the documentation.</p>
 <ul class="simple">
 <li><p>If you make changes and wish to see how they are reflected in the documentation, you can run the <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">html</span></code> command again and refresh the window you already have open</p></li>
 </ul>
@@ -619,7 +598,7 @@ c. Under Export/BibTeX or Edit-&gt;Preferences-&gt;Better BibTeX, set “Add URL
 d. Under Export/Fields or Edit-&gt;Preferences-&gt;Better BibTeX, enter the following in “Fields to omit from export (comma-separated)”: <code class="docutils literal notranslate"><span class="pre">file,keywords</span></code></p></li>
 <li><p>Request access to the ReEDS Zotero library from Brian, Patrick, or Wesley</p></li>
 <li><p>If you add any new references to the ReEDS Zotero library and cite them in the ReEDS docs, you’ll need to:
-a. Replace the contents of ReEDS-2.0/docs/source/references.bib with the contents of the .bib file at {your path}. Make sure to export your .bib file in a “Better BibTex” format.</p></li>
+a. Replace the contents of ReEDS/docs/source/references.bib with the contents of the .bib file at {your path}. Make sure to export your .bib file in a “Better BibTex” format.</p></li>
 </ol>
 <p>To add an in-text citation, find the citation key of the citation you would like to add in Zotero.</p>
 <figure class="align-default" id="id2">
@@ -949,8 +928,8 @@ If you have a charge code for your project, share it with the reviewers to cover
             &quot;program&quot;: &quot;${file}&quot;,
             &quot;console&quot;: &quot;integratedTerminal&quot;,
             &quot;args&quot;: [
-                &quot;/Users/kminderm/ReEDS-2.0&quot;,
-                &quot;/Users/kminderm/ReEDS-2.0/runs/main_Pacific/inputs_case&quot;
+                &quot;/Users/kminderm/ReEDS&quot;,
+                &quot;/Users/kminderm/ReEDS/runs/main_Pacific/inputs_case&quot;
             ],
             &quot;purpose&quot;: [&quot;debug-in-terminal&quot;]
         },
@@ -980,7 +959,7 @@ If you have a charge code for your project, share it with the reviewers to cover
 <ul class="simple">
 <li><p>The following example runs the scenarios in cases_test.csv with the batch name ‘20240717_test’. The ‘-r -1’ means that all cases will run simultaneously.</p></li>
 </ul>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">runbatch</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">c</span> <span class="n">test</span> <span class="o">-</span><span class="n">b</span> <span class="mi">20240717</span><span class="n">_test</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="mi">1</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">runreeds</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">c</span> <span class="n">test</span> <span class="o">-</span><span class="n">b</span> <span class="mi">20240717</span><span class="n">_test</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="mi">1</span>
 </pre></div>
 </div>
 <ul>
@@ -1049,7 +1028,7 @@ If you have a charge code for your project, share it with the reviewers to cover
 
   <div role="contentinfo">
     <p>&#169; Copyright 2024, NREL.
-      <span class="lastupdated">Last updated on May 05, 2026.
+      <span class="lastupdated">Last updated on June 29, 2026.
       </span></p>
   </div>
 

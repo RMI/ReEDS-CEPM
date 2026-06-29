@@ -54,7 +54,7 @@
 <li class="toctree-l1"><a class="reference internal" href="developer_best_practices.html">Developer Resources</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="user_guide.html">User guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Analysis tools and helper scripts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="publications.html">ReEDS publications</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
@@ -99,6 +99,7 @@
 <p>This GitHub repository contains the source code for NLR’s ReEDS model.
 The ReEDS model source code is available at no cost from the National Laboratory of the Rockies.
 The ReEDS model can be downloaded or cloned from <a class="reference external" href="https://github.com/ReEDS-Model/ReEDS">https://github.com/ReEDS-Model/ReEDS</a>.</p>
+<p>If you want to use the latest stable version of ReEDS, download or check out the latest stable release <a class="reference external" href="https://github.com/ReEDS-Model/ReEDS/releases/latest">here</a>.</p>
 <p><strong>For more information about the model, see the <a class="reference external" href="https://reeds-model.github.io/ReEDS">ReEDS Documentation</a>.</strong></p>
 <p>ReEDS training videos are available on the <a class="reference external" href="https://youtube.com/playlist?list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&amp;amp;si=NgGBaL_MxNcYiIEX">NLR Learning YouTube channel</a>.</p>
 <p><a name="Introduction"></a></p>
@@ -154,10 +155,10 @@ Additional details on remote files and other topics can be found in the <a class
 </li>
 <li><p>Run ReEDS on a test case from the root of the cloned repository:</p>
 <ol class="arabic simple">
-<li><p>For interactive setup: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runbatch.py</span></code></p></li>
-<li><p>For one-line operation: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runbatch.py</span> <span class="pre">-b</span> <span class="pre">v20250314_main</span> <span class="pre">-c</span> <span class="pre">test</span></code>.
+<li><p>For interactive setup: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runreeds.py</span></code></p></li>
+<li><p>For one-line operation: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runreeds.py</span> <span class="pre">-b</span> <span class="pre">v20250314_main</span> <span class="pre">-c</span> <span class="pre">test</span></code>.
 In this example, “v20250314_main” is the prefix for this batch of cases, and “test” is the suffix of the cases file, in this case <code class="docutils literal notranslate"><span class="pre">cases_test.csv</span></code>, located in the root of the repository.
-Run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runbatch.py</span> <span class="pre">-h</span></code> for information on other optional command-line arguments for ReEDS.</p></li>
+Run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runreeds.py</span> <span class="pre">-h</span></code> for information on other optional command-line arguments for ReEDS.</p></li>
 </ol>
 </li>
 </ol>
@@ -185,7 +186,7 @@ note: to change the maxdepth of the toctree, you need to change 'navigation_dept
 
   <div role="contentinfo">
     <p>&#169; Copyright 2024, NREL.
-      <span class="lastupdated">Last updated on May 05, 2026.
+      <span class="lastupdated">Last updated on June 29, 2026.
       </span></p>
   </div>
 

@@ -53,7 +53,7 @@
 <li class="toctree-l1"><a class="reference internal" href="developer_best_practices.html">Developer Resources</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="user_guide.html">User guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Analysis tools and helper scripts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="publications.html">ReEDS publications</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
@@ -98,18 +98,18 @@
 <ul class="simple">
 <li><p>Copy the contents of rows 2-6 from the ERCOT_county column</p></li>
 <li><p>Replace ‘z3109’ with ‘z134’ in row 5 (<code class="docutils literal notranslate"><span class="pre">GSw_ZoneSet</span></code>)</p></li>
-<li><p>Save <code class="docutils literal notranslate"><span class="pre">cases_examples.csv</span></code> in the ReEDS-2.0 folder (you can overwrite the existing file)</p></li>
+<li><p>Save <code class="docutils literal notranslate"><span class="pre">cases_examples.csv</span></code> in the ReEDS folder (you can overwrite the existing file)</p></li>
 </ul>
 </li>
 <li><p>Open VS Code</p>
 <ul class="simple">
-<li><p>Open the folder where your repo is located (File -&gt; Open Folder -&gt; navigate to ReEDS-2.0 folder)</p></li>
+<li><p>Open the folder where your repo is located (File -&gt; Open Folder -&gt; navigate to ReEDS folder)</p></li>
 <li><p>Open a new terminal and activate the reeds2 environment</p></li>
 </ul>
 </li>
 <li><p>Start a new run</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runbatch.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runreeds.py</span></code></p></li>
 <li><p>when prompted for case file name, enter <code class="docutils literal notranslate"><span class="pre">examples</span></code></p></li>
 <li><p>when prompted for how many simultaneous runs you would like to execute, enter 2</p></li>
 <li><p>The ‘ERCOT_county’ and ‘ERCOT_BA’ runs should start</p></li>
@@ -120,7 +120,7 @@
 <section id="review-the-results">
 <h3>1. Review the results<a class="headerlink" href="#review-the-results" title="Link to this heading"></a></h3>
 <ol class="arabic simple">
-<li><p>Navigate to ‘ReEDS-2.0/runs/{your run name}/outputs/reeds-report’ and open ‘report.html’</p></li>
+<li><p>Navigate to ‘ReEDS/runs/{your run name}/outputs/reeds-report’ and open ‘report.html’</p></li>
 <li><p>Learn to create your own plots of the results using bokehpivot</p>
 <ul class="simple">
 <li><p>See <a class="reference internal" href="#../postprocessing_tools.md#bokehpivot"><span class="xref myst">Bokeh Pivot</span></a></p></li>
@@ -162,16 +162,16 @@
 </ul>
 </li>
 <li><p>Change the ‘ignore’ row value to be 1 for all columns except ‘Western_BA_Decarb’ which you can either set to 0 or leave blank</p></li>
-<li><p>Save <code class="docutils literal notranslate"><span class="pre">cases_examples.csv</span></code> in ReEDS-2.0 folder</p></li>
+<li><p>Save <code class="docutils literal notranslate"><span class="pre">cases_examples.csv</span></code> in ReEDS folder</p></li>
 <li><p>Open VS Code</p>
 <ul class="simple">
-<li><p>Open the folder where your repo is located (File -&gt; Open Folder -&gt; navigate to ReEDS-2.0 folder)</p></li>
+<li><p>Open the folder where your repo is located (File -&gt; Open Folder -&gt; navigate to ReEDS folder)</p></li>
 <li><p>Open a new terminal and activate the reeds2 environment</p></li>
 </ul>
 </li>
 <li><p>Start a new run</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runbatch.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runreeds.py</span></code></p></li>
 <li><p>when prompted for case file name, enter <code class="docutils literal notranslate"><span class="pre">examples</span></code></p></li>
 <li><p>The ‘Western_BA_Decarb’ run should start</p></li>
 </ul>
@@ -206,7 +206,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2024, NREL.
-      <span class="lastupdated">Last updated on May 05, 2026.
+      <span class="lastupdated">Last updated on June 29, 2026.
       </span></p>
   </div>
 
