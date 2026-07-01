@@ -1,4 +1,4 @@
-,Default Value,github_MA_county_CC,CO_county_IRAlow,CO_county_100by2050,WECC_county,WECC_county_100by2050,PJM_county_CC,NYVT_mixed
+NEEDS_REVIEW-verify_switches_against_current_cases.csv,Default Value,github_MA_county_CC,CO_county_IRAlow,CO_county_100by2050,WECC_county,WECC_county_100by2050,PJM_county_CC,NYVT_mixed
 ignore,1,1,1,1,1,0,1,1
 GSw_Region,cendiv/Pacific,st/MA,st/CO,st/CO,interconnect/western,interconnect/western,transreg/PJM,st/NY.VT
 GSw_ZoneSet,,z3109,z3109,z3109,z3109,z3109,z3109,PJMcounty

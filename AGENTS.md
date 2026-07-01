@@ -1,5 +1,14 @@
 # ReEDS Agent Guide
 
+**Needs review:** this repo was recently rebased onto a restructured upstream
+ReEDS base (see git history around 2026-06). This file was written against the
+pre-restructure layout and has not yet been fully verified against the new
+`reeds/` package layout. Known stale references: `runbatch.py` throughout this
+file should be `runreeds.py`; `Augur.py` is now `reeds/resource_adequacy/ra_calcs.py`;
+`e_report.gms` is now `reeds/core/terminus/report.gms`; `input_processing/` now
+lives under `reeds/input_processing/`. Treat the rest of this file as unverified
+pending a full pass. Flagging for follow-up via issue/comment.
+
 ReEDS is a capacity planning and dispatch model for the U.S. electricity system.
 The repository is a mixed Python, GAMS, and Julia codebase: Python prepares inputs,
 orchestrates runs, and postprocesses outputs; GAMS contains the optimization model;

@@ -21,6 +21,14 @@ Usage examples:
     .\bootstrap_reeds.ps1 -b v20260625_test -c test
     .\bootstrap_reeds.ps1 -y -b v20260625_test -c test
     .\bootstrap_reeds.ps1 --bypass -b v20260625_test -c test
+
+NEEDS REVIEW: this script was written against the pre-restructure repo layout
+and has not yet been fully verified against the current upstream base. Known
+issues: (1) Step 7 below calls `runbatch.py`, which has been renamed to
+`runreeds.py` upstream; (2) `uv sync --extra dev` in Step 5 currently has no
+root pyproject.toml to sync against (see version-control/package-management
+cleanup). Do not rely on this script until those are fixed. Flagging for
+follow-up via issue/comment.
 #>
 
 # Initializing functions and variables for this script.
@@ -193,5 +201,3 @@ uv run python runbatch.py @ForwardArgs
 if ($LASTEXITCODE -ne 0) {
     throw 'runbatch.py failed.'
 }
-
-

@@ -8,6 +8,12 @@
 ![GitHub License](https://img.shields.io/github/license/ReEDS-Model/ReEDS)
 [![DOI](https://zenodo.org/badge/189060033.svg)](https://doi.org/10.5281/zenodo.16943302)
 
+**Needs review:** this repo was recently rebased onto a restructured upstream
+ReEDS base, and this README has not yet been fully verified against it. Known
+stale reference: instructions below say `runbatch.py`, which has been renamed
+to `runreeds.py` upstream. Treat setup/run instructions as unverified pending
+review. Flagging for follow-up via issue/comment.
+
 This GitHub repository contains the source code for NLR's ReEDS model.
 
 The ReEDS model source code is available at no cost from the National Laboratory of the Rockies.
