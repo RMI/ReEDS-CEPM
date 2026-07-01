@@ -1135,24 +1135,23 @@ def process_health_damage(df, **kw):
     rows = product(*allRows.values())
     df_all = pd.DataFrame.from_records(rows, columns=allRows.keys())
     df_new = df.merge(df_all, how='outer', on=['model', 'cr', 'e', 'rb', 'year'])
-    df_new['st'] = df_new['st'].interpolate(method="ffill")
     
     # sort by category and year
     df_new = df_new.sort_values(['model', 'cr', 'e', 'rb', 'year'])
 
     # interpolate any missing values 
-    df_new = df_new.groupby(['model', 'cr', 'e', 'rb']).apply(lambda group: group.interpolate(method='ffill'))
+    df_new = df_new.ffill()
 
     # sum over rb
-    df_out = df_new.groupby(['model', 'cr', 'e', 'year'])[
+    df_out = df_new.groupby(['model', 'cr', 'e', 'year'])[[
             'Emissions (thousand metric tons)', 'Health damages (billion $)', 
             'Health damages (lives)', 'Discounted health damages (billion $)'
-        ].sum().reset_index()
+    ]].sum().reset_index()
 
     # also sum over pollutant   
-    df_poll_agg = df_new.groupby(['model', 'cr', 'year'])[
+    df_poll_agg = df_new.groupby(['model', 'cr', 'year'])[[
             'Health damages (billion $)', 'Health damages (lives)', 'Discounted health damages (billion $)'
-        ].sum().reset_index()
+    ]].sum().reset_index()
 
     df_poll_agg.rename(columns={'Health damages (billion $)' : 'Total health damages (billion $)', 
                                 'Health damages (lives)' : 'Total health damages (lives)',
@@ -1174,7 +1173,7 @@ def process_social_costs(dfs, **kw):
     system_costs_agg.rename(columns={'Cost (Bil $)' : 'Cost (Bil $)-system', 
                                     'Discounted Cost (Bil $)' : 'Discounted Cost (Bil $)-system'}, inplace=True)
 
-    health_costs_agg = health_costs.groupby(['year', 'model', 'cr'])['Health damages (billion $)', 'Discounted health damages (billion $)'].sum().reset_index()
+    health_costs_agg = health_costs.groupby(['year', 'model', 'cr'])[['Health damages (billion $)', 'Discounted health damages (billion $)']].sum().reset_index()
     health_costs_agg.rename(columns={'Health damages (billion $)' : 'Cost (Bil $)-health', 
                                     'Discounted health damages (billion $)' : 'Discounted Cost (Bil $)-health'}, inplace=True)
 
@@ -2067,7 +2066,7 @@ results_meta = collections.OrderedDict((
 
     ('Health Damages from Emissions',
         {'file':'health_damages_caused_r.csv',
-        'columns': ['rb', 'st', 'year', 'e', 'Emissions (thousand metric tons)', 'model', 'cr', 'Marginal damage ($/metric ton)', 'Health damages (billion $)', 'Health damages (lives)'],
+        'columns': ['rb', 'year', 'e', 'Emissions (thousand metric tons)', 'model', 'cr', 'Marginal damage ($/metric ton)', 'Health damages (billion $)', 'Health damages (lives)'],
         'preprocess': [
             {'func': process_health_damage, 'args':{}},
         ],
@@ -2090,7 +2089,7 @@ results_meta = collections.OrderedDict((
             {'name': 'df_capex_init', 'file': '../inputs_case/df_capex_init.csv'},
             {'name': 'switches', 'file': '../inputs_case/switches.csv', 'header':None, 'columns': ['switch', 'value']},
             {'name': 'scalars', 'file': '../inputs_case/scalars.csv', 'header':None, 'columns': ['scalar', 'value', 'comment']},
-            {'name': 'health_damages', 'file': 'health_damages_caused_r.csv', 'columns': ['rb', 'st', 'year', 'e', 'Emissions (thousand metric tons)', 'model', 'cr', 'Marginal damage ($/metric ton)', 'Health damages (billion $)', 'Health damages (lives)']},
+            {'name': 'health_damages', 'file': 'health_damages_caused_r.csv', 'columns': ['rb', 'year', 'e', 'Emissions (thousand metric tons)', 'model', 'cr', 'Marginal damage ($/metric ton)', 'Health damages (billion $)', 'Health damages (lives)']},
         ],  
         'preprocess': [
             {'func': process_social_costs, 'args': {}},
