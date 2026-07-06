@@ -117,7 +117,7 @@ Link large data files from shared folder, so we each don't store separate instan
 there are some type of strange permission issues, so use powershell:
 
 ```powershell
-New-Item -ItemType Junction -Path ".inputs\remote" -Target "C:\Users\Public\Documents\reeds_data\remote"
+New-Item -ItemType Junction -Path ".\inputs\remote" -Target "C:\Users\Public\Documents\reeds_data\remote"
 ```
 
 Several large data files are hosted remotely. These files are downloaded automatically as needed during a ReEDS run, but the command above finishes all internet-requiring steps up front.
@@ -142,10 +142,10 @@ uv run python runbatch.py
 For one-line operation:
 
 ```bash
-uv run python runbatch.py -b v20250314_main -c test
+uv run python runbatch.py -b v20260605 -c cepm
 ```
 
-In this example, `v20250314_main` is the prefix for this batch of cases, and `test` is the suffix of the cases file, in this case `cases_test.csv`, located in the root of the repository. For the batch prefix, we should follow the convention `vYYYYMMDD_`, and note that the case ID from the cases file will be appended to the batch prefix for file naming purposes. Our cases are stored in the `cases_cepm.csv` file.
+In this example, `v20260605` is the prefix for this batch of cases, and `cepm` is the suffix of the cases file, in this case `cases_cepm.csv`, located in the root of the repository. For the batch prefix, we should follow the convention `vYYYYMMDD`, and note that the case ID from the cases file will be appended to the batch prefix for file naming purposes (e.g., `WECC_county_100by2050`).
 
 Run the following for information on other optional command-line arguments:
 

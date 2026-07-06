@@ -1,7 +1,7 @@
-,Default Value,github_MA_county_CC,CO_county_IRAlow,CO_county_100by2050,WECC_county,WECC_county_100by2050,PJM_county_CC,NYVT_mixed
+,Default Value,github_MA_county_CC,CO_county_IRAlow,CO_county_100by2050,WECC_county,East_134,PJM_county_CC,NYVT_mixed
 ignore,1,1,1,1,1,0,1,1
-GSw_Region,cendiv/Pacific,st/MA,st/CO,st/CO,interconnect/western,interconnect/western,transreg/PJM,st/NY.VT
-GSw_ZoneSet,,z3109,z3109,z3109,z3109,z3109,z3109,PJMcounty
+GSw_Region,cendiv/Pacific,st/MA,st/CO,st/CO,interconnect/western,interconnect/eastern,transreg/PJM,st/NY.VT
+GSw_ZoneSet,,z3109,z3109,z3109,z3109,z134,z3109,PJMcounty
 endyear,2032,2026,,,,,,
 yearset,,,,,,,,
 GSw_GasCurve,2,,,,,,,
@@ -12,7 +12,7 @@ GSw_TransHurdleRate,,,,,,,,
 distpvscen,,,,,,,,
 GSw_AnnualCap,,,,,,,,
 GSw_AnnualCapScen,,,,,,,,
-GSw_LoadProfiles,,EER2025_IRAlow,,EER2025_100by2050,,EER2025_100by2050,,
+GSw_LoadProfiles,,EER2025_IRAlow,,EER2025_100by2050,,,,
 GSw_NG_CRF_penalty,,,,,,,,
 GSw_PRM_NetImportLimit,,,,,,,,
 GSw_RetirePenalty,,,,,,,,
