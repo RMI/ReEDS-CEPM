@@ -1,5 +1,34 @@
 # User guide
 
+## General Suggestions
+### Document and Communicate Inputs
+Document and communicate inputs used and any changes made to the model. For example, published reports or journal articles should include enough information so that others can reproduce your work.
+
+### Emphasize Aggregated Results
+Emphasize aggregated results rather than results for a specific region or year, given that aggregate results will be more robust.  For example, the magnitude of new wind builds identified across a multistate region will be substantially more robust result than wind builds in a single ReEDS region. Similarly, the magnitude of natural gas combined cycle capacity additions across a multiyear period (e.g., 2030-2040) will be more robust result than the amount added in a single year (e.g., 2032).
+
+We recommend this practice because:
+- ReEDS results at their finest resolution can be sensitive to small changes in assumptions. For example, small differences in natural gas prices between two adjacent regions could lead to large disparities in gas-based capacity expansion in those regions that ignore practical constraints that might produce more even deployment.
+- ReEDS was designed as a national-scale model. That level of geographic scope means that many local conditions important to power plant build decisions might not be captured.
+
+### Emphasize Trends or Scenario Differences
+Emphasize trends or scenario differences over absolute results.  For example, the result that photovoltaic (PV) deployment is highly sensitive to natural gas price is more robust than the specific amounts of PV capacity deployed under high and low gas price scenarios.
+
+### Understand Calculations Behind Reported Numbers
+Do not rely on parameter names or labels alone when interpreting results. Explore the underlying calculations to ensure a robust understanding of the parameter and what it means. For example, reported electricity prices represent the marginal cost of meeting an additional infinitesimally small amount of load. They do not consider existing real-world market structure, rate design, or distribution costs, and thus should not be interpreted as estimates of retail rates.
+
+### Employ Scenario Sensitivity Analysis
+Always employ scenario sensitivity analysis. ReEDS is a deterministic model, so uncertainties are not captured in individual model runs.
+
+### Deliberately Choose Model Inputs
+Be deliberate in how you choose model inputs.  The ReEDS default values are not necessarily “most likely,” and “high” and “low” input options are not based on specific probabilities of occurrence.
+
+### Keep Questions Within Model's Scope
+Ensure that your questions are within the scope of the model. ReEDS is primarily meant to inform decisions at the investment or planning timescales in the bulk power sector.  For other questions at different timescales (such as unit commitment questions) or touching other sectors (such as distributed generation adoption), other models should be used.  However, ReEDS might be used to inform inputs or identify analysis questions for these other models.
+
+### Cautiously Use Near-Term Results
+Use near-term results with caution.  We have designed ReEDS primarily to consider long-term questions, and as such, not all near-term power sector changes are represented.
+
 ## Large input files
 
 Large input files,
@@ -46,7 +75,7 @@ Here is partial list of remotely hosted files used by ReEDS:
       affinity='euclidean', linkage='ward')
   ```
 
-  - If set to 'optimized', then a two-step custom optimization is performed using the `hourly_repperiods.optimize_period_weights()` and `hourly_repperiods.assign_representative_days()` functions to minimize the deviation in regional load and PV/wind CF between the weighted representative periods and the full year.
+  - If set to 'optimized', then a two-step custom optimization is performed using the `hourly_repperiods.optimize_period_weights()` and `hourly_repperiods.match_act2rep_milp()` functions to minimize the deviation in regional load and PV/wind CF between the weighted representative periods and the full year.
   - If set to a string containing the substring 'user', then instead of optimizing the choice of representative periods for this run, the model reads a user-supplied file at `inputs/temporal/period_szn_{GSw_HourlyClusterAlgorithm}.csv`.
       - So if you want to use the example period:szn map, set `GSw_HourlyClusterAlgorithm=user` and provide `inputs/temporal/period_szn_user.csv`.
       - If you want to specify a different period:szn map, then create a file with your label in the filename and set `GSw_HourlyClusterAlgorithm` to that same label (which must contain the substring 'user'). For example, for `GSw_HourlyClusterAlgorithm=user_myname_20230130`, provide `inputs/temporal/period_szn_user_myname_20230130.csv`.
@@ -68,38 +97,6 @@ Here is partial list of remotely hosted files used by ReEDS:
   - When using representative weks (5-day periods), timestamps are instead formatted as `y{year}w{wek of year}h{hour of wek}`. The numbering of weks begins at 1. In this format, the hour from 3am-4am on January 3, 2012 would be indicated as `y2012w001h052`.
 - Representative and stress **periods** (indexed as `szn` within ReEDS) are labeled similarly to timestamps but without the `h{hour of day}` component...
   - *Except stress periods and stress timeslices have an 's' prefix.* So if the time period above showed up as a stress period, it would be labeled as `h=sy2012d003h004` and `szn=sy2012d003` for representative days (or `h=sy2012w001h052` and `szn=sy2012w001` for representative weks). Stress periods are modeled using different loads and transmission capacities than representative periods, so they need to be indexed separately.
-
-
-
-## Hourly Resolution
-
-The model can be run at hourly resolution using the following switch settings:
-
-- `GSw_Hourly = 1`
-  - Turn on hourly resolution
-- `GSw_Canada = 2`
-  - Turn on hourly resolution for Canadian imports/exports
-- `GSw_AugurCurtailment = 0`
-  - Turn off the Augur calculation of curtailment
-- `GSw_StorageArbitrageMult = 0`
-  - Turn off the Augur calculation of storage arbitrage value
-- `GSw_Storage_in_Min = 0`
-  - Turn off the Augur calculation of storage charging
-- `capcredit_szn_hours = 3`
-  - The current default hourly representation is 18 representative 5-day weeks. Each representative period is treated as a 'season' and is thus active in the planning-reserve margin constraint. In h17 ReEDS we set `capcredit_szn_hours = 10`, giving 40 total hours considered for planning reserves (the top 10 hours in each of the 4 quarterly seasons). 18 'seasons' with 10 hours each would give 180 hours, so we switch to 3 hours per 'season' (for 54 hours total).
-
-To further reduce solve time, you can make the following changes:
-
-- `yearset = 2010_2015_2020_2025_2030_2035_2040_2045_2050`
-  - Solve in 5-year steps
-- `GSw_OpRes = 0`
-  - Turn off operating reserves
-- `GSw_MinLoading = 0`
-  - Turn off the sliding-window representation of minimum-generation limits
-- `GSw_PVB = 0`
-  - Turn off PV-battery hybrids
-- `GSw_calc_powfrac = 0`
-  - Turn off a post-processing calculation of power flows
 
 
 
@@ -386,14 +383,19 @@ In addition, the `GSw_ReducedResource` switch allows for a uniform reduction of 
 1. `GSw_TransInvMaxLongTerm`: Limit on annual transmission deployment nationwide **IN/AFTER** `firstyear_trans_longterm`, measured in TW-miles
 1. `GSw_TransInvMaxNearTerm`: Limit on annual transmission deployment nationwide **BEFORE** `firstyear_trans_longterm`, measured in TW-miles
 1. `GSw_TransInvPRMderate`: By default, adding 1 MW of transmission capacity between two zones increases the energy transfer capability by 1 MW but the PRM trading capability by only 0.85 MW; here you can adjust that derate
+1. `GSw_TransConductor`: Conductor type assumed for new interzonal AC transmission.
+`acss` applies the assumptions from the [MISO Transmission Cost Estimation Guide](https://www.misoenergy.org/planning/transmission-planning/mtep), using either ACSS or ACSR depending on voltage level;
+`acsr` uses ACSR for all voltage levels, reducing the power capacity of some representative lines and increasing the \$/MW cost.
 1. `GSw_TransCostMult`: Applies to interzonal transmission capacity (including AC/DC converters) but not FOM costs
-1. `GSw_TransSquiggliness`: Somewhat similar to `GSw_TransCostMult`, but scales the distance for each inter-zone interface. So turning it up to 1.3 will increase costs and losses by 1.3, and for the same amount of GW it will increase TWmiles by 1.3.
+1. `GSw_TransSquigglinessMin`: Minimum squiggliness (straight-line length multiplier) to apply for interzonal transmission; the default value of 1.3 is from the [MISO Transmission Cost Estimation Guide](https://www.misoenergy.org/planning/transmission-planning/mtep).
+The cost and length of representative interzonal transmission routes that are straighter than `GSw_TransSquigglinessMin` are scaled up to match `GSw_TransSquigglinessMin`
+(i.e., if a representative route is 11 miles long and the straight-line distance between its endpoints is 10 miles, giving a squiggliness factor of 1.1, its cost and length are scaled up by 1.3 / 1.1 = 1.18).
 1. `GSw_TransHurdle`: Intra-US hurdle rate for interzonal flows, measured in $2004/MWh
 1. `GSw_TransHurdleLevel`: Indicate the level of hierarchy.csv between which to apply the hurdle rate specified by `GSw_TransHurdle`. i.e. if set to ‘st’, intra-state flows will have no hurdle rates but inter-state flows will have hurdle rates specified by `GSw_TransHurdle`.
-1. `GSw_TransRestrict`: Indicate the level of hierarchy.csv within which to allow transmission expansion. i.e. if set to ‘st’, no inter-state expansion is allowed.
-1. `GSw_TransScen`: Indicate the inputs/transmission/transmission_capacity_future_{`GSw_TransScen`}.csv file to use, which includes the list of interfaces that can be expanded.
-Note that the full list of expandable interfaces is indicated by this file plus transmission_capacity_future_default.csv (currently planned additions) plus existing AC and DC interfaces (which can be expanded by default).
-Applies to AC, LCC, and VSC.
+1. `GSw_TransRestrict`: Spatial hierarchy level within which to allow transmission expansion. For example, if set to `st`, no inter-state expansion is allowed.
+1. `GSw_TransScen`: Which `inputs/transmission/hvdc_planned-{GSw_TransScen}.csv` file to use.
+This file provides a list of additional transmission lines that can be built.
+The full list of candidate lines is indicated by this file plus `hvdc_planned-baseline.csv` (currently planned additions) plus existing AC and DC interfaces (which can be expanded by default).
 1. `GSw_PRM_hierarchy_level`: Level of hierarchy.csv within which to calculate net load, used for capacity credit. Larger levels indicate more planning coordination between regions.
 1. `GSw_PRMTRADE_level`: Level of hierarchy.csv within which to allow PRM trading. By default it’s set to ‘country’, indicating no limits. If set to ‘r’, no PRM trading is allowed.
 
@@ -421,7 +423,7 @@ Some of the behavior of ReEDS2PRAS and PRAS (used for the stress periods resourc
 - ReEDS2PRAS technology representation
   - `pras_hydro_energylim` (default 1): Model hydro as energy-limited in PRAS (1) or like a thermal generator (0)
   - `pras_include_h2dac` (default 0): If set to 1, include demand associated with H2 production & DAC in PRAS
-  - `pras_trans_contingency` (default 0): Use n-0 (0) or n-1 (1) transmission capacities in PRAS
+  - `pras_trans_contingency` (default 0): Use energy (0) or PRM (1) transmission capacities in PRAS
 
 If a ReEDS case raises an out-of-memory error in ReEDS2PRAS/PRAS, the memory use can be reduced using some or all of the following settings:
 
@@ -448,9 +450,11 @@ For example, `default` will use `inputs/userinput/mcs_distributions_default.yaml
 3. Set `MCS_dist_groups` to one or more YAML group names. Separate multiple groups with a dot.
    For example `tech.load_st.ng_fuel_price`.
 
-4. Run ReEDS as usual. Each Monte Carlo draw will create its own run using the sampled inputs.
+4. Choose the sampling method; `MCS_lhs=1` uses a Latin Hypercube sampling method and `MCS_lhs=0` uses random sampling.
 
-These three switches (`MCS_runs`,`MCS_dist`, and  `MCS_dist_groups`) are the only required controls.
+5. Run ReEDS as usual. Each Monte Carlo draw will create its own run using the sampled inputs.
+
+These four switches (`MCS_runs`, `MCS_dist`, `MCS_dist_groups`, and `MCS_lhs`) are the only required controls.
 All other settings live in the YAML file (`inputs/userinput/mcs_distributions_{MCS_dist}.yaml`).
 
 ### YAML distribution file format
@@ -555,6 +559,31 @@ Each state receives its own weighted combination of the two load scenarios.\
 
 This enables state level uncertainty in siting supply curves for wind and solar technologies through a random draw between `limited` and `reference` conditions.
 
+### Sampling method
+
+There are two sampling approaches available for Monte Carlo analysis: random sampling and Latin Hypercube sampling. 
+
+Random sampling uses the numpy `random` method for the relevant distribution to sample a set of weights. 
+These weights are applied to the assignment values specified in the distribution group to generate the value for each run. 
+To ensure reproducibility, the Monte Carlo run number is used as the seed value. This means that, for a given 
+run configuration, run MC001 will always have the same sampled values. A global seed value (set by `MCS_seed` in `inputs/scalars.csv`) 
+can be used to shift the seed values for a batch of runs; this can be useful for extending a set of runs; 
+for example, if you ran already 200 runs and now want to add 100 more, set the seed value to 200 to generate 
+new sampled runs.
+
+The second approach, Latin Hypercube sampling (LHS), utilizes a quasi-Monte Carlo sampling method that is 
+designed to improve efficiency by reducing overlap of the sampled values. An overview of this method
+can be found in {cite}`sheikholeslamiProgressiveLatinHypercube2017`. For this method, an NxD matrix is generated upfront
+for all model runs based on the number of samples (N) and the independent dimensions being sampled (D). 
+The values in this matrix represent sampling of the cumulative probability distribution functions, 
+and are later used by the inverse CDF (percent point) functions to derive the actual sample values. 
+A single global seed value (set by `MCS_seed` in `inputs/scalars.csv`) is used for all runs, 
+resulting in unique sampling matrices for a given set of values of N and D.
+
+The LHS method tends to result in sampling values that converge on the true input distributions for lower numbers of samples.
+However, it does not currently support sampling for any spatial resolution besides country 
+or using multivariate distributions such as the Dirichlet.
+
 ### Tips
 
 - Use multiple distribution groups to sample switches independently.
@@ -600,7 +629,7 @@ Options are `capacity`, `transmission`, `rasharing`, and `co2`.
 - `GSw_MGA_SubObjective` (default `fossil`): Technology subset to minimize or maximize the capacity of (only used for `GSw_MGA_Objective = capacity`).
 Options are the column names in the `inputs/tech-subset-table.csv` file.
 
-Users familiar with GAMS can add alternative objective functions to the `c_mga.gms` file and associated options to the `GSw_MGA_Objective` switch in `cases.csv`.
+Users familiar with GAMS can add alternative objective functions to the `d_mga.gms` file and associated options to the `GSw_MGA_Objective` switch in `cases.csv`.
 
 
 
@@ -717,7 +746,6 @@ This section provides guidance on identifying and resolving common issues encoun
   - What to look for:
     - `1_inputs.lst`: errors will be preceded by `****`
     - `{batch_prefix}_{case}_{year}i0.lst`: there should be one file for each year of the model run
-    - `Augur_errors_{year}`: this file will appear in the event that there is an augur-related issue
 
 - GAMS Workfiles
   - Path: `/runs/{batch_prefix}_{case}/g00files/`
@@ -733,10 +761,10 @@ This section provides guidance on identifying and resolving common issues encoun
       - these files should contain data, an error message "GDX file not found" indicates an issue with the reporting script at the end of the model
     - `reeds-report/` and `reeds-report-reduced/`: if these folders are not present, it can indicate a problem with the post-processing scripts
 
-- Augur Data
-  - Path: `/runs/{batch_prefix}_{case}/ReEDS_Augur/augur_data/`
+- Resource adequacy data
+  - Path: `/runs/{batch_prefix}_{case}/handoff/reeds_data/`
   - What to look for:
-    - `ReEDS_Augur_{year}.gdx`: there should be a file for each year of the model run =
+    - `ccdata_{year}.gdx`: there should be a file for each year of the model run =
     - `reeds_data_{year}.gdx`: there should be a file for each year of the model run
 
 - Case Inputs

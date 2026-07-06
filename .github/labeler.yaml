@@ -9,6 +9,7 @@ dependencies:
           - "Project.toml"
           - "Manifest.toml"
           - ".github/dependabot.yml"
+          - "instantiate.jl"
 
 github_actions:
   - changed-files:
@@ -42,15 +43,8 @@ tests:
 model_changes:
   - changed-files:
       - any-glob-to-any-file:
-          - "*.gms"
-          - "**/*.gms"
-          - "runbatch.py"
-          - "d_solve*.py"
           - "reeds/**"
-          - "ReEDS_Augur/**"
-          - "Augur.py"
-          - "instantiate.jl"
-          - "reeds2pras/**"
+          - "runreeds.py"
 
 data_changes:
   - changed-files:
@@ -60,18 +54,10 @@ data_changes:
           - "postprocessing/**/inputs/**"
           - "**/*.csv"
           - "**/*.h5"
-          - "sources.csv"
-          - "sources_documentation.md"
 
 hourlize:
   - changed-files:
       - any-glob-to-any-file: "hourlize/**"
-
-input_processing:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "input_processing/**"
-          - "preprocessing/**"
 
 postprocessing:
   - changed-files:

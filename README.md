@@ -14,6 +14,8 @@ The ReEDS model source code is available at no cost from the National Laboratory
 
 The ReEDS model can be downloaded or cloned from [https://github.com/ReEDS-Model/ReEDS](https://github.com/ReEDS-Model/ReEDS).
 
+If you want to use the latest stable version of ReEDS, download or check out the latest stable release [here](https://github.com/ReEDS-Model/ReEDS/releases/latest).
+
 **For more information about the model, see the [ReEDS Documentation](https://reeds-model.github.io/ReEDS).**
 
 ReEDS training videos are available on the [NLR Learning YouTube channel](https://youtube.com/playlist?list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&si=NgGBaL_MxNcYiIEX).

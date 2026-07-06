@@ -226,7 +226,7 @@ def get_ferc_costs(
         Indicate whether to write results as csv or pickle (default = csv), or enter False
         to skip writing of results
     inflationpath : str
-        Filepath to ReEDS-2.0/runs/{casename}/inputs_case/inflation.csv
+        Filepath to ReEDS/runs/{casename}/inputs_case/inflation.csv
         (required)
     drop_pgesce_20182019 : bool
         Indicate whether to drop 2018 and 2019 values for 'A&G Oper Injuries & Damages $'
@@ -248,9 +248,9 @@ def get_ferc_costs(
     # aggregation = 'state'
     # writeout = False
     # inflationpath = os.path.join(
-    #     os.path.expanduser('~/Documents/ReEDS_/ReEDS-2.0/runs/stdscen_091923_Mid_Case/'),
+    #     os.path.expanduser('~/Documents/ReEDS_/ReEDS/runs/stdscen_091923_Mid_Case/'),
     #     'inputs_case', 'inflation.csv')
-    # inflationpath = os.path.join('/','Users','jcarag','ReEDS','RRM_Fixes','ReEDS-2.0',
+    # inflationpath = os.path.join('/','Users','jcarag','ReEDS','RRM_Fixes','ReEDS',
     #                               'runs','stdscen_091923_DAC_100by2035','inputs_case','inflation.csv')
     # drop_pgesce_20182019 = True
     # dollar_year = 2004
