@@ -8,35 +8,27 @@ What this script does:
 4) Checks the project Python pin and runs `uv python pin 3.11` when not pinned to 3.11.
 5) Runs `uv sync --extra dev` to ensure the Python environment matches project dependencies (unless bypass mode is enabled).
 6) Runs `julia --project=. instantiate.jl` to ensure Julia dependencies are installed (unless bypass mode is enabled).
-7) Starts runbatch.py and forwards any arguments passed to this script.
+7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/check_env_sync.py.
+8) Starts runreeds.py and forwards any arguments passed to this script.
 
 
 BYPASS option:
     -y, --skip-setup, or --bypass
     Skips Step 5 (`uv sync --extra dev`) and Step 6 (`julia --project=. instantiate.jl`).
-    Other checks and setup steps still run, and remaining args are forwarded to runbatch.py.
+    Other checks and setup steps still run, and remaining args are forwarded to runreeds.py.
 
 Usage examples:
-    .\bootstrap_reeds.ps1
-    .\bootstrap_reeds.ps1 -b v20260625_test -c test
-    .\bootstrap_reeds.ps1 -y -b v20260625_test -c test
-    .\bootstrap_reeds.ps1 --bypass -b v20260625_test -c test
-
-
-NEEDS REVIEW: this script was written against the pre-restructure repo layout
-and has not yet been fully verified against the current upstream base. Known
-issues: (1) Step 7 below calls `runbatch.py`, which has been renamed to
-`runreeds.py` upstream; (2) `uv sync --extra dev` in Step 5 currently has no
-root pyproject.toml to sync against (see version-control/package-management
-cleanup). Do not rely on this script until those are fixed. Flagging for
-follow-up via issue/comment.
+    .\bootstrap_CEPM.ps1
+    .\bootstrap_CEPM.ps1 -b v20260625_test -c test
+    .\bootstrap_CEPM.ps1 -y -b v20260625_test -c test
+    .\bootstrap_CEPM.ps1 --bypass -b v20260625_test -c test
 #>
 
 # Initializing functions and variables for this script.
 
-# Accept and forward all remaining command-line args to runbatch.py.
+# Accept and forward all remaining command-line args to runreeds.py.
 param(
-    [switch]$y, # Bypass mode for skipping uv sync and Julia instantiate. We use y to prevent collision with runbatch options.
+    [switch]$y, # Bypass mode for skipping uv sync and Julia instantiate. We use y to prevent collision with runreeds options.
 
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$RunbatchArgs
@@ -53,8 +45,31 @@ if ($ForwardArgs -contains '--skip-setup') {
     $ForwardArgs = @($ForwardArgs | Where-Object { $_ -ne '--skip-setup' })
 }
 
-# Fail immediately on PowerShell errors so setup issues do not get masked.
+# Fail immediately on PowerShell (cmdlet) errors so setup issues do not get masked.
 $ErrorActionPreference = 'Stop'
+
+# Run a native command with stderr-as-error suppressed. Tools like uv and julia
+# write normal progress to stderr; when that stderr is merged into the pipeline
+# (e.g. a caller wraps this script with 2>&1, or a CI/host captures combined
+# output), Windows PowerShell 5.1 turns each stderr line into a terminating
+# NativeCommandError under $ErrorActionPreference='Stop' -- aborting the script
+# even though the command actually succeeded (exit code 0). We relax the
+# preference only around the native call; real failures are still detected by
+# the caller via $LASTEXITCODE.
+function Invoke-Native {
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$Action
+    )
+
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $Action
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+}
 
 # Run a named step, print progress, and throw on non-zero process exit code.
 function Invoke-Step {
@@ -66,7 +81,7 @@ function Invoke-Step {
     )
 
     Write-Host "[run] $Description"
-    & $Action
+    Invoke-Native $Action
     if ($LASTEXITCODE -ne 0) {
         throw "Step failed: $Description"
     }
@@ -83,7 +98,7 @@ if (-not $gamsCmd) {
     throw 'GAMS executable was not found on PATH. Install GAMS and add it to PATH before running ReEDS.'
 }
 
-$gamsVersionOutput = (& gams 2>&1 | Out-String).Trim()
+$gamsVersionOutput = (Invoke-Native { & gams 2>&1 | Out-String }).Trim()
 if ($LASTEXITCODE -ne 0) {
     throw "GAMS command failed while checking version. Output:`n$gamsVersionOutput"
 }
@@ -121,7 +136,7 @@ if (-not $juliaCmd) {
     throw 'Julia executable was not found on PATH. Install Julia 1.12.1 and add it to PATH before running ReEDS.'
 }
 
-$juliaVersionOutput = (& julia --version 2>&1 | Out-String).Trim()
+$juliaVersionOutput = (Invoke-Native { & julia --version 2>&1 | Out-String }).Trim()
 if ($LASTEXITCODE -ne 0) {
     throw "Julia command failed while checking version. Output:`n$juliaVersionOutput"
 }
@@ -193,14 +208,27 @@ if ($y) {
     }
 }
 
-Write-Host 'Bootstrap complete. Starting ReEDS runbatch.py with forwarded arguments...'
-
-# Step 7: Start ReEDS with any arguments passed to this bootstrap script.
-Write-Host '[run] uv run python runbatch.py ...'
+# Step 7: Warn (non-fatal) if environment.yml and pyproject.toml have drifted
+# beyond the known-accepted exceptions. This always runs -- it only reads two
+# text files -- so it is not gated by bypass mode. It must never abort the
+# bootstrap, so a non-zero result becomes a warning rather than a throw.
+Write-Host '[run] CEPM/check_env_sync.py (environment.yml vs pyproject.toml)'
 Set-Location $repoRoot
-uv run python runbatch.py @ForwardArgs
+Invoke-Native { uv run python CEPM/check_env_sync.py }
 if ($LASTEXITCODE -ne 0) {
-    throw 'runbatch.py failed.'
+    Write-Warning 'environment.yml and pyproject.toml have drifted (see output above). Update both files, or adjust the allowlist in CEPM/check_env_sync.py. Continuing.'
+} else {
+    Write-Host '[ok] environment.yml and pyproject.toml are aligned (within known exceptions).'
+}
+
+Write-Host 'Bootstrap complete. Starting ReEDS runreeds.py with forwarded arguments...'
+
+# Step 8: Start ReEDS with any arguments passed to this bootstrap script.
+Write-Host '[run] uv run python runreeds.py ...'
+Set-Location $repoRoot
+Invoke-Native { uv run python runreeds.py @ForwardArgs }
+if ($LASTEXITCODE -ne 0) {
+    throw 'runreeds.py failed.'
 }
 
 

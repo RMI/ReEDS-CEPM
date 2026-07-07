@@ -8,12 +8,6 @@
 ![GitHub License](https://img.shields.io/github/license/ReEDS-Model/ReEDS)
 [![DOI](https://zenodo.org/badge/189060033.svg)](https://doi.org/10.5281/zenodo.16943302)
 
-**Needs review:** this repo was recently rebased onto a restructured upstream
-ReEDS base, and this README has not yet been fully verified against it. Known
-stale reference: instructions below say `runbatch.py`, which has been renamed
-to `runreeds.py` upstream. Treat setup/run instructions as unverified pending
-review. Flagging for follow-up via issue/comment.
-
 This GitHub repository contains the source code for NLR's ReEDS model.
 
 The ReEDS model source code is available at no cost from the National Laboratory of the Rockies.
@@ -143,10 +137,10 @@ Additional details on remote files and other topics can be found in the [user gu
 ### 4.5 Optional PowerShell bootstrap command
 
 Once you've cloned the repository, you can use an optional PowerShell bootstrap helper to 
-ensure supporting software is up to date and then immediately run runbatch.py:
+ensure supporting software is up to date and then immediately run runreeds.py:
 
 ```powershell
-.\bootstrap_reeds.ps1
+.\bootstrap_CEPM.ps1
 ```
 
 This script performs the following steps in order:
@@ -156,14 +150,14 @@ This script performs the following steps in order:
 4. Checks that Python is pinned to 3.11 and runs `uv python pin 3.11` if needed.
 5. Runs `uv sync --extra dev`.
 6. Runs `julia --project=. instantiate.jl`.
-7. Forwards all arguments to `runbatch.py`.
+7. Forwards all arguments to `runreeds.py`.
 
 Passing `-y` (or `--skip-setup` / `--bypass`) skips Step 5 (`uv sync --extra dev`) and Step 6 (`julia --project=. instantiate.jl`).
-All other checks and setup steps still run, and remaining arguments are still passed to `runbatch.py`
+All other checks and setup steps still run, and remaining arguments are still passed to `runreeds.py`
 
 ```powershell
-.\bootstrap_reeds.ps1 -y -b v20250314_main -c test
-.\bootstrap_reeds.ps1 --bypass -b v20250314_main -c test
+.\bootstrap_CEPM.ps1 -y -b v20250314_main -c test
+.\bootstrap_CEPM.ps1 --bypass -b v20250314_main -c test
 ```
 
 ### 5. Run ReEDS
@@ -178,13 +172,13 @@ export CONDA_PREFIX="$PWD/.venv"
 For interactive setup:
 
 ```bash
-uv run python runbatch.py
+uv run python runreeds.py
 ```
 
 For one-line operation:
 
 ```bash
-uv run python runbatch.py -b v20260605 -c cepm
+uv run python runreeds.py -b v20260605 -c cepm
 ```
 
 In this example, `v20260605` is the prefix for this batch of cases, and `cepm` is the suffix of the cases file, in this case `cases_cepm.csv`, located in the root of the repository. For the batch prefix, we should follow the convention `vYYYYMMDD`, and note that the case ID from the cases file will be appended to the batch prefix for file naming purposes (e.g., `WECC_county_100by2050`).
@@ -192,13 +186,13 @@ In this example, `v20260605` is the prefix for this batch of cases, and `cepm` i
 Run the following for information on other optional command-line arguments:
 
 ```bash
-uv run python runbatch.py -h
+uv run python runreeds.py -h
 ```
 
 PowerShell users can run setup + launch in one command with the bootstrap helper:
 
 ```powershell
-.\bootstrap_reeds.ps1 -b v20250314_main -c test
+.\bootstrap_CEPM.ps1 -b v20250314_main -c test
 ```
 
 ## Troubleshooting
