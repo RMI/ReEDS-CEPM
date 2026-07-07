@@ -6,6 +6,23 @@ path (see `pyproject.toml` at repo root and `dev`'s `environment.yml`).
 Whenever one changes, the other should be updated by hand — there's no
 automatic converter, so this is a manual mapping.
 
+## Automated drift check
+
+`CEPM/check_env_sync.py` compares the two files and warns when they drift beyond
+a hard-coded allowlist of intentional exceptions (the "known-accepted" cases
+below). `bootstrap_CEPM.ps1` runs it as a non-fatal step, or run it directly:
+
+```bash
+uv run python CEPM/check_env_sync.py
+```
+
+It reports three things: packages only in one file and packages pinned to
+incompatible versions. Exit code `0` means aligned (all differences are on the
+allowlist); `1` means new/unexpected drift. When you intentionally add an
+exception, update both the allowlist in `CEPM/check_env_sync.py` and the
+"Known current drift" / "Things that don't map 1:1" sections below so the two
+stay in agreement.
+
 ## Structural mapping
 
 | environment.yml | pyproject.toml | Notes |

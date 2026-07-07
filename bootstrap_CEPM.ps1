@@ -8,7 +8,8 @@ What this script does:
 4) Checks the project Python pin and runs `uv python pin 3.11` when not pinned to 3.11.
 5) Runs `uv sync --extra dev` to ensure the Python environment matches project dependencies (unless bypass mode is enabled).
 6) Runs `julia --project=. instantiate.jl` to ensure Julia dependencies are installed (unless bypass mode is enabled).
-7) Starts runreeds.py and forwards any arguments passed to this script.
+7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/check_env_sync.py.
+8) Starts runreeds.py and forwards any arguments passed to this script.
 
 
 BYPASS option:
@@ -207,9 +208,22 @@ if ($y) {
     }
 }
 
+# Step 7: Warn (non-fatal) if environment.yml and pyproject.toml have drifted
+# beyond the known-accepted exceptions. This always runs -- it only reads two
+# text files -- so it is not gated by bypass mode. It must never abort the
+# bootstrap, so a non-zero result becomes a warning rather than a throw.
+Write-Host '[run] CEPM/check_env_sync.py (environment.yml vs pyproject.toml)'
+Set-Location $repoRoot
+Invoke-Native { uv run python CEPM/check_env_sync.py }
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning 'environment.yml and pyproject.toml have drifted (see output above). Update both files, or adjust the allowlist in CEPM/check_env_sync.py. Continuing.'
+} else {
+    Write-Host '[ok] environment.yml and pyproject.toml are aligned (within known exceptions).'
+}
+
 Write-Host 'Bootstrap complete. Starting ReEDS runreeds.py with forwarded arguments...'
 
-# Step 7: Start ReEDS with any arguments passed to this bootstrap script.
+# Step 8: Start ReEDS with any arguments passed to this bootstrap script.
 Write-Host '[run] uv run python runreeds.py ...'
 Set-Location $repoRoot
 Invoke-Native { uv run python runreeds.py @ForwardArgs }
