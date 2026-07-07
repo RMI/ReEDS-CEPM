@@ -1,12 +1,3 @@
-**Needs review:** this repo was recently rebased onto a restructured upstream
-ReEDS base (see git history around 2026-06). This file was written against the
-pre-restructure layout and has not yet been fully verified against the new
-`reeds/` package layout. Known stale references: `runbatch.py` throughout this
-file should be `runreeds.py`; `Augur.py` is now `reeds/resource_adequacy/ra_calcs.py`;
-`e_report.gms` is now `reeds/core/terminus/report.gms`; `input_processing/` now
-lives under `reeds/input_processing/`. Treat the rest of this file as unverified
-pending a full pass. Flagging for follow-up via issue/comment.
-
 # Translating between `environment.yml` (mamba/conda) and `pyproject.toml`/`uv.lock` (uv)
 
 This repo keeps both, per the decision to keep `environment.yml` as the
@@ -51,17 +42,19 @@ Same as above in reverse — pull it from both files, then `uv lock` to drop it 
 - **Non-Python packages.** `environment.yml` has `git-lfs=2.13` and `mscorefonts=0.0` — these aren't pip-installable and have no uv equivalent. They just don't appear in `pyproject.toml`; document them in setup docs instead.
 - **`pip` itself and its version.** conda pins `pip=23.2` as a bootstrap tool; uv manages its own resolver, so this has no uv equivalent either.
 - **Exact vs. fuzzy pins.** conda's `package=X.Y` conventionally means "X.Y.* is fine"; the uv side in this repo mostly uses explicit `==X.Y.*` to match that intent, but a few packages (`tables`, `gdxpds`, `geopandas`, `pulp`, `shapely`, `cmocean`) are pinned to an exact patch version in `pyproject.toml` where conda only pins minor. If you tighten/loosen a pin on one side, consider whether the other side should match.
+- **PyTables naming and version drift.** conda's package is `pytables`, but its importable/pip name is `tables`, so it appears as `pytables=3.8` in `environment.yml` and `tables==3.11.1` in `pyproject.toml`. These are currently different minor versions — a real drift, not just a naming difference. Reconcile the version if the two paths are meant to match.
 - **Git-sourced packages.** `rmi.etoolbox @ git+https://github.com/rmi/etoolbox.git` in `pyproject.toml` has no equivalent line in `environment.yml` yet — conda's `pip:` block *can* take a `git+https://...` URL the same way, so if `environment.yml` needs to stay fully equivalent, add a matching line there.
 
 ## Known pre-existing gaps (not introduced by this cleanup, not yet fixed)
 
 A few packages are imported directly in `postprocessing/` (`jinja2`, `loguru`, `lxml`, `seaborn`, `six`) but aren't declared as explicit dependencies in *either* file — they currently work only because something else pulls them in transitively. This gap already exists on the `dev`/upstream base itself, independent of the RMI rebase, so it wasn't in scope for the pyproject.toml restoration. Worth its own follow-up if these ever stop being transitively satisfied.
 
-## Note: `environment.yml` is currently missing from this branch
+## Known current drift between the two files
 
-The "keep both" decision assumes `environment.yml` exists alongside
-`pyproject.toml`, but it was deleted by the mvp-branch commit that introduced
-uv (`801ae3eb`, "changes to pyproject toml for UV, removed environment.yml
-and added python version") and that deletion is still in effect on this
-branch. `dev` still has it. Until it's restored from `dev`, this guide
-describes a mapping that only exists on one side.
+Both files now exist at the repo root, and a few packages are out of sync
+(worth reconciling next time either file is touched):
+
+- `pyyaml` is declared in `pyproject.toml` but missing from `environment.yml`.
+- `proj==0.2.0` is in `environment.yml`'s `pip:` block but has no entry in
+  `pyproject.toml`.
+- `pytables=3.8` (conda) vs `tables==3.11.1` (uv) — see the PyTables note above.

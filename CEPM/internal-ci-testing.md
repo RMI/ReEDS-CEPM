@@ -76,9 +76,9 @@ Expected directories include:
 Run each scenario exactly as CI does:
 
 ```bash
-python runbatch.py -b test -c test -s github_Pacific
-python runbatch.py -b test -c test -s github_Everything
-python runbatch.py -b test -c test -s github_MA_county_CC
+python runreeds.py -b test -c test -s github_Pacific
+python runreeds.py -b test -c test -s github_Everything
+python runreeds.py -b test -c test -s github_MA_county_CC
 ```
 
 Run folders should be created at:
@@ -115,12 +115,12 @@ Also inspect diagnostics if needed:
 
 ## 7) Run R2X compatibility checks (optional but recommended parity)
 
-CI executes `scripts/run_r2x.py` for each scenario. Reproduce locally after successful ReEDS runs.
+CI executes `postprocessing/run_r2x.py` for each scenario. Reproduce locally after successful ReEDS runs.
 
 If using `uvx` as in CI:
 
 ```bash
-uvx --from "r2x-reeds>=0.3.5" python scripts/run_r2x.py \
+uvx --from "r2x-reeds>=0.3.5" python postprocessing/run_r2x.py \
   --reeds-run-path "github_Pacific-2029" \
   --scenario "github_Pacific" \
   --solve-year "2029" \
