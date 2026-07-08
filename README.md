@@ -184,7 +184,7 @@ uv run python runbatch.py
 For one-line operation:
 
 ```bash
-uv run python runbatch.py -b v20260605 -c cepm
+uv run python runreeds.py -b v20260605 -c cepm
 ```
 
 In this example, `v20260605` is the prefix for this batch of cases, and `cepm` is the suffix of the cases file, in this case `cases_cepm.csv`, located in the root of the repository. For the batch prefix, we should follow the convention `vYYYYMMDD`, and note that the case ID from the cases file will be appended to the batch prefix for file naming purposes (e.g., `WECC_county_100by2050`).
