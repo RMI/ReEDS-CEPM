@@ -134,13 +134,13 @@ Several large data files are hosted remotely. These files are downloaded automat
 
 Additional details on remote files and other topics can be found in the [user guide](https://reeds-model.github.io/ReEDS/user_guide.html#large-input-files).
 
-### 4.5 Optional PowerShell bootstrap command
+### 4.5 Optional PowerShell setup-and-run command (`run_cepm.ps1`)
 
-Once you've cloned the repository, you can use an optional PowerShell bootstrap helper to 
+Once you've cloned the repository, you can use the optional PowerShell helper `run_cepm.ps1` to 
 ensure supporting software is up to date and then immediately run runreeds.py:
 
 ```powershell
-.\bootstrap_CEPM.ps1
+.\run_cepm.ps1
 ```
 
 This script performs the following steps in order:
@@ -157,9 +157,11 @@ This script performs the following steps in order:
 Passing `-y` (or `--skip-setup` / `--bypass`) skips Step 5 (`uv sync --extra dev`) and Step 6 (Julia instantiation).
 All other checks and setup steps still run, and remaining arguments are still passed to `runreeds.py`
 
+Two more bootstrap-only options: `-q` (or `--quiet`) disables the ntfy.sh notifications, and `-u <name>` (or `--user <name>`) includes `<name>` as the username in the notification messages (omitted when not given). All other arguments are forwarded to `runreeds.py`.
+
 ```powershell
-.\bootstrap_CEPM.ps1 -y -b v20250314_main -c test
-.\bootstrap_CEPM.ps1 --bypass -b v20250314_main -c test
+.\run_cepm.ps1 -y -b v20250314_main -c test
+.\run_cepm.ps1 --bypass -b v20250314_main -c test
 ```
 
 ### 5. Run ReEDS
@@ -191,10 +193,10 @@ Run the following for information on other optional command-line arguments:
 uv run python runreeds.py -h
 ```
 
-PowerShell users can run setup + launch in one command with the bootstrap helper:
+PowerShell users can run setup + launch in one command with `run_cepm.ps1`:
 
 ```powershell
-.\bootstrap_CEPM.ps1 -b v20250314_main -c test
+.\run_cepm.ps1 -b v20250314_main -c test
 ```
 
 ## Troubleshooting

@@ -1,5 +1,5 @@
 <#
-Bootstrap script for ReEDS run setup.
+run_cepm.ps1 -- set up the ReEDS environment and launch a ReEDS run (RMI/CEPM).
 
 What this script does:
 1) Verifies GAMS is on PATH, checks GAMS license status, and prints a detected version string.
@@ -10,19 +10,37 @@ What this script does:
 6) Instantiates Julia dependencies only when needed: a fast offline instantiate checks/heals the environment, falling back to the full `julia --project=. instantiate.jl` (which updates the registry) only if that can't satisfy the project (unless bypass mode is enabled).
 7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/check_env_sync.py.
 8) Starts runreeds.py and forwards any arguments passed to this script.
-9) Sends an ntfy.sh notification (topic: rmi-cepm-run-batch-finished) once runreeds.py returns. Best-effort: a failed or offline notification is ignored.
+9) Sends an ntfy.sh notification (topic: rmi-cepm-run-batch-finished) before runreeds.py launches and once it returns. Best-effort: a failed or offline notification is ignored. Disabled with -q/--quiet; -u/--user adds a username to the message.
 
 
-BYPASS option:
-    -y, --skip-setup, or --bypass
-    Skips Step 5 (`uv sync --extra dev`) and Step 6 (`julia --project=. instantiate.jl`).
-    Other checks and setup steps still run, and remaining args are forwarded to runreeds.py.
+BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.py):
+    -y, --bypass, --skip-setup
+        Bypass mode: skip Step 5 (`uv sync --extra dev`) and Step 6 (Julia
+        instantiation). Other checks/setup steps still run.
+    -q, --quiet
+        Disable the ntfy.sh notifications (both the pre-launch ping and Step 9).
+    -u, --user <name>   (also --user=<name>)
+        Include <name> as the username in the ntfy messages. When omitted, no
+        username is shown.
+
+RESERVED OPTIONS (do NOT add a bootstrap-only flag that reuses these):
+    All args other than the bootstrap-only options above are forwarded verbatim to
+    runreeds.py, so any short/long option runreeds.py defines is off-limits for this
+    script to claim for itself. As of this writing runreeds.py uses:
+        -b/--BatchName   -c/--cases_suffix  -s/--single      -r/--simult_runs
+        -l/--forcelocal  -f/--skip_checks   -d/--debug       -n/--debugnode
+        -p/--cases_per_node                 -t/--dryrun
+    (plus -h/--help from argparse). The bootstrap-only options above (-y, -q, -u)
+    were chosen to avoid these. If you add a new bootstrap-only switch, pick a
+    letter outside that set (and re-check against runreeds.py, which may change).
 
 Usage examples:
-    .\bootstrap_CEPM.ps1
-    .\bootstrap_CEPM.ps1 -b v20260625_test -c test
-    .\bootstrap_CEPM.ps1 -y -b v20260625_test -c test
-    .\bootstrap_CEPM.ps1 --bypass -b v20260625_test -c test
+    .\run_cepm.ps1
+    .\run_cepm.ps1 -b v20260625_test -c test
+    .\run_cepm.ps1 -y -b v20260625_test -c test
+    .\run_cepm.ps1 --bypass -b v20260625_test -c test
+    .\run_cepm.ps1 -q -b v20260625_test -c test
+    .\run_cepm.ps1 -u "Tyler Fitch" -b v20260625_test -c test
 #>
 
 # Initializing functions and variables for this script.
@@ -30,12 +48,17 @@ Usage examples:
 # Accept and forward all remaining command-line args to runreeds.py.
 param(
     [switch]$y, # Bypass mode for skipping uv sync and Julia instantiate. We use y to prevent collision with runreeds options.
+    [switch]$q, # Quiet: disable the ntfy.sh notifications. -q is free of runreeds options.
+    [string]$u = '', # Username string to include in ntfy messages. -u is free of runreeds options.
 
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$RunbatchArgs
 )
 
-# Copy forwarded args and handle explicit bypass tokens if provided.
+# Copy forwarded args and pull out our long-form tokens. PowerShell binds the short
+# switches (-y/-q/-u) natively; the double-dash long forms are not real PowerShell
+# parameters, so we strip them from the forwarded args by hand. Everything left is
+# forwarded verbatim to runreeds.py.
 $ForwardArgs = @($RunbatchArgs)
 if ($ForwardArgs -contains '--bypass') {
     $y = $true
@@ -45,6 +68,28 @@ if ($ForwardArgs -contains '--skip-setup') {
     $y = $true
     $ForwardArgs = @($ForwardArgs | Where-Object { $_ -ne '--skip-setup' })
 }
+if ($ForwardArgs -contains '--quiet') {
+    $q = $true
+    $ForwardArgs = @($ForwardArgs | Where-Object { $_ -ne '--quiet' })
+}
+# --user NAME and --user=NAME take a value; pull them (and the value) out by hand.
+$remainingArgs = @()
+for ($i = 0; $i -lt $ForwardArgs.Count; $i++) {
+    $arg = $ForwardArgs[$i]
+    if ($arg -eq '--user') {
+        if ($i + 1 -lt $ForwardArgs.Count) { $u = $ForwardArgs[$i + 1]; $i++ }
+        continue
+    }
+    if ($arg -like '--user=*') {
+        $u = $arg.Substring('--user='.Length)
+        continue
+    }
+    $remainingArgs += $arg
+}
+$ForwardArgs = @($remainingArgs)
+
+# Optional ntfy username fragment: empty unless -u/--user was given.
+$ntfyUser = if ([string]::IsNullOrWhiteSpace($u)) { '' } else { " by $u" }
 
 # Fail immediately on PowerShell (cmdlet) errors so setup issues do not get masked.
 $ErrorActionPreference = 'Stop'
@@ -237,10 +282,12 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host 'Bootstrap complete. Starting ReEDS runreeds.py with forwarded arguments...'
 
-try {
-    Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" `
-        -Body "ReEDS run batch started on $(hostname) by $($env:USERNAME) at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
-} catch {}
+if (-not $q) {
+    try {
+        Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" -TimeoutSec 5 `
+            -Body "ReEDS run batch started on $(hostname)$ntfyUser at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+    } catch {}
+}
 
 # Step 8: Start ReEDS with any arguments passed to this bootstrap script.
 Write-Host '[run] uv run python runreeds.py ...'
@@ -252,10 +299,12 @@ if ($LASTEXITCODE -ne 0) {
 
 # Step 9: Notify ntfy.sh that the run has finished. Useful for long-running runs.
 # Best-effort only -- wrapped so a failed or offline notification never affects
-# the run outcome.
-try {
-    Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" `
-        -Body "ReEDS run batch finished on $(hostname) by $($env:USERNAME) at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
-} catch {}
+# the run outcome; skipped entirely with -q/--quiet.
+if (-not $q) {
+    try {
+        Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" -TimeoutSec 5 `
+            -Body "ReEDS run batch finished on $(hostname)$ntfyUser at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+    } catch {}
+}
 
 
