@@ -10,7 +10,7 @@ What this script does:
 6) Instantiates Julia dependencies only when needed: a fast offline instantiate checks/heals the environment, falling back to the full `julia --project=. instantiate.jl` (which updates the registry) only if that can't satisfy the project (unless bypass mode is enabled).
 7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/check_env_sync.py.
 8) Starts runreeds.py and forwards any arguments passed to this script.
-9) Sends an ntfy.sh notification (topic: rmi-cepm-run-batch-finished) once runreeds.py returns. Best-effort: a failed or offline notification is ignored.
+9) Sends an ntfy.sh notification (topic: rmi-cepm-run-batch-finished) before runreeds.py is launched and once runreeds.py returns. Best-effort: a failed or offline notification is ignored.
 
 
 BYPASS option:
@@ -237,6 +237,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host 'Bootstrap complete. Starting ReEDS runreeds.py with forwarded arguments...'
 
+#Pre-step 8: Notify ntfy.sh that a run batch has started.
 try {
     Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" `
         -Body "ReEDS run batch started on $(hostname) by $($env:USERNAME) at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
