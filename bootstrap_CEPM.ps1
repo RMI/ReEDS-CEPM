@@ -237,6 +237,11 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host 'Bootstrap complete. Starting ReEDS runreeds.py with forwarded arguments...'
 
+try {
+    Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" `
+        -Body "ReEDS run batch started on $(hostname) by $($env:USERNAME) at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+} catch {}
+
 # Step 8: Start ReEDS with any arguments passed to this bootstrap script.
 Write-Host '[run] uv run python runreeds.py ...'
 Set-Location $repoRoot
@@ -250,7 +255,7 @@ if ($LASTEXITCODE -ne 0) {
 # the run outcome.
 try {
     Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" `
-        -Body "ReEDS run finished on $(hostname) at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+        -Body "ReEDS run batch finished on $(hostname) by $($env:USERNAME) at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
 } catch {}
 
 
