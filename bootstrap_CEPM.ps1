@@ -7,9 +7,10 @@ What this script does:
 3) Sets ReEDS-required CONDA-style environment variables in the current PowerShell session.
 4) Checks the project Python pin and runs `uv python pin 3.11` when not pinned to 3.11.
 5) Runs `uv sync --extra dev` to ensure the Python environment matches project dependencies (unless bypass mode is enabled).
-6) Runs `julia --project=. instantiate.jl` to ensure Julia dependencies are installed (unless bypass mode is enabled).
+6) Instantiates Julia dependencies only when needed: a fast offline instantiate checks/heals the environment, falling back to the full `julia --project=. instantiate.jl` (which updates the registry) only if that can't satisfy the project (unless bypass mode is enabled).
 7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/check_env_sync.py.
 8) Starts runreeds.py and forwards any arguments passed to this script.
+9) Sends an ntfy.sh notification (topic: rmi-cepm-run-batch-finished) once runreeds.py returns. Best-effort: a failed or offline notification is ignored.
 
 
 BYPASS option:
@@ -200,11 +201,24 @@ if ($y) {
         uv sync --extra dev
     }
 
-    # Step 6: Run Julia instantiate every time.
-    # This is safe and ensures deps match project files.
-    Invoke-Step -Description 'julia --project=. instantiate.jl' -Action {
-        Set-Location $repoRoot
-        julia --project=. instantiate.jl
+    # Step 6: Instantiate Julia deps only when needed. A fast, offline instantiate
+    # (no registry update) both checks and cheaply self-heals the environment. If
+    # it can't satisfy the project from the local registry cache (e.g. the Manifest
+    # changed to a version not cached, or a fresh Julia depot), fall back to the
+    # full instantiate.jl, which updates the registry. Every Project.toml dependency
+    # (including Random123, PRAS, TimeZones) is covered by instantiate, so the fast
+    # path loses nothing when the environment is already current.
+    Write-Host '[run] checking whether Julia dependencies need instantiation'
+    Set-Location $repoRoot
+    Invoke-Native { julia --project=. -e "using Pkg; try; Pkg.instantiate(; update_registry=false); exit(0); catch; exit(1); end" }
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host '[ok] Julia dependencies already instantiated (skipping full instantiate.jl).'
+    } else {
+        Write-Warning 'Julia dependencies changed or missing; running full instantiate.jl (updates registry).'
+        Invoke-Step -Description 'julia --project=. instantiate.jl' -Action {
+            Set-Location $repoRoot
+            julia --project=. instantiate.jl
+        }
     }
 }
 
@@ -230,5 +244,13 @@ Invoke-Native { uv run python runreeds.py @ForwardArgs }
 if ($LASTEXITCODE -ne 0) {
     throw 'runreeds.py failed.'
 }
+
+# Step 9: Notify ntfy.sh that the run has finished. Useful for long-running runs.
+# Best-effort only -- wrapped so a failed or offline notification never affects
+# the run outcome.
+try {
+    Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" `
+        -Body "ReEDS run finished on $(hostname) at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+} catch {}
 
 

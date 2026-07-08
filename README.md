@@ -149,10 +149,12 @@ This script performs the following steps in order:
 3. Sets ReEDS environment variables for the current PowerShell session.
 4. Checks that Python is pinned to 3.11 and runs `uv python pin 3.11` if needed.
 5. Runs `uv sync --extra dev`.
-6. Runs `julia --project=. instantiate.jl`.
-7. Forwards all arguments to `runreeds.py`.
+6. Instantiates Julia dependencies only when needed: a fast offline check (`Pkg.instantiate` without a registry update) skips the work when the environment is already current, and only falls back to the full `julia --project=. instantiate.jl` (which updates the registry) if dependencies changed or are missing.
+7. Checks `environment.yml` against `pyproject.toml` and prints a non-fatal warning if they have drifted beyond the known-accepted allowlist (see `CEPM/UV_MAMBA_GUIDE.md`).
+8. Forwards all arguments to `runreeds.py`.
+9. Sends a best-effort [ntfy.sh](https://ntfy.sh) notification (topic `rmi-cepm-run-batch-finished`) once `runreeds.py` returns, so you can be alerted when a long-running batch finishes. Subscribe to the topic in the ntfy app or at <https://ntfy.sh/rmi-cepm-run-batch-finished>. A failed or offline notification is ignored.
 
-Passing `-y` (or `--skip-setup` / `--bypass`) skips Step 5 (`uv sync --extra dev`) and Step 6 (`julia --project=. instantiate.jl`).
+Passing `-y` (or `--skip-setup` / `--bypass`) skips Step 5 (`uv sync --extra dev`) and Step 6 (Julia instantiation).
 All other checks and setup steps still run, and remaining arguments are still passed to `runreeds.py`
 
 ```powershell
