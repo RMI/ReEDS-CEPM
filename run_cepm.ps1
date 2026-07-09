@@ -293,6 +293,8 @@ if (-not $q) {
 Write-Host '[run] uv run python runreeds.py ...'
 Set-Location $repoRoot
 Invoke-Native { uv run python runreeds.py @ForwardArgs }
+
+# Send a NTFY message on failure and exit if runreeds fails.
 if ($LASTEXITCODE -ne 0) {
     if (-not $q) {
         try {
