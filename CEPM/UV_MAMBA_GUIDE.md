@@ -10,7 +10,7 @@ automatic converter, so this is a manual mapping.
 
 `CEPM/check_env_sync.py` compares the two files and warns when they drift beyond
 a hard-coded allowlist of intentional exceptions (the "known-accepted" cases
-below). `bootstrap_CEPM.ps1` runs it as a non-fatal step, or run it directly:
+below). `run_cepm.ps1` runs it as a non-fatal step, or run it directly:
 
 ```bash
 uv run python CEPM/check_env_sync.py

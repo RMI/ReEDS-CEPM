@@ -85,7 +85,7 @@ Use this file as the first stop for agent orientation. Deeper references:
 - `.github/workflows/`: CI, docs, and workflow-quality automation.
 - `CEPM/`: RMI/CEPM-specific docs kept separate from upstream docs —
   `UV_MAMBA_GUIDE.md` (uv/mamba dependency mapping) and `internal-ci-testing.md`
-  (on-prem CI runbook). The CEPM run bootstrap is `bootstrap_CEPM.ps1` at repo root.
+  (on-prem CI runbook). The CEPM setup-and-run helper is `run_cepm.ps1` at repo root.
 
 ## Environment
 

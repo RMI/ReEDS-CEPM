@@ -134,13 +134,13 @@ Several large data files are hosted remotely. These files are downloaded automat
 
 Additional details on remote files and other topics can be found in the [user guide](https://reeds-model.github.io/ReEDS/user_guide.html#large-input-files).
 
-### 4.5 Optional PowerShell bootstrap command
+### 4.5 Optional PowerShell setup-and-run command (`run_cepm.ps1`)
 
-Once you've cloned the repository, you can use an optional PowerShell bootstrap helper to 
+Once you've cloned the repository, you can use the optional PowerShell helper `run_cepm.ps1` to 
 ensure supporting software is up to date and then immediately run runreeds.py:
 
 ```powershell
-.\bootstrap_CEPM.ps1
+.\run_cepm.ps1
 ```
 
 This script performs the following steps in order:
@@ -149,15 +149,19 @@ This script performs the following steps in order:
 3. Sets ReEDS environment variables for the current PowerShell session.
 4. Checks that Python is pinned to 3.11 and runs `uv python pin 3.11` if needed.
 5. Runs `uv sync --extra dev`.
-6. Runs `julia --project=. instantiate.jl`.
-7. Forwards all arguments to `runreeds.py`.
+6. Instantiates Julia dependencies only when needed: a fast offline check (`Pkg.instantiate` without a registry update) skips the work when the environment is already current, and only falls back to the full `julia --project=. instantiate.jl` (which updates the registry) if dependencies changed or are missing.
+7. Checks `environment.yml` against `pyproject.toml` and prints a non-fatal warning if they have drifted beyond the known-accepted allowlist (see `CEPM/UV_MAMBA_GUIDE.md`).
+8. Forwards all arguments to `runreeds.py`.
+9. Sends a best-effort [ntfy.sh](https://ntfy.sh) notification (topic `rmi-cepm-run-batch-finished`) before `runreeds.py` is launched and once it returns (on fail or success), so you can be alerted when a long-running batch finishes. Subscribe to the topic in the ntfy app or at <https://ntfy.sh/rmi-cepm-run-batch-finished>. A failed or offline notification is ignored. A failed or offline notification is ignored. Note: ntfy.sh topics are public; avoid including sensitive information in notifications.
 
-Passing `-y` (or `--skip-setup` / `--bypass`) skips Step 5 (`uv sync --extra dev`) and Step 6 (`julia --project=. instantiate.jl`).
+Passing `-y` (or `--skip-setup` / `--bypass`) skips Step 5 (`uv sync --extra dev`) and Step 6 (Julia instantiation).
 All other checks and setup steps still run, and remaining arguments are still passed to `runreeds.py`
 
+Two more bootstrap-only options: `-q` (or `--quiet`) disables the ntfy.sh notifications, and `-u <name>` (or `--user <name>`) includes `<name>` as the username in the notification messages (omitted when not given). All other arguments are forwarded to `runreeds.py`.
+
 ```powershell
-.\bootstrap_CEPM.ps1 -y -b v20250314_main -c test
-.\bootstrap_CEPM.ps1 --bypass -b v20250314_main -c test
+.\run_cepm.ps1 -y -b v20250314_main -c test
+.\run_cepm.ps1 --bypass -b v20250314_main -c test
 ```
 
 ### 5. Run ReEDS
@@ -189,10 +193,10 @@ Run the following for information on other optional command-line arguments:
 uv run python runreeds.py -h
 ```
 
-PowerShell users can run setup + launch in one command with the bootstrap helper:
+PowerShell users can run setup + launch in one command with `run_cepm.ps1`:
 
 ```powershell
-.\bootstrap_CEPM.ps1 -b v20250314_main -c test
+.\run_cepm.ps1 -b v20250314_main -c test
 ```
 
 ## Troubleshooting
