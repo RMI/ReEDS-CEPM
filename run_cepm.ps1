@@ -294,6 +294,12 @@ Write-Host '[run] uv run python runreeds.py ...'
 Set-Location $repoRoot
 Invoke-Native { uv run python runreeds.py @ForwardArgs }
 if ($LASTEXITCODE -ne 0) {
+    if (-not $q) {
+        try {
+            Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" -TimeoutSec 5 `
+                -Body "ReEDS run batch failed to finish on $(hostname)$ntfyUser at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+        } catch {}
+    }
     throw 'runreeds.py failed.'
 }
 
