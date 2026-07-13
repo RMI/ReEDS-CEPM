@@ -1,7 +1,6 @@
 # ReEDS primary metrics extractor
 
-Standalone Python postprocessor for comparing selected outputs from two existing ReEDS runs without rerunning ReEDS.
-
+Standalone Python postprocessor for comparing selected outputs from two existing ReEDS runs.
 ## Requirements
 
 - Python 3.11+
