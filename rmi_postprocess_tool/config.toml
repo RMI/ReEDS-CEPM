@@ -1,9 +1,9 @@
 [general]
-# Folder containing the run directories. This can be absolute or relative to this config file.
+# Path to ReEDS root folder. Currently set up as a local relative path, change to make it work on your computer
 runs_root = "/Users/shuestis/Library/CloudStorage/OneDrive-RMI/CEP (Clean Energy Planning) - VM-Outputs"
 output_csv = "primary_metrics_comparison.csv"
 
-# Basic version supports exactly two runs.
+# MVP supports exactly two runs.
 [[runs]]
 name = "NM_2year"
 path = "v20260707_NM_optimized_2yrs"
@@ -56,7 +56,7 @@ scale = 100.0
 output_unit = "%"
 missing_ok = true
 
-# Curtailment in MWh by year.
+# Curtailment in MWh/year.
 [[metrics]]
 name = "curtailment_annual"
 file = "curt_ann.csv"
@@ -68,7 +68,7 @@ scale = 1.0
 output_unit = "MWh"
 missing_ok = true
 
-# Curtailment in MWh by technology and year.
+# Curtailment in MWh/technology and year.
 [[metrics]]
 name = "curtailment_by_technology"
 file = "curt_tech.csv"
