@@ -92,3 +92,8 @@ include-package-data = true
 where = ["."]
 include = ["hourlize*", "reeds*"]
 exclude = ["inputs*"]
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
+]

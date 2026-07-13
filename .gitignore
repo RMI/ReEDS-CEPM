@@ -69,3 +69,6 @@ docs/build/*
 
 # uv stuff
 ReEDS.egg-info/
+
+#rmi_postprocess csvs
+*.csv
