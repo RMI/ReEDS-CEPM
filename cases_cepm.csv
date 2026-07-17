@@ -20,7 +20,7 @@ GSw_AnnualCapScen,,,,,,
 GSw_LoadProfiles,,EER2025_Baseline_AEO2023,EER2025_Baseline_AEO2023,EER2025_Baseline_AEO2023,EER2025_Baseline_AEO2023,EER2025_Baseline_AEO2023
 GSw_LoadSiteCF,0,,,1,1,1
 GSw_LoadSiteRA,0,,,0,0,0
-GSw_LoadSiteTrajectory,,,,st_NMtest1,country_epri_medium_extended_to_2032,country_epri_medium_extended_to_2032
+GSw_LoadSiteTrajectory,,,,st_NMtest1,st_epri_medium_extended_to_2032,st_epri_medium_extended_to_2032
 GSw_NG_CRF_penalty,,,,,,
 GSw_PRM_NetImportLimit,,,,,,
 GSw_RetirePenalty,,,,,,
