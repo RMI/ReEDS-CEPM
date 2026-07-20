@@ -66,3 +66,6 @@ slurm_parallel_runs/
 
 # documentation files 
 docs/build/*
+
+# uv stuff
+ReEDS.egg-info/

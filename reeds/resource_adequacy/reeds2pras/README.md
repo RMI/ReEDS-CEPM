@@ -69,14 +69,14 @@ It is always good practice to include new tests if the current tests don't cover
 You can run ReEDS2PRAS tests by running:
 
 ```shell
-cd ReEDS/reeds2pras/test
+cd ReEDS/reeds/resource_adequacy/reeds2pras/test
 julia --project runtests.jl
 ```
 
 or
 
 ```shell
-cd ReEDS/reeds2pras/test
+cd ReEDS/reeds/resource_adequacy/reeds2pras/test
 julia --project
 ```
 
