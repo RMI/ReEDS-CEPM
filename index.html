@@ -86,87 +86,197 @@
              
   <section class="tex2jax_ignore mathjax_ignore" id="welcome-to-reeds-s-documentation">
 <h1>Welcome to ReEDS’s documentation!<a class="headerlink" href="#welcome-to-reeds-s-documentation" title="Link to this heading"></a></h1>
-<section id="reeds">
-<h2>ReEDS<a class="headerlink" href="#reeds" title="Link to this heading"></a></h2>
+</section>
+<section class="tex2jax_ignore mathjax_ignore" id="reeds">
+<h1>ReEDS<a class="headerlink" href="#reeds" title="Link to this heading"></a></h1>
 <p><strong>Regional Energy Deployment System (ReEDS) Model</strong></p>
 <p><a class="reference external" href="https://github.com/ReEDS-Model/ReEDS/actions/workflows/python-app.yaml"><img alt="CI" src="https://github.com/ReEDS-Model/ReEDS/actions/workflows/python-app.yaml/badge.svg?branch=main" /></a>
 <a class="reference external" href="https://reeds-model.github.io/ReEDS"><img alt="Documentation" src="https://img.shields.io/badge/Documentation-view%20online-0a7f5e?logo=readthedocs&amp;logoColor=white&amp;labelColor=555" /></a>
 <img alt="Static Badge" src="https://img.shields.io/badge/python-3.11-blue" />
 <img alt="GitHub License" src="https://img.shields.io/github/license/ReEDS-Model/ReEDS" />
 <a class="reference external" href="https://doi.org/10.5281/zenodo.16943302"><img alt="DOI" src="https://zenodo.org/badge/189060033.svg" /></a></p>
-</br>
-</br>
-<p>This GitHub repository contains the source code for NLR’s ReEDS model.
-The ReEDS model source code is available at no cost from the National Laboratory of the Rockies.
-The ReEDS model can be downloaded or cloned from <a class="reference external" href="https://github.com/ReEDS-Model/ReEDS">https://github.com/ReEDS-Model/ReEDS</a>.</p>
+<p>This GitHub repository contains the source code for NLR’s ReEDS model.</p>
+<p>The ReEDS model source code is available at no cost from the National Laboratory of the Rockies.</p>
+<p>The ReEDS model can be downloaded or cloned from <a class="reference external" href="https://github.com/ReEDS-Model/ReEDS">https://github.com/ReEDS-Model/ReEDS</a>.</p>
 <p>If you want to use the latest stable version of ReEDS, download or check out the latest stable release <a class="reference external" href="https://github.com/ReEDS-Model/ReEDS/releases/latest">here</a>.</p>
 <p><strong>For more information about the model, see the <a class="reference external" href="https://reeds-model.github.io/ReEDS">ReEDS Documentation</a>.</strong></p>
 <p>ReEDS training videos are available on the <a class="reference external" href="https://youtube.com/playlist?list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&amp;amp;si=NgGBaL_MxNcYiIEX">NLR Learning YouTube channel</a>.</p>
-<p><a name="Introduction"></a></p>
-</section>
 <section id="introduction">
 <h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h2>
 <p><a class="reference external" href="https://www.nlr.gov/analysis/reeds/">ReEDS</a> is a capacity planning and dispatch model for the U.S. electricity system.</p>
-<p>As NLR’s flagship long-term power sector model, ReEDS has served as the primary analytic tool for <a class="reference external" href="https://reeds-model.github.io/ReEDS/publications.html">many studies</a> of electricity sector research questions.
-Example model results are available in the <a class="reference external" href="https://scenarioviewer.nlr.gov/">Scenario Viewer</a>.</p>
-<p><a name="Software"></a></p>
+<p>As NLR’s flagship long-term power sector model, ReEDS has served as the primary analytic tool for <a class="reference external" href="https://reeds-model.github.io/ReEDS/publications.html">many studies</a> of electricity sector research questions.</p>
+<p>Example model results are available in the <a class="reference external" href="https://scenarioviewer.nlr.gov/">Scenario Viewer</a>.</p>
 </section>
 <section id="quick-start-guide">
 <h2>Quick-start guide<a class="headerlink" href="#quick-start-guide" title="Link to this heading"></a></h2>
-<p>The ReEDS model is written in <a class="reference external" href="https://www.python.org/">Python</a>, <a class="reference external" href="https://www.gams.com/">GAMS</a>, and <a class="reference external" href="https://julialang.org/">Julia</a>.
-Python and Julia are free, open-source languages;
-GAMS requires a software license from the vendor.
-A step-by-step guide for getting started with ReEDS is available <a class="reference external" href="https://reeds-model.github.io/ReEDS/setup.html">here</a>, and a quick-start guide for advanced users is outlined below.</p>
-<ol class="arabic simple">
-<li><p>Install Python using the Anaconda Distribution: <a class="reference external" href="https://www.anaconda.com/download/success">https://www.anaconda.com/download/success</a></p></li>
-<li><p>Set up GAMS:</p>
+<p>The ReEDS model is written in <a class="reference external" href="https://www.python.org/">Python</a>, <a class="reference external" href="https://www.gams.com/">GAMS</a>, and <a class="reference external" href="https://julialang.org/">Julia</a>.</p>
+<p>Python and Julia are free, open-source languages.</p>
+<p>GAMS requires a software license from the vendor.</p>
+<p>A step-by-step guide for getting started with ReEDS is available <a class="reference external" href="https://reeds-model.github.io/ReEDS/setup.html">here</a>, and a quick-start guide for advanced users is outlined below.</p>
+<section id="install-uv-and-python">
+<h3>1. Install UV and Python<a class="headerlink" href="#install-uv-and-python" title="Link to this heading"></a></h3>
+<p>Install UV:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-LsSf<span class="w"> </span>https://astral.sh/uv/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh
+</pre></div>
+</div>
+<p>Restart your terminal, then install Python 3.11:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>python<span class="w"> </span>install<span class="w"> </span><span class="m">3</span>.11
+</pre></div>
+</div>
+</section>
+<section id="set-up-gams">
+<h3>2. Set up GAMS<a class="headerlink" href="#set-up-gams" title="Link to this heading"></a></h3>
 <ol class="arabic simple">
 <li><p>Install GAMS: <a class="reference external" href="https://www.gams.com/download/">https://www.gams.com/download/</a></p></li>
-<li><p>Obtain a combined GAMS/CPLEX license: <a class="reference external" href="https://www.gams.com/sales/licensing/">https://www.gams.com/sales/licensing/</a></p>
+<li><p>Obtain a combined GAMS/CPLEX license: <a class="reference external" href="https://www.gams.com/sales/licensing/">https://www.gams.com/sales/licensing/</a></p></li>
+</ol>
+<p>Small ReEDS systems have been solved using the open-source <a class="reference external" href="https://www.coin-or.org/">COIN-OR</a> solver as described <a class="reference external" href="https://www.nlr.gov/docs/fy21osti/77907.pdf">here</a>, but this capability is not actively maintained.</p>
+<p>Other commercial solvers have also been successfully applied to ReEDS, but setup details and some solver tuning are specific to the CPLEX solver.</p>
+<p>Ensure the <code class="docutils literal notranslate"><span class="pre">gams</span></code> executable is available on your PATH:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>gams
+</pre></div>
+</div>
+<p>GAMS typically installs directly into the top level directory, with a version number. A typical way to add gams to your user PATH variable in powershell is:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">$currentPath</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[</span>Environment<span class="o">]</span>::GetEnvironmentVariable<span class="o">(</span><span class="s2">&quot;Path&quot;</span>,<span class="s2">&quot;User&quot;</span><span class="o">)</span><span class="w"> </span><span class="c1">#This gets the PATH Environment variable at the user scope</span>
+<span class="nv">$addPath</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;C:/GAMS/53&#39;</span><span class="w"> </span><span class="c1"># or wherever your gams install is</span>
+<span class="o">[</span>Environment<span class="o">]</span>::SetEnvironmentVariable<span class="o">(</span><span class="s2">&quot;Path&quot;</span>,<span class="s2">&quot;</span><span class="nv">$addPath</span><span class="s2">;</span><span class="nv">$currentPath</span><span class="s2">&quot;</span>,<span class="s2">&quot;User&quot;</span><span class="o">)</span>
+</pre></div>
+</div>
+</section>
+<section id="install-julia">
+<h3>3. Install Julia<a class="headerlink" href="#install-julia" title="Link to this heading"></a></h3>
+<p>Install Julia using <code class="docutils literal notranslate"><span class="pre">juliaup</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://install.julialang.org<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh
+</pre></div>
+</div>
+<p>Install the required Julia version:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>juliaup<span class="w"> </span>add<span class="w"> </span><span class="m">1</span>.12.1
+juliaup<span class="w"> </span>default<span class="w"> </span><span class="m">1</span>.12.1
+</pre></div>
+</div>
+<p>Verify:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>julia<span class="w"> </span>--version
+</pre></div>
+</div>
+</section>
+<section id="set-up-the-reeds-environment">
+<h3>4. Set up the ReEDS environment<a class="headerlink" href="#set-up-the-reeds-environment" title="Link to this heading"></a></h3>
+<p>Clone the repository:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/ReEDS-Model/ReEDS.git
+<span class="nb">cd</span><span class="w"> </span>ReEDS
+</pre></div>
+</div>
+<p>Pin Python 3.11 for the project:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>python<span class="w"> </span>pin<span class="w"> </span><span class="m">3</span>.11
+</pre></div>
+</div>
+<p>Create the UV-managed Python environment:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>dev
+</pre></div>
+</div>
+<p>Instantiate the Julia environment:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>julia<span class="w"> </span>--project<span class="o">=</span>.<span class="w"> </span>instantiate.jl
+</pre></div>
+</div>
+<p>Link large data files from shared folder, so we each don’t store separate instances of this ~95GB of input data. Note you cannot do this in git bash as
+there are some type of strange permission issues, so use powershell:</p>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="nb">New-Item</span> <span class="n">-ItemType</span> <span class="n">Junction</span> <span class="n">-Path</span> <span class="s2">&quot;.\inputs\remote&quot;</span> <span class="n">-Target</span> <span class="s2">&quot;C:\Users\Public\Documents\reeds_data\remote&quot;</span>
+</pre></div>
+</div>
+<p>Several large data files are hosted remotely. These files are downloaded automatically as needed during a ReEDS run, but the command above finishes all internet-requiring steps up front.</p>
+<p>Additional details on remote files and other topics can be found in the <a class="reference external" href="https://reeds-model.github.io/ReEDS/user_guide.html#large-input-files">user guide</a>.</p>
+</section>
+<section id="optional-powershell-setup-and-run-command-run-cepm-ps1">
+<h3>4.5 Optional PowerShell setup-and-run command (<code class="docutils literal notranslate"><span class="pre">run_cepm.ps1</span></code>)<a class="headerlink" href="#optional-powershell-setup-and-run-command-run-cepm-ps1" title="Link to this heading"></a></h3>
+<p>Once you’ve cloned the repository, you can use the optional PowerShell helper <code class="docutils literal notranslate"><span class="pre">run_cepm.ps1</span></code> to
+ensure supporting software is up to date and then immediately run runreeds.py:</p>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="p">.\</span><span class="n">run_cepm</span><span class="p">.</span><span class="n">ps1</span>
+</pre></div>
+</div>
+<p>This script performs the following steps in order:</p>
 <ol class="arabic simple">
-<li><p>Small ReEDS systems have been solved using the open-source <a class="reference external" href="https://www.coin-or.org/">COIN-OR</a> solver as described <a class="reference external" href="https://www.nlr.gov/docs/fy21osti/77907.pdf">here</a>, but this capability is not actively maintained.</p></li>
-<li><p>Other commercial solvers have also been successfully applied to ReEDS, but setup details and some solver tuning are specific to the CPLEX solver.</p></li>
+<li><p>Verifies GAMS is on PATH, checks GAMS license status, and prints a detected version string.</p></li>
+<li><p>Verifies Julia is on PATH and checks that the version is <code class="docutils literal notranslate"><span class="pre">1.12.1</span></code>.</p></li>
+<li><p>Sets ReEDS environment variables for the current PowerShell session.</p></li>
+<li><p>Checks that Python is pinned to 3.11 and runs <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">python</span> <span class="pre">pin</span> <span class="pre">3.11</span></code> if needed.</p></li>
+<li><p>Runs <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">sync</span> <span class="pre">--extra</span> <span class="pre">dev</span></code>.</p></li>
+<li><p>Instantiates Julia dependencies only when needed: a fast offline check (<code class="docutils literal notranslate"><span class="pre">Pkg.instantiate</span></code> without a registry update) skips the work when the environment is already current, and only falls back to the full <code class="docutils literal notranslate"><span class="pre">julia</span> <span class="pre">--project=.</span> <span class="pre">instantiate.jl</span></code> (which updates the registry) if dependencies changed or are missing.</p></li>
+<li><p>Checks <code class="docutils literal notranslate"><span class="pre">environment.yml</span></code> against <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> and prints a non-fatal warning if they have drifted beyond the known-accepted allowlist (see <code class="docutils literal notranslate"><span class="pre">CEPM/UV_MAMBA_GUIDE.md</span></code>).</p></li>
+<li><p>Forwards all arguments to <code class="docutils literal notranslate"><span class="pre">runreeds.py</span></code>.</p></li>
+<li><p>Sends a best-effort <a class="reference external" href="https://ntfy.sh">ntfy.sh</a> notification (topic <code class="docutils literal notranslate"><span class="pre">rmi-cepm-run-batch-finished</span></code>) before <code class="docutils literal notranslate"><span class="pre">runreeds.py</span></code> is launched and once it returns (on fail or success), so you can be alerted when a long-running batch finishes. Subscribe to the topic in the ntfy app or at <a class="reference external" href="https://ntfy.sh/rmi-cepm-run-batch-finished">https://ntfy.sh/rmi-cepm-run-batch-finished</a>. A failed or offline notification is ignored. A failed or offline notification is ignored. Note: ntfy.sh topics are public; avoid including sensitive information in notifications.</p></li>
 </ol>
-</li>
-</ol>
-</li>
-<li><p>Install Julia version 1.12.1 as described in the <a class="reference external" href="https://reeds-model.github.io/ReEDS/setup.html#reeds2pras-julia-and-stress-periods-setup">documentation</a>:</p>
-<ol class="arabic simple">
-<li><p>Follow the platform-dependent installation instructions at <a class="reference external" href="https://julialang.org/downloads/">https://julialang.org/downloads/</a> to install both <code class="docutils literal notranslate"><span class="pre">julia</span></code> and <code class="docutils literal notranslate"><span class="pre">juliaup</span></code></p></li>
-<li><p>Specify version 1.12.1 by running:</p>
-<ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">juliaup</span> <span class="pre">add</span> <span class="pre">1.12.1</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">juliaup</span> <span class="pre">default</span> <span class="pre">1.12.1</span></code></p></li>
-</ol>
-</li>
-</ol>
-</li>
-<li><p>Open a command-line interface and set up your environments:</p>
-<ol class="arabic simple">
-<li><p>Clone the ReEDS repository: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.com:ReEDS-Model/ReEDS.git</span></code> or <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/ReEDS-Model/ReEDS.git</span></code></p></li>
-<li><p>Navigate to the cloned repository</p></li>
-<li><p>Create the <code class="docutils literal notranslate"><span class="pre">reeds2</span></code> <a class="reference external" href="https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html">conda environment</a>: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">env</span> <span class="pre">create</span> <span class="pre">-f</span> <span class="pre">environment.yml</span></code></p></li>
-<li><p>Activate the <code class="docutils literal notranslate"><span class="pre">reeds2</span></code> environment: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">reeds2</span></code></p></li>
-<li><p>Instantiate the Julia environment: <code class="docutils literal notranslate"><span class="pre">julia</span> <span class="pre">--project=.</span> <span class="pre">instantiate.jl</span></code></p></li>
-<li><p>(Optional) Several large data files are hosted remotely.
-These files are downloaded automatically as needed during a ReEDS run, but to finish all the internet-requiring steps up front, you can download them all by running <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">reeds/remote.py</span></code>.
-Additional details on remote files and other topics can be found in the <a class="reference external" href="https://reeds-model.github.io/ReEDS/user_guide.html#large-input-files">user guide</a>.</p></li>
-</ol>
-</li>
-<li><p>Run ReEDS on a test case from the root of the cloned repository:</p>
-<ol class="arabic simple">
-<li><p>For interactive setup: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runreeds.py</span></code></p></li>
-<li><p>For one-line operation: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runreeds.py</span> <span class="pre">-b</span> <span class="pre">v20250314_main</span> <span class="pre">-c</span> <span class="pre">test</span></code>.
-In this example, “v20250314_main” is the prefix for this batch of cases, and “test” is the suffix of the cases file, in this case <code class="docutils literal notranslate"><span class="pre">cases_test.csv</span></code>, located in the root of the repository.
-Run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runreeds.py</span> <span class="pre">-h</span></code> for information on other optional command-line arguments for ReEDS.</p></li>
-</ol>
-</li>
-</ol>
-<p><a name="Contact"></a></p>
+<p>Passing <code class="docutils literal notranslate"><span class="pre">-y</span></code> (or <code class="docutils literal notranslate"><span class="pre">--skip-setup</span></code> / <code class="docutils literal notranslate"><span class="pre">--bypass</span></code>) skips Step 5 (<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">sync</span> <span class="pre">--extra</span> <span class="pre">dev</span></code>) and Step 6 (Julia instantiation).
+All other checks and setup steps still run, and remaining arguments are still passed to <code class="docutils literal notranslate"><span class="pre">runreeds.py</span></code></p>
+<p>Two more bootstrap-only options: <code class="docutils literal notranslate"><span class="pre">-q</span></code> (or <code class="docutils literal notranslate"><span class="pre">--quiet</span></code>) disables the ntfy.sh notifications, and <code class="docutils literal notranslate"><span class="pre">-u</span> <span class="pre">&lt;name&gt;</span></code> (or <code class="docutils literal notranslate"><span class="pre">--user</span> <span class="pre">&lt;name&gt;</span></code>) includes <code class="docutils literal notranslate"><span class="pre">&lt;name&gt;</span></code> as the username in the notification messages (omitted when not given). All other arguments are forwarded to <code class="docutils literal notranslate"><span class="pre">runreeds.py</span></code>.</p>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="p">.\</span><span class="n">run_cepm</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-y</span> <span class="n">-b</span> <span class="n">v20250314_main</span> <span class="n">-c</span> <span class="n">test</span>
+<span class="p">.\</span><span class="n">run_cepm</span><span class="p">.</span><span class="n">ps1</span> <span class="p">-</span><span class="n">-bypass</span> <span class="n">-b</span> <span class="n">v20250314_main</span> <span class="n">-c</span> <span class="n">test</span>
+</pre></div>
+</div>
+</section>
+<section id="run-reeds">
+<h3>5. Run ReEDS<a class="headerlink" href="#run-reeds" title="Link to this heading"></a></h3>
+<p>ReEDS currently expects Conda-style environment variables. When using UV, set these variables before running ReEDS or ideally in your dotenv file, so you don’t ahve to do this before every run.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">CONDA_DEFAULT_ENV</span><span class="o">=</span>reeds2
+<span class="nb">export</span><span class="w"> </span><span class="nv">CONDA_PREFIX</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/.venv&quot;</span>
+</pre></div>
+</div>
+<p>For interactive setup:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>runreeds.py
+</pre></div>
+</div>
+<p>For one-line operation:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>runreeds.py<span class="w"> </span>-b<span class="w"> </span>v20260605<span class="w"> </span>-c<span class="w"> </span>cepm
+</pre></div>
+</div>
+<p>In this example, <code class="docutils literal notranslate"><span class="pre">v20260605</span></code> is the prefix for this batch of cases, and <code class="docutils literal notranslate"><span class="pre">cepm</span></code> is the suffix of the cases file, in this case <code class="docutils literal notranslate"><span class="pre">cases_cepm.csv</span></code>, located in the root of the repository. For the batch prefix, we should follow the convention <code class="docutils literal notranslate"><span class="pre">vYYYYMMDD</span></code>, and note that the case ID from the cases file will be appended to the batch prefix for file naming purposes (e.g., <code class="docutils literal notranslate"><span class="pre">WECC_county_100by2050</span></code>).</p>
+<p>Run the following for information on other optional command-line arguments:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>runreeds.py<span class="w"> </span>-h
+</pre></div>
+</div>
+<p>PowerShell users can run setup + launch in one command with <code class="docutils literal notranslate"><span class="pre">run_cepm.ps1</span></code>:</p>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="p">.\</span><span class="n">run_cepm</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-b</span> <span class="n">v20250314_main</span> <span class="n">-c</span> <span class="n">test</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<section id="gams-is-not-found">
+<h3>GAMS is not found<a class="headerlink" href="#gams-is-not-found" title="Link to this heading"></a></h3>
+<p>Confirm that GAMS is available on your PATH:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>gams
+</pre></div>
+</div>
+<p>If this fails, update your shell PATH to include the GAMS installation directory.</p>
+</section>
+<section id="julia-setup-fails">
+<h3>Julia setup fails<a class="headerlink" href="#julia-setup-fails" title="Link to this heading"></a></h3>
+<p>Re-run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>julia<span class="w"> </span>--project<span class="o">=</span>.<span class="w"> </span>instantiate.jl
+</pre></div>
+</div>
+</section>
+<section id="python-environment-issues">
+<h3>Python environment issues<a class="headerlink" href="#python-environment-issues" title="Link to this heading"></a></h3>
+<p>Recreate the UV environment:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>rm<span class="w"> </span>-rf<span class="w"> </span>.venv<span class="w"> </span>uv.lock
+uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>dev
+</pre></div>
+</div>
+</section>
+<section id="conda-default-env-error">
+<h3><code class="docutils literal notranslate"><span class="pre">CONDA_DEFAULT_ENV</span></code> error<a class="headerlink" href="#conda-default-env-error" title="Link to this heading"></a></h3>
+<p>When running with UV, set:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">CONDA_DEFAULT_ENV</span><span class="o">=</span>reeds2
+<span class="nb">export</span><span class="w"> </span><span class="nv">CONDA_PREFIX</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/.venv&quot;</span>
+</pre></div>
+</div>
+<p>Then rerun the command with <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span></code>.</p>
+</section>
 </section>
 <section id="contact-us">
 <h2>Contact Us<a class="headerlink" href="#contact-us" title="Link to this heading"></a></h2>
-<p>If you have comments and/or questions, you can contact the ReEDS team at <a class="reference external" href="mailto:ReEDS&#46;Inquiries&#37;&#52;&#48;nlr&#46;gov">ReEDS<span>&#46;</span>Inquiries<span>&#64;</span>nlr<span>&#46;</span>gov</a> or post a question on the <a class="reference external" href="https://github.com/ReEDS-Model/ReEDS/discussions">discussion pages</a>.</p>
+<p>If you have comments and/or questions, contact the ReEDS team at <a class="reference external" href="mailto:ReEDS&#46;Inquiries&#37;&#52;&#48;nlr&#46;gov">ReEDS<span>&#46;</span>Inquiries<span>&#64;</span>nlr<span>&#46;</span>gov</a> or post a question on the <a class="reference external" href="https://github.com/ReEDS-Model/ReEDS/discussions">discussion pages</a>.</p>
 <div class="toctree-wrapper compound">
 </div>
 <!--
@@ -186,7 +296,7 @@ note: to change the maxdepth of the toctree, you need to change 'navigation_dept
 
   <div role="contentinfo">
     <p>&#169; Copyright 2024, NREL.
-      <span class="lastupdated">Last updated on June 29, 2026.
+      <span class="lastupdated">Last updated on July 20, 2026.
       </span></p>
   </div>
 
