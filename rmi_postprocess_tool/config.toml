@@ -1,105 +1,42 @@
 [general]
-# Path to ReEDS root folder. Currently set up as a local relative path, change to make it work on your computer
+# Folder containing the two ReEDS run folders.
 runs_root = "/Users/shuestis/Library/CloudStorage/OneDrive-RMI/CEP (Clean Energy Planning) - VM-Outputs"
+
+# Output CSV path. Relative paths are resolved relative to this config file.
 output_csv = "primary_metrics_comparison.csv"
 
-# MVP supports exactly two runs.
-[[runs]]
-name = "NM_2year"
-path = "v20260707_NM_optimized_2yrs"
+# ReEDS system cost outputs are commonly reported in 2004$.
+# Put your chosen 2004$ -> 2026$ conversion factor here.
+dollar_year = 2026
+dollar_conversion_factor = 1.0
+
+# Years can be "shared" or an explicit list, e.g. [2024, 2026, 2032].
+years = "shared"
+
+# States to include in the output. Use two-letter postal abbreviations.
+states = ['NM','AZ']
+
+# Optional explicit region-to-state mapping file.
+# If omitted, the script tries common ReEDS hierarchy files inside each run.
+# Expected columns can be either r/state, r/st, *r/state, or *r/st.
+# region_to_state_file = "/path/to/region_to_state.csv"
+
+# How to calculate percent difference.
+# Currently supported: "relative_to_first_run".
+diff_method = "relative_to_first_run"
 
 [[runs]]
-name = "NM_3year"
-path = "v20260707_NM_optimized_3yrs"
+name = "USA_optimized"
+path = "v20260717_USA_optimized"
 
-# Notes:
-# - For headered CSVs, omit `columns`.
-# - For headerless ReEDS/GAMS CSVs, specify `columns` in exact file order.
-# - `scale` handles unit conversion, e.g. fraction -> percent or Quad -> MMBtu.
-# - `group_by` preserves detail rows, e.g. by year or technology. If omitted, the metric is aggregated to one row.
-# - `filters` are optional and are compared as strings, so year 2032 matches "2032".
+[[runs]]
+name = "USA_gas"
+path = "v20260720_USA_gas"
 
-# Reliability / reserve margin in percent.
-# Expected direct output: outputs/prm.csv with r,t,value or headerless equivalent.
-[[metrics]]
-name = "planning_reserve_margin"
-file = "prm.csv"
-columns = ["r", "t", "value"]
-value_column = "value"
-group_by = ["t"]
-aggregation = "mean"
-scale = 100.0
-output_unit = "%"
-missing_ok = true
-
-# Transmission utilization in percent, representative periods.
-[[metrics]]
-name = "transmission_utilization_annual_representative"
-file = "tran_util_ann_rep.csv"
-columns = ["r", "rr", "trtype", "t", "value"]
-value_column = "value"
-group_by = ["t"]
-aggregation = "mean"
-scale = 100.0
-output_unit = "%"
-missing_ok = true
-
-# Transmission utilization in percent, stress periods.
-[[metrics]]
-name = "transmission_utilization_annual_stress"
-file = "tran_util_ann_stress.csv"
-columns = ["r", "rr", "trtype", "t", "value"]
-value_column = "value"
-group_by = ["t"]
-aggregation = "mean"
-scale = 100.0
-output_unit = "%"
-missing_ok = true
-
-# Curtailment in MWh/year.
-[[metrics]]
-name = "curtailment_annual"
-file = "curt_ann.csv"
-columns = ["r", "t", "value"]
-value_column = "value"
-group_by = ["t"]
-aggregation = "sum"
-scale = 1.0
-output_unit = "MWh"
-missing_ok = true
-
-# Curtailment in MWh/technology and year.
-[[metrics]]
-name = "curtailment_by_technology"
-file = "curt_tech.csv"
-columns = ["i", "r", "t", "value"]
-value_column = "value"
-group_by = ["i", "t"]
-aggregation = "sum"
-scale = 1.0
-output_unit = "MWh"
-missing_ok = true
-
-# Natural gas consumption, national, converted from Quads to MMBtu.
-[[metrics]]
-name = "natural_gas_consumption_national"
-file = "repgasquant_nat.csv"
-columns = ["t", "value"]
-value_column = "value"
-group_by = ["t"]
-aggregation = "sum"
-scale = 1000000000.0
-output_unit = "MMBtu"
-missing_ok = true
-
-# Natural gas consumption by tech/region/year, converted from Quads to MMBtu.
-[[metrics]]
-name = "natural_gas_consumption_by_tech_region"
-file = "repgasquant_irt.csv"
-columns = ["i", "r", "t", "value"]
-value_column = "value"
-group_by = ["i", "t"]
-aggregation = "sum"
-scale = 1000000000.0
-output_unit = "MMBtu"
-missing_ok = true
+[metrics]
+# Use ["all"] for the full default primary metric set.
+# Or list metric groups explicitly:
+# ["system_cost", "average_electricity_cost", "co2_emissions", "generation_mix",
+#  "capacity_additions", "reserve_margin", "transmission_utilization",
+#  "curtailment", "fuel_consumption"]
+include = ["all"]
