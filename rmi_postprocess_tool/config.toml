@@ -6,15 +6,15 @@ runs_root = "/Users/shuestis/Library/CloudStorage/OneDrive-RMI/CEP (Clean Energy
 output_csv = "primary_metrics_comparison.csv"
 
 # ReEDS system cost outputs are reported in 2004$.
-# Put your chosen 2004$ -> 2026$ conversion factor here.
 dollar_year = 2026
+# Dollar conversion taken from US Bureau of Labor Statistics CPI Inflation Calculator
 dollar_conversion_factor = 1.8
 
 # Years can be "shared" or an explicit list, e.g. [2024, 2026, 2032].
 years = "shared"
 
-# States to include in the output. Use two-letter postal abbreviations.
-states = ['NM','AZ']
+# States to include in the output. Use two-letter postal abbreviations e.g. ['NM'] or ['NM','AZ']
+states = ['AZ','NM']
 
 # How to calculate percent difference.
 # Currently supported: "relative_to_first_run".
