@@ -5,21 +5,16 @@ runs_root = "/Users/shuestis/Library/CloudStorage/OneDrive-RMI/CEP (Clean Energy
 # Output CSV path. Relative paths are resolved relative to this config file.
 output_csv = "primary_metrics_comparison.csv"
 
-# ReEDS system cost outputs are commonly reported in 2004$.
+# ReEDS system cost outputs are reported in 2004$.
 # Put your chosen 2004$ -> 2026$ conversion factor here.
 dollar_year = 2026
-dollar_conversion_factor = 1.0
+dollar_conversion_factor = 1.8
 
 # Years can be "shared" or an explicit list, e.g. [2024, 2026, 2032].
 years = "shared"
 
 # States to include in the output. Use two-letter postal abbreviations.
 states = ['NM','AZ']
-
-# Optional explicit region-to-state mapping file.
-# If omitted, the script tries common ReEDS hierarchy files inside each run.
-# Expected columns can be either r/state, r/st, *r/state, or *r/st.
-# region_to_state_file = "/path/to/region_to_state.csv"
 
 # How to calculate percent difference.
 # Currently supported: "relative_to_first_run".
