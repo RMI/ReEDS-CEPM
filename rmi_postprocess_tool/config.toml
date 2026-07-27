@@ -2,23 +2,26 @@
 # Folder containing the two ReEDS run folders.
 runs_root = "/Users/shuestis/Library/CloudStorage/OneDrive-RMI/CEP (Clean Energy Planning) - VM-Outputs"
 
-# Output CSV path. Relative paths are resolved relative to this config file.
-output_csv = "primary_metrics_comparison.csv"
+# Default output for the primary metrics comparison runner.
+primary_metrics_output_csv = "primary_metrics_comparison.csv"
 
-# ReEDS system cost outputs are reported in 2004$.
-dollar_year = 2026
-# Dollar conversion taken from US Bureau of Labor Statistics CPI Inflation Calculator
-dollar_conversion_factor = 1.8
+# Default output for the installed capacity resource mix runner.
+capacity_mix_output_csv = "capacity_mix_comparison.csv"
 
 # Years can be "shared" or an explicit list, e.g. [2024, 2026, 2032].
-years = "shared"
+# "shared" keeps only years available in both runs after each output is read.
+years = ['2026','2032']
 
-# States to include in the output. Use two-letter postal abbreviations e.g. ['NM'] or ['NM','AZ']
-states = ['AZ','NM']
+# States to include in outputs.
+# Multi-state runs will be split into these states using the region-to-state map.
+states = ['AZ']
 
-# How to calculate percent difference.
-# Currently supported: "relative_to_first_run".
-diff_method = "relative_to_first_run"
+# Cost outputs in ReEDS are commonly 2004$.
+# Put the 2004$ -> 2026$ conversion factor you want to use here.
+dollar_year = 2026
+dollar_conversion_factor = 1.8
+
+cost_comparison_output_csv = "cost_comparison.csv"
 
 [[runs]]
 name = "USA_optimized"
@@ -29,9 +32,31 @@ name = "USA_gas"
 path = "v20260720_USA_gas"
 
 [metrics]
-# Use ["all"] for the full default primary metric set.
-# Or list metric groups explicitly:
-# ["system_cost", "average_electricity_cost", "co2_emissions", "generation_mix",
-#  "capacity_additions", "reserve_margin", "transmission_utilization",
-#  "curtailment", "fuel_consumption"]
+# Use ["all"] for the full primary metric set.
+# Or select specific groups:
+# [
+#   "system_cost",
+#   "average_electricity_cost",
+#   "co2_emissions",
+#   "generation_mix",
+#   "capacity_additions",
+#   "reserve_margin",
+#   "transmission_utilization",
+#   "curtailment",
+#   "fuel_consumption"
+# ]
 include = ["all"]
+
+[capacity_mix]
+# First chart-output runner: installed capacity mix.
+metric = "installed_capacity"
+unit = "MW"
+
+# [load_forecast]
+# unit = "MWh"
+# large_load_threshold_mwh = 1000000.0
+# large_load_source = "prod_load_ann"
+
+[cost_comparison]
+unit = "2026$"
+group_cost_categories = true
