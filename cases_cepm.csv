@@ -1,5 +1,5 @@
 ,Default Value,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas,USA_optimized
-ignore,1,1,1,1,0,0
+ignore,1,1,1,1,0,1
 GSw_Region,cendiv/Pacific,st/NM,st/NM,st/NM,country/USA,country/USA
 GSw_ZoneSet,,,,,z48,z48
 endyear,2032,,,,,
