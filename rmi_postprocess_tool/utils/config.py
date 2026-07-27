@@ -12,6 +12,7 @@ DEFAULT_PRIMARY_METRICS_OUTPUT = "primary_metrics_comparison.csv"
 DEFAULT_CAPACITY_MIX_OUTPUT = "capacity_mix_comparison.csv"
 DEFAULT_LOAD_FORECAST_OUTPUT = "load_forecast_comparison.csv"
 DEFAULT_COST_COMPARISON_OUTPUT = "cost_comparison.csv"
+DEFAULT_EMISSIONS_OUTPUT = "emissions_comparison.csv"
 
 VALID_STATES = {
     "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "IA", "ID",
@@ -41,6 +42,7 @@ class ProjectConfig:
     capacity_mix_output_csv: Path
     load_forecast_output_csv: Path
     cost_comparison_output_csv: Path
+    emissions_output_csv: Path
 
     # Cost settings
     dollar_year: int
@@ -60,6 +62,10 @@ class ProjectConfig:
     # Cost comparison settings
     cost_comparison_unit: str
     group_cost_categories: bool
+
+    # Emissions comparison settings
+    emissions_unit: str
+    emissions_type: str
 
 
 def parse_common_args(
@@ -222,6 +228,7 @@ def load_config(
     capacity_mix = raw.get("capacity_mix", {})
     load_forecast = raw.get("load_forecast", {})
     cost_comparison = raw.get("cost_comparison", {})
+    emissions = raw.get("emissions", {})
 
     runs = _resolve_runs(raw, config_dir)
     years = _parse_years(general.get("years", "shared"))
@@ -276,6 +283,17 @@ def load_config(
     this_kind="cost_comparison",
     )
 
+    emissions_output_csv = _output_with_optional_override(
+    config_dir=config_dir,
+    configured_path=general.get(
+        "emissions_output_csv",
+        DEFAULT_EMISSIONS_OUTPUT,
+    ),
+    output_override=output_override,
+    output_kind=output_kind,
+    this_kind="emissions",
+    )
+
     metric_include = [str(x).lower() for x in metrics.get("include", ["all"])]
 
     large_load_source = str(
@@ -313,4 +331,7 @@ def load_config(
         cost_comparison_output_csv=cost_comparison_output_csv,
         cost_comparison_unit=str(cost_comparison.get("unit", f"{int(general.get('dollar_year', 2026))}$")),
         group_cost_categories=bool(cost_comparison.get("group_cost_categories", True)),
+        emissions_output_csv=emissions_output_csv,
+        emissions_unit=str(emissions.get("unit", "metric tons CO2")),
+        emissions_type=str(emissions.get("emissions_type", "CO2")).upper(),
     )

@@ -60,3 +60,9 @@ unit = "MW"
 [cost_comparison]
 unit = "2026$"
 group_cost_categories = true
+
+[emissions]
+unit = "metric tons CO2"
+
+# Usually "CO2". You can also use "CO2E" if needed.
+emissions_type = "CO2"
