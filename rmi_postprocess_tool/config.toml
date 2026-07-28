@@ -23,6 +23,8 @@ dollar_conversion_factor = 1.8
 
 cost_comparison_output_csv = "cost_comparison.csv"
 
+capacity_changes_output_csv = "capacity_changes_comparison.csv"
+
 [[runs]]
 name = "USA_optimized"
 path = "v20260717_USA_optimized"
@@ -63,6 +65,8 @@ group_cost_categories = true
 
 [emissions]
 unit = "metric tons CO2"
-
-# Usually "CO2". You can also use "CO2E" if needed.
+# C02 or C02e 
 emissions_type = "CO2"
+
+[capacity_changes]
+unit = "MW"

@@ -10,6 +10,7 @@ from typing import Iterable
 DEFAULT_CONFIG_FILE = "config.toml"
 DEFAULT_PRIMARY_METRICS_OUTPUT = "primary_metrics_comparison.csv"
 DEFAULT_CAPACITY_MIX_OUTPUT = "capacity_mix_comparison.csv"
+DEFAULT_CAPACITY_CHANGES_OUTPUT = "capacity_changes_comparison.csv"
 DEFAULT_LOAD_FORECAST_OUTPUT = "load_forecast_comparison.csv"
 DEFAULT_COST_COMPARISON_OUTPUT = "cost_comparison.csv"
 DEFAULT_EMISSIONS_OUTPUT = "emissions_comparison.csv"
@@ -43,6 +44,7 @@ class ProjectConfig:
     load_forecast_output_csv: Path
     cost_comparison_output_csv: Path
     emissions_output_csv: Path
+    capacity_changes_output_csv: Path
 
     # Cost settings
     dollar_year: int
@@ -53,6 +55,9 @@ class ProjectConfig:
 
     # Capacity mix settings
     capacity_mix_unit: str
+
+    # Capacity changes comparison settings 
+    capacity_changes_unit: str
 
     # Load forecast settings
     load_forecast_unit: str
@@ -66,6 +71,8 @@ class ProjectConfig:
     # Emissions comparison settings
     emissions_unit: str
     emissions_type: str
+
+    
 
 
 def parse_common_args(
@@ -226,6 +233,7 @@ def load_config(
     general = raw.get("general", {})
     metrics = raw.get("metrics", {})
     capacity_mix = raw.get("capacity_mix", {})
+    capacity_changes = raw.get("capacity_changes", {})
     load_forecast = raw.get("load_forecast", {})
     cost_comparison = raw.get("cost_comparison", {})
     emissions = raw.get("emissions", {})
@@ -259,6 +267,17 @@ def load_config(
         output_override=output_override,
         output_kind=output_kind,
         this_kind="capacity_mix",
+    )
+
+    capacity_changes_output_csv = _output_with_optional_override(
+    config_dir=config_dir,
+    configured_path=general.get(
+        "capacity_changes_output_csv",
+        DEFAULT_CAPACITY_CHANGES_OUTPUT,
+    ),
+    output_override=output_override,
+    output_kind=output_kind,
+    this_kind="capacity_changes",
     )
 
     load_forecast_output_csv = _output_with_optional_override(
@@ -323,6 +342,8 @@ def load_config(
         dollar_conversion_factor=float(general.get("dollar_conversion_factor", 1.0)),
         metric_include=metric_include,
         capacity_mix_unit=str(capacity_mix.get("unit", "MW")),
+        capacity_changes_output_csv=capacity_changes_output_csv,
+        capacity_changes_unit=str(capacity_changes.get("unit", "MW")),
         load_forecast_unit=str(load_forecast.get("unit", "MWh")),
         large_load_threshold_mwh=float(
             load_forecast.get("large_load_threshold_mwh", 1_000_000.0)
