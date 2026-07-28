@@ -1,16 +1,18 @@
-,Default Value,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas,USA_optimized
+,Default Value,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas_updated_cc_capex,USA_optimized_updated_cc_capex
 ignore,1,1,1,1,0,1
 GSw_Region,cendiv/Pacific,st/NM,st/NM,st/NM,country/USA,country/USA
 GSw_ZoneSet,,,,,z48,z48
 endyear,2032,,,,,
 yearset,,2026_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032
+plantchar_gas,,,,,gas_CAPEX_ccgt_all,gas_CAPEX_ccgt_all
 GSw_GasCurve,2,,,,,
 GSw_Geothermal,,,,,0,
 GSw_CSP,0,,,,0,
 GSw_OfsWind,1,,,,0,
 GSw_OnsWind6to10,1,,,,0,
 GSw_distpv,1,,,,0,
-supplycurve,default,,,,0,
+supplycurve,default,,,,,
+file_replacements,none,,,,inputs_case/techs_banned.csv << inputs/state_policies/techs_banned_no_new_windsolar.csv,
 GSw_GrowthPenalties,,,,,,
 GSw_Upstream,,,,,,
 GSw_TransHurdleRate,,,,,,
