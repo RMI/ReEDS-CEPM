@@ -27,6 +27,9 @@ evmc_shape_Baseline,2020
 evmc_storage_Baseline,2020
 fuelcell_ATB_2024_advanced,2022
 fuelcell_ATB_2024_moderate,2022
+gas_CAPEX_ccgt_all,2022
+gas_CAPEX_ccgt_low,2022
+gas_CAPEX_ccgt_high,2022
 gas_ATB_2024_moderate,2022
 gas-ccs_ATB_2024_advanced,2022
 gas-ccs_ATB_2024_conservative,2022
