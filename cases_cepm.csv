@@ -12,7 +12,7 @@ GSw_OfsWind,1,,,,0,
 GSw_OnsWind6to10,1,,,,0,
 GSw_distpv,1,,,,0,
 supplycurve,default,,,,,
-file_replacements,none,,,,inputs_case/techs_banned.csv << inputs/state_policies/techs_banned_no_new_windsolar.csv,
+file_replacements,none,,,,inputs/state_policies/techs_banned.yaml << inputs/state_policies/techs_banned_no_new_windsolar_ccs.yaml,inputs/state_policies/techs_banned.yaml << inputs/state_policies/techs_banned_no_new_windsolar_ccs.yaml
 GSw_GrowthPenalties,,,,,,
 GSw_Upstream,,,,,,
 GSw_TransHurdleRate,,,,,,

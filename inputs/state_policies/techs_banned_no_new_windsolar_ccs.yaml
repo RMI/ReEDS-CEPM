@@ -1,0 +1,124 @@
+upv_1:
+  st: &all_states
+    - WA
+    - OR
+    - CA
+    - NV
+    - ID
+    - MT
+    - WY
+    - UT
+    - AZ
+    - NM
+    - SD
+    - CO
+    - ND
+    - NE
+    - MN
+    - IA
+    - WI
+    - TX
+    - OK
+    - KS
+    - MO
+    - AR
+    - LA
+    - MI
+    - IL
+    - MS
+    - AL
+    - FL
+    - TN
+    - KY
+    - GA
+    - SC
+    - NC
+    - VA
+    - IN
+    - OH
+    - PA
+    - WV
+    - MD
+    - DE
+    - NJ
+    - NY
+    - VT
+    - NH
+    - MA
+    - CT
+    - RI
+    - ME
+upv_2:
+  st: *all_states
+upv_3:
+  st: *all_states
+upv_4:
+  st: *all_states
+upv_5:
+  st: *all_states
+upv_6:
+  st: *all_states
+upv_7:
+  st: *all_states
+upv_8:
+  st: *all_states
+upv_9:
+  st: *all_states
+upv_10:
+  st: *all_states
+wind-ons_1:
+  st: *all_states
+wind-ons_2:
+  st: *all_states
+wind-ons_3:
+  st: *all_states
+wind-ons_4:
+  st: *all_states
+wind-ons_5:
+  st: *all_states
+wind-ons_6:
+  st: *all_states
+wind-ons_7:
+  st: *all_states
+wind-ons_8:
+  st: *all_states
+wind-ons_9:
+  st: *all_states
+wind-ons_10:
+  st: *all_states
+wind-ofs_1:
+  st: *all_states
+wind-ofs_2:
+  st: *all_states
+wind-ofs_3:
+  st: *all_states
+wind-ofs_4:
+  st: *all_states
+wind-ofs_5:
+  st: *all_states
+wind-ofs_6:
+  st: *all_states
+wind-ofs_7:
+  st: *all_states
+wind-ofs_8:
+  st: *all_states
+wind-ofs_9:
+  st: *all_states
+wind-ofs_10:
+  st: *all_states
+Gas-CC-CCS_max:
+  st: *all_states
+Gas-CC-CCS_mod:
+  st: *all_states
+Gas-CC_H_1x1-CCS_max:
+  st: *all_states
+Gas-CC_H_1x1-CCS_mod:
+  st: *all_states
+Gas-CC_H_2x1-CCS_max:
+  st: *all_states
+Gas-CC_H_2x1-CCS_mod:
+  st: *all_states
+coal-CCS_max:
+  st: *all_states
+coal-CCS_mod:
+  st: *all_states
