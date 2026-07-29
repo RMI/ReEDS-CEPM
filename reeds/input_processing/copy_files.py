@@ -440,64 +440,93 @@ def get_regions_and_agglevel(
 def read_banned_tech_file(full_path, filepath, inputs_case, r_county):
     """
     Parses the list of regionally (state/county-level) banned techs from the
-    provided YAML file and reformats it as a GAMS-compatible table.
+    provided YAML/CSV file and reformats it as a GAMS-compatible table.
     Regions banning nuclear are exported as their own list, as nuclear bans
     have their own switches and functionalities that are handled separately.
     """
-    if not (full_path.endswith('yaml') or full_path.endswith('yml')):
-        raise TypeError(f'filetype for {full_path} is not .yaml/.yml')
-
-    with open(full_path) as f:
-        techs_banned = yaml.safe_load(f)
-
     hierarchy = pd.read_csv(os.path.join(inputs_case, 'hierarchy.csv'))
-    df = pd.DataFrame(data=0, columns=hierarchy['*r'], index=techs_banned.keys())
+    fext = os.path.splitext(full_path)[1].lower()
 
     # Nuclear bans are handled specially in the model,
     # so we create a separate dataframe for those regions.
     nuclear_ban_regions = pd.DataFrame(data=[], columns=['*r'])
-    for tech, ban_lists in techs_banned.items():
-        ban_regions = []
 
-        if not all([x in ['st', 'county'] for x in ban_lists.keys()]):
-            raise NotImplementedError(
-                "The regional scope of banned techs must be either 'st' or 'county'. "
-                f"Update the nested keys in {filepath}."
+    if fext in ['.yaml', '.yml']:
+        with open(full_path) as f:
+            techs_banned = yaml.safe_load(f)
+
+        df = pd.DataFrame(data=0, columns=hierarchy['*r'], index=techs_banned.keys())
+        for tech, ban_lists in techs_banned.items():
+            ban_regions = []
+
+            if not all([x in ['st', 'county'] for x in ban_lists.keys()]):
+                raise NotImplementedError(
+                    "The regional scope of banned techs must be either 'st' or 'county'. "
+                    f"Update the nested keys in {filepath}."
+                )
+
+            # Apply state-wide bans to all of the regions belonging to those states
+            if 'st' in ban_lists.keys():
+                ban_states = ban_lists['st']
+                state_ban_regions = list(hierarchy.loc[hierarchy.st.isin(ban_states)]['*r'])
+                ban_regions.extend(state_ban_regions)
+
+            # Apply county-wide bans to regions where all of the counties have banned the tech
+            if 'county' in ban_lists.keys():
+                ban_counties = ['p' + str(fips).zfill(5) for fips in ban_lists['county']]
+                r_ban_counties_map = (
+                    r_county.loc[r_county.county.isin(ban_counties)]
+                    .groupby('r')
+                    ['county']
+                    .apply(list)
+                    .apply(sorted)
+                )
+                r_all_counties_map = (
+                    r_county.groupby('r')
+                    ['county']
+                    .apply(list)
+                    .apply(sorted)
+                )
+                county_ban_regions = list(
+                    r_ban_counties_map
+                    .loc[(r_ban_counties_map.isin(r_all_counties_map))]
+                    .index
+                )
+                ban_regions.extend(county_ban_regions)
+
+            if tech == 'nuclear':
+                nuclear_ban_regions['*r'] = ban_regions
+            else:
+                df.loc[tech, ban_regions] = 1
+
+    elif fext == '.csv':
+        df_in = pd.read_csv(full_path, comment='#')
+        tech_col = df_in.columns[0]
+        df_in = df_in.rename(columns={tech_col: 'i'}).set_index('i')
+
+        valid_regions = list(hierarchy['*r'])
+        overlap_regions = [r for r in valid_regions if r in df_in.columns]
+        if len(overlap_regions) == 0:
+            raise ValueError(
+                f'No overlapping region columns found between {filepath} and inputs_case/hierarchy.csv'
             )
 
-        # Apply state-wide bans to all of the regions belonging to those states
-        if 'st' in ban_lists.keys():
-            ban_states = ban_lists['st']
-            state_ban_regions = list(hierarchy.loc[hierarchy.st.isin(ban_states)]['*r'])
-            ban_regions.extend(state_ban_regions)
+        df = pd.DataFrame(data=0, columns=valid_regions, index=df_in.index)
+        df.loc[:, overlap_regions] = (
+            df_in[overlap_regions]
+            .apply(pd.to_numeric, errors='coerce')
+            .fillna(0)
+            .clip(lower=0, upper=1)
+            .astype(int)
+        )
 
-        # Apply county-wide bans to regions where all of the counties have banned the tech
-        if 'county' in ban_lists.keys():
-            ban_counties = ['p' + str(fips).zfill(5) for fips in ban_lists['county']]
-            r_ban_counties_map = (
-                r_county.loc[r_county.county.isin(ban_counties)]
-                .groupby('r')
-                ['county']
-                .apply(list)
-                .apply(sorted)
-            )
-            r_all_counties_map = (
-                r_county.groupby('r')
-                ['county']
-                .apply(list)
-                .apply(sorted)
-            )
-            county_ban_regions = list(
-                r_ban_counties_map
-                .loc[(r_ban_counties_map.isin(r_all_counties_map))]
-                .index
-            )
-            ban_regions.extend(county_ban_regions)
+        if 'nuclear' in df.index:
+            nuclear_ban_regions['*r'] = [
+                r for r in overlap_regions if int(df.loc['nuclear', r]) == 1
+            ]
 
-        if tech == 'nuclear':
-            nuclear_ban_regions['*r'] = ban_regions
-        else:
-            df.loc[tech, ban_regions] = 1
+    else:
+        raise TypeError(f'filetype for {full_path} is not .yaml/.yml/.csv')
 
     df = df.reset_index(names=['i'])
 
@@ -581,6 +610,7 @@ def subset_to_valid_regions(
                 case=os.path.dirname(os.path.normpath(inputs_case)),
             )
         elif filename == 'techs_banned.csv':
+            print(f"Using techs_banned source file: {full_path}")
             df, nuclear_ban_regions = read_banned_tech_file(
                 full_path,
                 filepath,
