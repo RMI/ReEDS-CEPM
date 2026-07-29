@@ -25,6 +25,8 @@ cost_comparison_output_csv = "cost_comparison.csv"
 
 capacity_changes_output_csv = "capacity_changes_comparison.csv"
 
+load_output_csv = "load_comparison.csv"
+
 [[runs]]
 name = "USA_optimized"
 path = "v20260717_USA_optimized"
@@ -70,3 +72,20 @@ emissions_type = "CO2"
 
 [capacity_changes]
 unit = "MW"
+
+[load]
+unit = "MWh"
+large_load_file_pattern = "inputs_case/loadsite_annual.csv"
+
+# Since the file column is MW, this probably needs to convert MW to annual MWh.
+# If the values already represent annual MWh despite the column name, keep this at 1.0.
+large_load_value_multiplier = 8760.0
+
+# Threshold is applied after the multiplier, so this is annual MWh.
+large_load_threshold_mwh = 1000000.0
+
+large_load_region_column = "*loadsitereg"
+large_load_year_column = "t"
+large_load_value_column = "MW"
+
+clip_large_load_to_total = true

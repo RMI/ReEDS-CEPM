@@ -8,18 +8,21 @@ from typing import Iterable
 
 
 DEFAULT_CONFIG_FILE = "config.toml"
+
 DEFAULT_PRIMARY_METRICS_OUTPUT = "primary_metrics_comparison.csv"
 DEFAULT_CAPACITY_MIX_OUTPUT = "capacity_mix_comparison.csv"
-DEFAULT_CAPACITY_CHANGES_OUTPUT = "capacity_changes_comparison.csv"
-DEFAULT_LOAD_FORECAST_OUTPUT = "load_forecast_comparison.csv"
 DEFAULT_COST_COMPARISON_OUTPUT = "cost_comparison.csv"
 DEFAULT_EMISSIONS_OUTPUT = "emissions_comparison.csv"
+DEFAULT_CAPACITY_CHANGES_OUTPUT = "capacity_changes_comparison.csv"
+DEFAULT_LOAD_OUTPUT = "load_comparison.csv"
+
 
 VALID_STATES = {
-    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "IA", "ID",
-    "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT",
-    "NC", "ND", "NE", "NH", "NJ", "NM", "NV", "NY", "OH", "OK", "OR", "PA", "RI",
-    "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY", "DC",
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI",
+    "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI",
+    "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NM", "NV",
+    "NY", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT",
+    "VA", "VT", "WA", "WI", "WV", "WY", "DC",
 }
 
 
@@ -41,10 +44,10 @@ class ProjectConfig:
     # Output paths
     primary_metrics_output_csv: Path
     capacity_mix_output_csv: Path
-    load_forecast_output_csv: Path
     cost_comparison_output_csv: Path
     emissions_output_csv: Path
     capacity_changes_output_csv: Path
+    load_output_csv: Path
 
     # Cost settings
     dollar_year: int
@@ -56,23 +59,27 @@ class ProjectConfig:
     # Capacity mix settings
     capacity_mix_unit: str
 
-    # Capacity changes comparison settings 
+    # Capacity changes settings
     capacity_changes_unit: str
-
-    # Load forecast settings
-    load_forecast_unit: str
-    large_load_threshold_mwh: float
-    large_load_source: str
 
     # Cost comparison settings
     cost_comparison_unit: str
     group_cost_categories: bool
 
-    # Emissions comparison settings
+    # Emissions settings
     emissions_unit: str
     emissions_type: str
 
-    
+    # Load settings
+    load_unit: str
+    large_load_file_pattern: str
+    large_load_threshold_mwh: float
+    large_load_value_multiplier: float
+    large_load_state_column: str | None
+    large_load_region_column: str | None
+    large_load_year_column: str | None
+    large_load_value_column: str | None
+    clip_large_load_to_total: bool
 
 
 def parse_common_args(
@@ -83,7 +90,9 @@ def parse_common_args(
     """
     Shared CLI parser for runner scripts.
 
-    Each runner can pass --config and optionally --output.
+    Each runner can pass:
+    - --config
+    - --output
     """
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
@@ -115,8 +124,8 @@ def resolve_path(path_raw: str | Path, base: Path) -> Path:
 def load_toml(path: Path) -> dict:
     if not path.exists():
         raise FileNotFoundError(
-            f"Config file not found: {path}. Create {DEFAULT_CONFIG_FILE} in the "
-            "current directory or pass --config path/to/config.toml."
+            f"Config file not found: {path}. Create {DEFAULT_CONFIG_FILE} "
+            "in the current directory or pass --config path/to/config.toml."
         )
 
     with path.open("rb") as f:
@@ -156,12 +165,20 @@ def _resolve_runs(raw: dict, config_dir: Path) -> list[RunSpec]:
     runs_root = resolve_path(general.get("runs_root", "."), config_dir)
 
     runs: list[RunSpec] = []
+
     for item in raw.get("runs", []):
         name = str(item["name"])
         run_path = Path(str(item["path"])).expanduser()
+
         if not run_path.is_absolute():
             run_path = runs_root / run_path
-        runs.append(RunSpec(name=name, path=run_path.resolve()))
+
+        runs.append(
+            RunSpec(
+                name=name,
+                path=run_path.resolve(),
+            )
+        )
 
     if len(runs) != 2:
         raise ValueError(f"This version expects exactly two [[runs]], found {len(runs)}")
@@ -174,8 +191,10 @@ def _resolve_output_path(
     raw_path: str | Path,
 ) -> Path:
     path = Path(raw_path).expanduser()
+
     if not path.is_absolute():
         path = config_dir / path
+
     return path.resolve()
 
 
@@ -195,16 +214,29 @@ def _output_with_optional_override(
 
     Runner scripts should ideally call:
         load_config(..., output_override=args.output, output_kind="capacity_mix")
-    so only their own output path is overridden.
-    """
-    use_path: str | Path
 
-    if output_override is not None and (output_kind is None or output_kind == this_kind):
-        use_path = output_override
+    That ensures only the runner's own output path is overridden.
+    """
+    if output_override is not None and (
+        output_kind is None or output_kind == this_kind
+    ):
+        use_path: str | Path = output_override
     else:
         use_path = configured_path
 
     return _resolve_output_path(config_dir, use_path)
+
+
+def _optional_str(section: dict, key: str) -> str | None:
+    value = section.get(key)
+    if value is None:
+        return None
+
+    value_str = str(value).strip()
+    if not value_str:
+        return None
+
+    return value_str
 
 
 def load_config(
@@ -222,9 +254,9 @@ def load_config(
     - year filters
     - output locations
     - dollar-year conversion factor
-    - large-load threshold
+    - chart/output toggles
 
-    Metric formulas and ReEDS output file choices live in Python modules.
+    Metric formulas, file-specific logic, and calculations live in Python modules.
     """
     config_path = config_path.resolve()
     config_dir = config_path.parent
@@ -234,9 +266,9 @@ def load_config(
     metrics = raw.get("metrics", {})
     capacity_mix = raw.get("capacity_mix", {})
     capacity_changes = raw.get("capacity_changes", {})
-    load_forecast = raw.get("load_forecast", {})
     cost_comparison = raw.get("cost_comparison", {})
     emissions = raw.get("emissions", {})
+    load = raw.get("load", {})
 
     runs = _resolve_runs(raw, config_dir)
     years = _parse_years(general.get("years", "shared"))
@@ -244,7 +276,9 @@ def load_config(
 
     region_map_raw = general.get("region_to_state_file")
     region_to_state_file = (
-        resolve_path(region_map_raw, config_dir) if region_map_raw else None
+        resolve_path(region_map_raw, config_dir)
+        if region_map_raw
+        else None
     )
 
     primary_metrics_output_csv = _output_with_optional_override(
@@ -269,90 +303,102 @@ def load_config(
         this_kind="capacity_mix",
     )
 
-    capacity_changes_output_csv = _output_with_optional_override(
-    config_dir=config_dir,
-    configured_path=general.get(
-        "capacity_changes_output_csv",
-        DEFAULT_CAPACITY_CHANGES_OUTPUT,
-    ),
-    output_override=output_override,
-    output_kind=output_kind,
-    this_kind="capacity_changes",
-    )
-
-    load_forecast_output_csv = _output_with_optional_override(
+    cost_comparison_output_csv = _output_with_optional_override(
         config_dir=config_dir,
         configured_path=general.get(
-            "load_forecast_output_csv",
-            DEFAULT_LOAD_FORECAST_OUTPUT,
+            "cost_comparison_output_csv",
+            DEFAULT_COST_COMPARISON_OUTPUT,
         ),
         output_override=output_override,
         output_kind=output_kind,
-        this_kind="load_forecast",
-    )
-
-    cost_comparison_output_csv = _output_with_optional_override(
-    config_dir=config_dir,
-    configured_path=general.get(
-        "cost_comparison_output_csv",
-        DEFAULT_COST_COMPARISON_OUTPUT,
-    ),
-    output_override=output_override,
-    output_kind=output_kind,
-    this_kind="cost_comparison",
+        this_kind="cost_comparison",
     )
 
     emissions_output_csv = _output_with_optional_override(
-    config_dir=config_dir,
-    configured_path=general.get(
-        "emissions_output_csv",
-        DEFAULT_EMISSIONS_OUTPUT,
-    ),
-    output_override=output_override,
-    output_kind=output_kind,
-    this_kind="emissions",
+        config_dir=config_dir,
+        configured_path=general.get(
+            "emissions_output_csv",
+            DEFAULT_EMISSIONS_OUTPUT,
+        ),
+        output_override=output_override,
+        output_kind=output_kind,
+        this_kind="emissions",
+    )
+
+    capacity_changes_output_csv = _output_with_optional_override(
+        config_dir=config_dir,
+        configured_path=general.get(
+            "capacity_changes_output_csv",
+            DEFAULT_CAPACITY_CHANGES_OUTPUT,
+        ),
+        output_override=output_override,
+        output_kind=output_kind,
+        this_kind="capacity_changes",
+    )
+
+    load_output_csv = _output_with_optional_override(
+        config_dir=config_dir,
+        configured_path=general.get(
+            "load_output_csv",
+            DEFAULT_LOAD_OUTPUT,
+        ),
+        output_override=output_override,
+        output_kind=output_kind,
+        this_kind="load",
     )
 
     metric_include = [str(x).lower() for x in metrics.get("include", ["all"])]
 
-    large_load_source = str(
-        load_forecast.get("large_load_source", "prod_load_ann")
-    ).lower()
-
-    valid_large_load_sources = {
-        "prod_load_ann",
-        "load_cat",
-        "load_rt_region_threshold",
-    }
-    if large_load_source not in valid_large_load_sources:
-        raise ValueError(
-            "[load_forecast].large_load_source must be one of "
-            f"{sorted(valid_large_load_sources)}, got {large_load_source!r}"
-        )
+    dollar_year = int(general.get("dollar_year", 2026))
+    dollar_conversion_factor = float(general.get("dollar_conversion_factor", 1.0))
 
     return ProjectConfig(
         runs=runs,
         years=years,
         states=states,
         region_to_state_file=region_to_state_file,
+
         primary_metrics_output_csv=primary_metrics_output_csv,
         capacity_mix_output_csv=capacity_mix_output_csv,
-        load_forecast_output_csv=load_forecast_output_csv,
-        dollar_year=int(general.get("dollar_year", 2026)),
-        dollar_conversion_factor=float(general.get("dollar_conversion_factor", 1.0)),
-        metric_include=metric_include,
-        capacity_mix_unit=str(capacity_mix.get("unit", "MW")),
-        capacity_changes_output_csv=capacity_changes_output_csv,
-        capacity_changes_unit=str(capacity_changes.get("unit", "MW")),
-        load_forecast_unit=str(load_forecast.get("unit", "MWh")),
-        large_load_threshold_mwh=float(
-            load_forecast.get("large_load_threshold_mwh", 1_000_000.0)
-        ),
-        large_load_source=large_load_source,
         cost_comparison_output_csv=cost_comparison_output_csv,
-        cost_comparison_unit=str(cost_comparison.get("unit", f"{int(general.get('dollar_year', 2026))}$")),
-        group_cost_categories=bool(cost_comparison.get("group_cost_categories", True)),
         emissions_output_csv=emissions_output_csv,
+        capacity_changes_output_csv=capacity_changes_output_csv,
+        load_output_csv=load_output_csv,
+
+        dollar_year=dollar_year,
+        dollar_conversion_factor=dollar_conversion_factor,
+
+        metric_include=metric_include,
+
+        capacity_mix_unit=str(capacity_mix.get("unit", "MW")),
+
+        capacity_changes_unit=str(capacity_changes.get("unit", "MW")),
+
+        cost_comparison_unit=str(
+            cost_comparison.get("unit", f"{dollar_year}$")
+        ),
+        group_cost_categories=bool(
+            cost_comparison.get("group_cost_categories", True)
+        ),
+
         emissions_unit=str(emissions.get("unit", "metric tons CO2")),
         emissions_type=str(emissions.get("emissions_type", "CO2")).upper(),
+
+        load_unit=str(load.get("unit", "MWh")),
+        large_load_file_pattern=str(
+            load.get("large_load_file_pattern", "inputs_case/loadsite_annual.csv")
+        ),
+        large_load_threshold_mwh=float(
+            load.get("large_load_threshold_mwh", 1_000_000.0)
+        ),
+        large_load_value_multiplier=float(
+            load.get("large_load_value_multiplier", 1.0)
+        ),
+        large_load_state_column=_optional_str(load, "large_load_state_column"),
+        large_load_region_column=_optional_str(load, "large_load_region_column"),
+        large_load_year_column=_optional_str(load, "large_load_year_column"),
+        large_load_value_column=_optional_str(load, "large_load_value_column"),
+        clip_large_load_to_total=bool(
+            load.get("clip_large_load_to_total", True)
+        ),
     )
