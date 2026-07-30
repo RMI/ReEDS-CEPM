@@ -66,3 +66,13 @@ solve.py | 2026-07-20 15:51:22 | ERROR | :
 solve.py | 2026-07-20 15:51:22 | ERROR | 3_solve_oneyear.gms failed with return code 7
 
 It was indeed a fluke.
+
+## Offshore Wind RPS target
+
+I've encountered an error that appears associated with the offshore wind policy targets for NY and CT. From Chat:
+
+"I’ve isolated the primary failure (eq_RPS_OFSWind infeasible RHS); I’m now checking your case switches to confirm which policy switch combo is causing that contradiction.
+
+I’ve confirmed the hard failure is an offshore-wind policy constraint (CT and NY) with zero available offshore capacity; I’ll quickly trace where that equation is activated so I can give you the cleanest switch fix."
+
+I've traced this back to a bug in the `file_replacements`, which replaces the default file rather than the case-specific input.
