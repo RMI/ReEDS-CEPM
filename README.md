@@ -168,7 +168,15 @@ All other checks and setup steps still run, and remaining arguments are still pa
 
 ### 5. Run ReEDS
 
-ReEDS currently expects Conda-style environment variables. When using UV, set these variables before running ReEDS or ideally in your dotenv file, so you don't ahve to do this before every run.
+ReEDS currently expects Conda-style environment variables. When using UV, set these variables before running ReEDS or ideally in your dotenv file, like so
+
+```bash
+echo 'export CONDA_DEFAULT_ENV=reeds2' >> ~/.bashrc
+echo 'export CONDA_PREFIX="$PWD/.venv"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+so you don't have to enter this code block before every run.
 
 ```bash
 export CONDA_DEFAULT_ENV=reeds2
