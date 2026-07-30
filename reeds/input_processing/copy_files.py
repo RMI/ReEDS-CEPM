@@ -46,9 +46,16 @@ def read_runfiles(reeds_path, inputs_case, sw, agglevel_variables):
     Read runfiles.csv and return the runfiles dataframe
     Identify files that have a region index versus those that do not.
     """
+    # Prefer the runfiles file colocated with this executing script (case-local copy).
+    # Fall back to the repository runfiles path for backward compatibility.
+    runfiles_csv = os.path.join(os.path.dirname(__file__), 'runfiles.csv')
+    if not os.path.exists(runfiles_csv):
+        runfiles_csv = os.path.join(reeds_path, 'reeds', 'input_processing', 'runfiles.csv')
+    print(f"Using runfiles source file: {runfiles_csv}")
+
     runfiles = (
         pd.read_csv(
-            os.path.join(reeds_path, 'reeds', 'input_processing', 'runfiles.csv'),
+            runfiles_csv,
             dtype={'fix_cols':str,
                    'depends_on_switch':str,
                    'depends_on_switch_value': str},
