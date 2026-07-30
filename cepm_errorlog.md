@@ -75,4 +75,4 @@ I've encountered an error that appears associated with the offshore wind policy 
 
 I’ve confirmed the hard failure is an offshore-wind policy constraint (CT and NY) with zero available offshore capacity; I’ll quickly trace where that equation is activated so I can give you the cleanest switch fix."
 
-I've traced this back to a bug in the `file_replacements`, which replaces the default file rather than the case-specific input.
+I've traced this back to a bug in the `file_replacements`, which replaces the default file rather than the case-specific input, and I've edited the underlying code such that the case-specific version of runfiles.csv is used rather than the one stored in the base repo.
