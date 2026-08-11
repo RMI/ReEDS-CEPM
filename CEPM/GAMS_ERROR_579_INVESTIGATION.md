@@ -112,7 +112,7 @@ Changed files:
   first so sets can be loaded inline as they're declared.
 
 Also cherry-picked from upstream for alignment (unrelated to this bug, but
-touch the same function):
+touches the same function):
 - `h5_to_gdx.py: add v to special_keys` (upstream commit `066d8fe6`)
 
 ## Verification
