@@ -126,6 +126,41 @@ def write_gdxread(
     print(f'Wrote {fpath}')
 
 
+def write_sets_declare_and_load(case:str|Path, declarations:list):
+    """
+    Write GAMS code to declare AND load each set, one at a time, before moving on
+    to the next set.
+
+    GAMS 44 (the version this repo is pinned to) raises Error 579 ("Cannot clear a
+    set used as a domain or used in lag/ord operations") if a set is referenced as
+    the domain of another set (e.g. `set offshore(r) ;`) before that set itself has
+    been `$loadDCR`'d. Declaring every set first and loading every set afterward
+    (as `write_declaration`/`write_gdxread` do) triggers this for any primary set
+    that has a domain-based subset, since all subsets get declared -- and therefore
+    "use" their parent set as a domain -- before any set is loaded.
+    GAMS 45.6.0 removed this restriction ($loadDCR "does not complain anymore ...
+    if that set had no data so far"), but this repo's GAMS install is locked to
+    44.4.0, so we still have to avoid ever declaring a subset before its parent
+    set has been loaded.
+    Primary (domain-less) sets never depend on other sets, so it's enough to fully
+    declare+load all primary sets before declaring+loading any domain-based subset.
+    """
+    aliases = pd.read_csv(
+        Path(reeds.io.reeds_path, 'inputs', 'sets', '_aliases.csv'),
+        header=0, index_col=0,
+    ).squeeze()
+    writelist = sort_primary_first(declarations)
+    fpath = Path(case, 'autocode', 'b_sets.gms')
+    with open(fpath, 'w') as f:
+        for line in writelist:
+            name = line.split('(')[0]
+            f.write(f'set {line} ;\n')
+            for alias in aliases.get([name], []):
+                f.write(f'alias({name},{alias}) ;\n')
+            f.write(f'$loadDCR {name} = {name}\n')
+    print(f'Wrote {fpath}')
+
+
 def main(case, overwrite=True, verbose=1):
     dictin, gamstypes, comments = read_inputs(case)
     gdxpath = Path(reeds.io.standardize_case(case), 'inputs_case', 'inputs_0.gdx')
@@ -164,10 +199,12 @@ def main(case, overwrite=True, verbose=1):
                 raise NotImplementedError(gamstypes[key])
         gdx.write(gdxpath)
         print(f'Wrote inputs.h5 to {gdxpath}')
-    ## Write GAMS code to declare and load the sets/parameters
-    write_declaration(case, declare_sets, 'set')
+    ## Write GAMS code to declare and load the sets/parameters.
+    ## Sets are declared and loaded one at a time (see write_sets_declare_and_load
+    ## docstring for why); parameters can't be used as domains, so declaring and
+    ## loading them in separate passes (after all sets are loaded) is safe.
+    write_sets_declare_and_load(case, declare_sets)
     write_declaration(case, declare_parameters, 'parameter')
-    write_gdxread(case, declare_sets, 'set')
     write_gdxread(case, declare_parameters, 'parameter')
 
 
