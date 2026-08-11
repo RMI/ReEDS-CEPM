@@ -28,6 +28,13 @@ As NLR's flagship long-term power sector model, ReEDS has served as the primary 
 
 Example model results are available in the [Scenario Viewer](https://scenarioviewer.nlr.gov/).
 
+## Changes from the NLR repo
+
+This fork (RMI/ReEDS-CEPM) carries a few RMI-specific changes on top of upstream. Notable ones:
+
+- **`run_cepm.ps1` bootstrap script.** An optional PowerShell helper that verifies GAMS/Julia/Python are installed and on PATH at the expected versions, syncs the `uv` environment, checks `environment.yml`/`pyproject.toml` for drift, and then forwards all arguments to `runreeds.py` — so a case batch can be launched with one command (`.\run_cepm.ps1 -b <batch> -c <suffix>`) instead of running each setup step by hand. It also sends an [ntfy.sh](https://ntfy.sh) notification when a batch finishes, since local runs can take a long time. See [section 4.5](#45-optional-powershell-setup-and-run-command-run_cepmps1) above for full details and flags.
+- **GAMS 44.4.0 compatibility fix in the h5-to-gdx input pipeline.** This repo's GAMS install is pinned to 44.4.0. Upstream's `h5_to_gdx.py`/`b_inputs.gms` declare every generated set/parameter before loading any of them, which GAMS 44.4.0 rejects with `Error 579` ("Cannot clear a set used as a domain...") for any primary set with a dependent subset — GAMS 45.6.0 lifted that restriction, so upstream (which tests on 49.6.0/51.3.0) never hits it. `h5_to_gdx.py` here instead declares and loads each set immediately, one at a time, to stay compatible with 44.4.0. See [`CEPM/GAMS_ERROR_579_INVESTIGATION.md`](CEPM/GAMS_ERROR_579_INVESTIGATION.md) for the full investigation and fix.
+
 ## Quick-start guide
 
 The ReEDS model is written in [Python](https://www.python.org/), [GAMS](https://www.gams.com/), and [Julia](https://julialang.org/).
