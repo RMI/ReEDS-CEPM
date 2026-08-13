@@ -32,8 +32,10 @@ RMI's Clean Energy Portfolio Model modifies NLR's ReEDS model, starting with its
 CEPM is designed to answer the question "What's the most cost-effective way to serve the next increment of data center load across the United States?" We use a modified version of NLR's ReEDS model. A few of the key differnces are:
 
 * Python package management in UV, instead of conda
-* Some additional scripts to automate resolving the environment and running the model
+* An additional Powershell helper script `run_cepm.ps1` that verifies the local environment, then passes arguments through to runreeds.py. It also sends an [ntfy.sh](https://ntfy.sh) notification when a batch finishes, since local runs can take a long time. See [section 4.5](#45-optional-powershell-setup-and-run-command-run_cepmps1) for full details and flags.
+* Minor changes to maintain compatibility with GAMS version 44.4.0. This repo's GAMS install is pinned to 44.4.0. To maintain compability with the upstream codebase, which tests on more recent GAMS versions, we implement several minor changes. The main ones are in `h5_to_gdx.py`/`b_input.gms`. See [`CEPM/GAMS_ERROR_579_INVESTIGATION.md`](CEPM/GAMS_ERROR_579_INVESTIGATION.md) for the full investigation and fix.
 * Customized cases_*.csv files that reflect CEPM scenarios.
+* A `CEPM` folder contains CEPM-specific documentation.
 * Additional minor changes throughout.
 
 ## Getting Started
