@@ -8,7 +8,7 @@ What this script does:
 4) Checks the project Python pin and runs `uv python pin 3.11` when not pinned to 3.11.
 5) Runs `uv sync --extra dev` to ensure the Python environment matches project dependencies (unless bypass mode is enabled).
 6) Instantiates Julia dependencies only when needed: a fast offline instantiate checks/heals the environment, falling back to the full `julia --project=. instantiate.jl` (which updates the registry) only if that can't satisfy the project (unless bypass mode is enabled).
-7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/check_env_sync.py.
+7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/scripts/check_env_sync.py.
 8) Starts runreeds.py and forwards any arguments passed to this script.
 9) Sends an ntfy.sh notification (topic: rmi-cepm-run-batch-finished) before runreeds.py launches and once it returns. Best-effort: a failed or offline notification is ignored. Disabled with -q/--quiet; -u/--user adds a username to the message.
 
@@ -271,11 +271,11 @@ if ($y) {
 # beyond the known-accepted exceptions. This always runs -- it only reads two
 # text files -- so it is not gated by bypass mode. It must never abort the
 # bootstrap, so a non-zero result becomes a warning rather than a throw.
-Write-Host '[run] CEPM/check_env_sync.py (environment.yml vs pyproject.toml)'
+Write-Host '[run] CEPM/scripts/check_env_sync.py (environment.yml vs pyproject.toml)'
 Set-Location $repoRoot
-Invoke-Native { uv run python CEPM/check_env_sync.py }
+Invoke-Native { uv run python CEPM/scripts/check_env_sync.py }
 if ($LASTEXITCODE -ne 0) {
-    Write-Warning 'environment.yml and pyproject.toml have drifted (see output above). Update both files, or adjust the allowlist in CEPM/check_env_sync.py. Continuing.'
+    Write-Warning 'environment.yml and pyproject.toml have drifted (see output above). Update both files, or adjust the allowlist in CEPM/scripts/check_env_sync.py. Continuing.'
 } else {
     Write-Host '[ok] environment.yml and pyproject.toml are aligned (within known exceptions).'
 }
