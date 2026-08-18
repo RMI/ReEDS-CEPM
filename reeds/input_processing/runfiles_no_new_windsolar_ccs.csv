@@ -236,7 +236,7 @@ tc_phaseout_schedule.csv,inputs/financials/tc_phaseout_schedule_{GSw_TCPhaseout_
 tech-subset-table.csv,inputs/tech-subset-table.csv,1,ignore,ignore,,,,,0,,,,,,
 tech_resourceclass.csv,inputs/techs/tech_resourceclass.csv,1,ignore,ignore,,,,,0,,,,,,
 techs.csv,inputs/techs/techs_{techs_suffix}.csv,1,ignore,ignore,,,,,0,,,,,,
-techs_banned.csv,inputs/state_policies/techs_banned.csv,1,ignore,ignore,wide,i,,,0,,,,,,
+techs_banned.csv,inputs/state_policies/techs_banned_no_new_windsolar_ccs.csv,1,ignore,ignore,wide,i,,,0,,,,,,
 techs_banned_ces.csv,inputs/state_policies/techs_banned_ces.csv,int(sw.GSw_StateRPS) != 0,ignore,ignore,wide_st,i,,,0,,,,,,
 techs_banned_imports_rps.csv,inputs/state_policies/techs_banned_imports_rps.csv,int(sw.GSw_StateRPS) != 0,ignore,ignore,wide_st,i,,,0,,,,,,
 techs_banned_rps.csv,inputs/state_policies/techs_banned_rps.csv,int(sw.GSw_StateRPS) != 0,ignore,ignore,wide_st,i,,,0,,,,,,

@@ -199,6 +199,15 @@ Two more bootstrap-only options: `-q` (or `--quiet`) disables the ntfy.sh notifi
 
 ### 6. Run ReEDS
 
+ReEDS currently expects Conda-style environment variables. When using UV, set these variables before running ReEDS or ideally in your dotenv file, like so
+
+```bash
+echo 'export CONDA_DEFAULT_ENV=reeds2' >> ~/.bashrc
+echo 'export CONDA_PREFIX="$PWD/.venv"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+so you don't have to enter this code block before every run.
 
 
 For interactive setup:
