@@ -17,7 +17,7 @@ similar). Those are catalogued in
 Ordered roughly from most general to most situational, with closed
 investigations near the end.
 
-| File | Summary |
+| Path | Summary |
 |---|---|
 | [`README.md`](README.md) | This file — a one-line summary of everything in `CEPM/`. |
 | [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) | Tracks how this repo diverges from upstream ReEDS, including which upstream files CEPM changed. Currently a placeholder. |
@@ -26,6 +26,14 @@ investigations near the end.
 | [`guidance/internal-ci-testing.md`](guidance/internal-ci-testing.md) | Runbook for reproducing the GitHub PR CI checks on an on-prem machine, for the CI jobs that cannot run on GitHub-hosted runners because of GAMS licensing. |
 | [`guidance/GAMS_ERROR_579_INVESTIGATION.md`](guidance/GAMS_ERROR_579_INVESTIGATION.md) | Investigation and fix for the 16x `Error 579` model-compile failure on GAMS 44.4.0, caused by declaring every set before loading any of them in the h5-to-gdx pipeline. |
 | [`scripts/check_env_sync.py`](scripts/check_env_sync.py) | Stdlib-only script that reports dependency drift between `environment.yml` and `pyproject.toml`, warning only on differences that are not on its known-accepted allowlist. |
+| [`preprocessing/dc_load_nm/`](preprocessing/dc_load_nm/) | Notebook and EPRI Powering Intelligence source data that build the New Mexico data center loadsite input: EPRI Medium-scenario annual energy for 2026-2030, a linear extrapolation for 2031-2032, converted to a flat hourly MW load written to `inputs/load/`. |
+| [`preprocessing/gas_capex_forecast/`](preprocessing/gas_capex_forecast/) | Notebooks and Halcyon Gas Power Plant Tracker data behind the 2026-2032 CCGT and CT gas capex regression forecast, which produces the CEPM gas cost variants in `inputs/plant_characteristics/`. Has its own [readme](preprocessing/gas_capex_forecast/gas_capex_update_readme.md) documenting the notebook run order. |
+
+Both `preprocessing/` directories keep their source data and notebooks here but
+write their generated outputs into the repo's top-level `inputs/` tree, not into
+`CEPM/`. See [`guidance/reeds-data-sources.md`](guidance/reeds-data-sources.md)
+for why a bespoke input has to sit alongside the upstream file it is an
+alternative to.
 
 ## Related, but outside this folder
 
