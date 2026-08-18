@@ -370,7 +370,7 @@ def main(reeds_path, inputs_case):
         )
         df_windofs.columns = ['wind-ofs_' + col for col in df_windofs]
     else:
-        # Keep concat logic uniform when offshore wind is disabled.
+        # Keep concat inputs consistent when offshore wind is disabled.
         df_windofs = pd.DataFrame(index=df_windons.index)
 
     ### UPV

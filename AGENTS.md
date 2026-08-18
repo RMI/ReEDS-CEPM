@@ -1,18 +1,13 @@
 # ReEDS Agent Guide
 
-**Needs review:** this repo was recently rebased onto a restructured upstream
-ReEDS base (see git history around 2026-06). This file was written against the
-pre-restructure layout and has not yet been fully verified against the new
-`reeds/` package layout. Known stale references: `runbatch.py` throughout this
-file should be `runreeds.py`; `Augur.py` is now `reeds/resource_adequacy/ra_calcs.py`;
-`e_report.gms` is now `reeds/core/terminus/report.gms`; `input_processing/` now
-lives under `reeds/input_processing/`. Treat the rest of this file as unverified
-pending a full pass. Flagging for follow-up via issue/comment.
-
 ReEDS is a capacity planning and dispatch model for the U.S. electricity system.
 The repository is a mixed Python, GAMS, and Julia codebase: Python prepares inputs,
 orchestrates runs, and postprocesses outputs; GAMS contains the optimization model;
 Julia translates solved ReEDS systems into PRAS resource adequacy systems.
+
+This repo was restructured upstream so that most Python and GAMS source now lives
+inside the `reeds/` package (the old flat repo-root layout is gone). The main
+orchestrator is `runreeds.py` (formerly `runbatch.py`).
 
 Use this file as the first stop for agent orientation. Deeper references:
 
@@ -29,47 +24,75 @@ Use this file as the first stop for agent orientation. Deeper references:
 
 ## Project Structure
 
-- `runbatch.py`: main run orchestrator. Reads `cases*.csv`, creates
-  `runs/{BatchName}_{case}/`, writes scripts, copies needed code/data into the
-  case folder, and launches local, HPC, or AWS runs.
+- `runreeds.py`: main run orchestrator (repo root). Reads `cases*.csv`, creates
+  `runs/{BatchName}_{case}/`, writes per-case run scripts, copies needed
+  code/data into the case folder, and launches local or HPC (SLURM) runs.
 - `cases.csv`: canonical case/switch catalog, with descriptions, allowed values,
-  and defaults. Scenario files such as `cases_test.csv`, `cases_small.csv`, and
-  study-specific `cases_{suffix}.csv` override defaults by case column.
-- `runfiles.csv`: inventory of input files and how they should be copied,
-  filtered, aggregated, or transformed into each run's `inputs_case/`.
-- Root `*.gms`: core GAMS model files. Important stages include `b_inputs.gms`
-  for GAMS-readable inputs, `c_supplymodel.gms` and `c_supplyobjective.gms` for
-  model equations/objective, `d_solveprep.gms`, `d_solveoneyear.gms`,
-  `d_solveallyears.gms`, `d_solvewindow.gms`, and `e_report.gms`.
-- `input_processing/`: scripts run during case setup to create files under
+  and defaults. Scenario files such as `cases_test.csv`, `cases_small.csv`,
+  `cases_cepm.csv`, and study-specific `cases_{suffix}.csv` override defaults by
+  case column.
+- `reeds/`: the main Python package. Top-level modules include `reeds.io`,
+  `reeds.inputs`, `reeds.spatial`, `reeds.techs`, `reeds.log`, `reeds.checks`,
+  `reeds.financials`, `reeds.results`, `reeds.timeseries`, `reeds.units`,
+  `reeds.remote`, and plotting modules (`reeds.plots`, `reeds.reedsplots`,
+  `reeds.prasplots`).
+- `reeds/core/`: the GAMS model and its solve orchestration, grouped by stage:
+  - `reeds/core/setup/`: model assembly. `a_createmodel.gms` is the top-level
+    assembler and `$include`s, in order, `b_inputs.gms` (GAMS-readable inputs) →
+    `c_model.gms` (variables/equations) → `d_objective.gms` (objective) →
+    `d_mga.gms` → `e_solveprep.gms`.
+  - `reeds/core/solve/`: solve drivers. `solve.py` is the Python solve wrapper;
+    `3_solve_oneyear.gms`, `3_solve_allyears.gms`, and `3_solve_window.gms`
+    correspond to `timetype` `seq`, `int`, and `win`. Also `1_tc_phaseout.py`,
+    `2_financials.gms`, `2_temporal_params.gms`, `4_post_solve_adjustments.gms`,
+    `5_varfix.gms`, `6_data_dump.gms`.
+  - `reeds/core/solve_pcm/`: production-cost-model solve (`solve_pcm.gms`,
+    `unfix_op.gms`).
+  - `reeds/core/terminus/`: reporting. `report.gms` is the main report,
+    `report_dump.py` dumps report parameters, `report_params.csv` lists the
+    reported parameters, plus `dump_alldata.gms`, `powfrac_calc.gms`,
+    `get_last_iter.py`.
+- `reeds/input_processing/`: scripts run during case setup to create files under
   `runs/{case}/inputs_case/`. `copy_files.py` is the broad data copier/filter;
   scripts such as `recf.py`, `hourly_repperiods.py`, `hourly_load.py`,
-  `writecapdat.py`, `plantcostprep.py`, and `transmission.py` derive key inputs.
-- `reeds/`: shared Python utilities. Common entry points are `reeds.io`,
-  `reeds.inputs`, `reeds.spatial`, `reeds.techs`, `reeds.log`,
-  `reeds.output_calc`, and plotting modules.
-- `ReEDS_Augur/` and `Augur.py`: capacity credit, PRAS, and stress-period logic
-  that runs between solve years when enabled.
-- `reeds2pras/`: Julia package for translating ReEDS outputs to PRAS systems.
+  `writecapdat.py`, `plantcostprep.py`, `transmission.py`, and `check_inputs.py`
+  derive key inputs. `runfiles.csv` (the input-file inventory: how each file is
+  copied, filtered, aggregated, or transformed into `inputs_case/`) lives here.
+- `reeds/resource_adequacy/`: capacity credit, PRAS, and stress-period logic that
+  runs between solve years when enabled. `ra_calcs.py` (formerly `Augur.py`) is
+  the entry point; also `capacity_credit.py`, `stress_periods.py`, `prep_data.py`,
+  `diagnostic_plots.py`, `run_pras.jl`, and `ra_switches.csv`. The Julia
+  translation package lives at `reeds/resource_adequacy/reeds2pras/`.
+- `reeds/hpc/`: HPC helpers (`aws_setup.sh`, `srun_template.sh`).
+- `reeds/solver/`: solver option files (`cplex.opt`, `cplex.op2`, `cbc.opt`,
+  `gurobi.opt`).
 - `hourlize/`: preprocessing for resource and load profiles. Main wrapper is
   `hourlize/run_hourlize.py`; `hourlize/reeds_to_rev.py` disaggregates ReEDS
   investments back to reV supply curve sites.
 - `postprocessing/`: reports, diagnostics, plots, run comparison, retail rates,
-  reValue, bokehpivot, Tableau, combine-runs, and output cleanup.
+  reValue, bokehpivot, Tableau, air-quality, land-use, R2X (`run_r2x.py`), and
+  output cleanup.
 - `preprocessing/`: tools for preparing repository inputs before ReEDS runs.
+- `helpers/`: operational helpers — `runstatus.py`, `restart_runs.py`,
+  `interim_report.py`, `interim_report_batch.py`.
 - `inputs/`: checked-in model inputs plus pointers to large remote inputs.
-  Large files are normally downloaded into `inputs/remote/` and linked or copied
-  as needed.
+  `inputs/remote_files.csv` catalogs remote data; large files are normally
+  downloaded into `inputs/remote/` and linked or copied as needed.
 - `runs/`: generated run folders. Treat contents as user/generated artifacts and
   do not edit or delete them unless the task explicitly targets a run.
 - `tests/` and `hourlize/tests/`: pytest tests. Some tests are lightweight unit
   tests; `tests/test_outputs.py` requires a completed ReEDS case.
 - `.github/workflows/`: CI, docs, and workflow-quality automation.
+- `CEPM/`: RMI/CEPM-specific docs kept separate from upstream docs —
+  `UV_MAMBA_GUIDE.md` (uv/mamba dependency mapping) and `internal-ci-testing.md`
+  (on-prem CI runbook). The CEPM setup-and-run helper is `run_cepm.ps1` at repo root.
 
 ## Environment
 
 - Python is pinned to `3.11` via `.python-version` and `pyproject.toml`.
 - Python dependencies are managed with `uv` and locked in `uv.lock`.
+  `environment.yml` is kept as an upstream-compatible conda/mamba fallback; see
+  @CEPM/UV_MAMBA_GUIDE.md for keeping the two in sync.
 - Julia `1.12.1` is the tested version for ReEDS2PRAS and stress-period flows.
 - GAMS is required for model solves. CPLEX is the normal solver; small cases may
   work with other solvers, but CPLEX-oriented settings are the maintained path.
@@ -94,18 +117,23 @@ uv run python reeds/remote.py
 
 ## Build And Run Commands
 
-- Show runbatch options: `uv run python runbatch.py -h`
-- Interactive run setup: `uv run python runbatch.py`
-- Typical test batch: `uv run python runbatch.py -b vYYYYMMDD_label -c test`
+- Show runreeds options: `uv run python runreeds.py -h`
+- Interactive run setup: `uv run python runreeds.py`
+- Typical test batch: `uv run python runreeds.py -b vYYYYMMDD_label -c test`
 - One or more named cases from a cases file:
-  `uv run python runbatch.py -b vYYYYMMDD_label -c test -s caseA,caseB`
-- Dry run case setup without launch: `uv run python runbatch.py -b label -c test -t`
-- Check run status: `uv run python runstatus.py <batch_prefix>`
-- Restart failed HPC runs: `uv run python restart_runs.py <batch_prefix>`
+  `uv run python runreeds.py -b vYYYYMMDD_label -c test -s caseA,caseB`
+- Dry run case setup without launch: `uv run python runreeds.py -b label -c test -t`
+- Check run status: `uv run python helpers/runstatus.py <batch_prefix>`
+- Restart failed HPC runs: `uv run python helpers/restart_runs.py <batch_prefix>`
 - Run a completed-case output check:
   `uv run python -m pytest tests/test_outputs.py --casepath runs/<case>`
 - Build docs when docs dependencies are installed:
   `uv run sphinx-build docs/source docs/build/`
+
+`runreeds.py` command-line arguments (from its argparse): `-b/--BatchName`,
+`-c/--cases_suffix`, `-s/--single` (a single case or comma-delimited list),
+`-r/--simult_runs`, `-l/--forcelocal`, `-f/--skip_checks`, `-d/--debug`,
+`-n/--debugnode`, `-p/--cases_per_node`, `-t/--dryrun`.
 
 Be conservative with full model runs. They can be long, need licensed GAMS, may
 download large files, and write substantial data under `runs/`.
@@ -118,10 +146,12 @@ download large files, and write substantial data under `runs/`.
   `uv run python -m pytest hourlize/tests`
 - Completed-run output validation:
   `uv run python -m pytest tests/test_outputs.py --casepath runs/<case>`
-- Julia ReEDS2PRAS tests from `reeds2pras/test/`:
+- Julia ReEDS2PRAS tests from `reeds/resource_adequacy/reeds2pras/test/`:
   `julia --project runtests.jl`
-- CI runs a test ReEDS scenario with `python runbatch.py -b "$batch" -c test -s "$SCENARIO"`
-  and then validates outputs with `tests/test_outputs.py`.
+- CI runs a test ReEDS scenario with `python runreeds.py -b "$batch" -c test -s "$SCENARIO"`
+  (scenarios `github_Pacific`, `github_Everything`, `github_MA_county_CC`) and
+  then validates outputs with `tests/test_outputs.py`. A later CI job exercises
+  R2X translation via `postprocessing/run_r2x.py`.
 
 `tests/test_outputs.py` is a completed-case artifact check, not a guarantee that
 every bokehpivot report section rendered cleanly. For report health, inspect
@@ -129,24 +159,28 @@ every bokehpivot report section rendered cleanly. For report health, inspect
 
 When changing GAMS objective-function inputs, check
 `tests/objective_function_params.yaml`; it documents parameters that
-`input_processing/check_inputs.py` validates for missing values.
+`reeds/input_processing/check_inputs.py` validates for missing values.
 
 ## Architecture And Run Flow
 
 1. A cases file is parsed by `reeds.inputs.parse_cases()`.
-2. `runbatch.py` expands cases, checks switch consistency, and creates
+2. `runreeds.py` expands cases, checks switch consistency, and creates
    `runs/{BatchName}_{case}/`.
 3. Case setup writes `inputs_case/`, `switches.csv`, `gswitches.csv`,
    `modeledyears.csv`, run metadata, and generated shell/batch scripts.
-4. `input_processing/copy_files.py` and related scripts copy, filter, aggregate,
-   and derive inputs. Many output CSV names intentionally match GAMS parameter
-   names read by `b_inputs.gms`.
-5. GAMS reads `b_inputs.gms`, creates `inputs.gdx`, solves according to the
-   chosen `timetype` (`seq`, `int`, or `win`), and writes GDX/CSV outputs.
-6. `Augur.py` may run between solve years to prepare PRAS data, run Julia PRAS,
-   calculate capacity credit, and add stress periods.
-7. `e_report.gms`, `e_report_dump.py`, bokehpivot, retail-rate, plots, Vizit,
-   R2X, and other postprocessors write to `runs/{case}/outputs/`.
+4. `reeds/input_processing/copy_files.py` and related scripts copy, filter,
+   aggregate, and derive inputs. Many output CSV names intentionally match GAMS
+   parameter names read by `reeds/core/setup/b_inputs.gms`.
+5. GAMS assembles the model via `reeds/core/setup/a_createmodel.gms`, creates
+   `inputs.gdx`, solves according to the chosen `timetype` (`seq` →
+   `3_solve_oneyear.gms`, `int` → `3_solve_allyears.gms`, `win` →
+   `3_solve_window.gms`, all under `reeds/core/solve/`), and writes GDX/CSV
+   outputs.
+6. `reeds/resource_adequacy/ra_calcs.py` may run between solve years to prepare
+   PRAS data, run Julia PRAS (`run_pras.jl` + `reeds2pras/`), calculate capacity
+   credit, and add stress periods.
+7. `reeds/core/terminus/report.gms`, `report_dump.py`, bokehpivot, retail-rate,
+   plots, Vizit, R2X, and other postprocessors write to `runs/{case}/outputs/`.
 
 Useful run-folder files:
 
@@ -158,7 +192,8 @@ Useful run-folder files:
 - `inputs_case/`: exact inputs seen by a case. This is usually better than
   guessing from repository defaults when debugging a completed run.
 - `outputs/`: reported CSVs, figures, bokehpivot reports, retail outputs, etc.
-- `ReEDS_Augur/augur_data/`: PRAS and capacity-credit intermediate data.
+- `handoff/reeds_data/`: resource-adequacy / capacity-credit intermediate data
+  (GDX and CSV) passed between solve years.
 
 ## Code Style
 
@@ -207,9 +242,9 @@ Inputs and CSVs:
 - Raw inputs belong under topical `inputs/` subdirectories.
 - Large or optional data should not be committed casually; use the remote-file
   mechanism and document sources in `sources.csv` / `sources_documentation.md`.
-- Costs read into `b_inputs.gms` should already be in 2004 dollars unless the
-  surrounding code clearly says otherwise; use `deflator.csv` rather than
-  hard-coded conversions.
+- Costs read into `reeds/core/setup/b_inputs.gms` should already be in 2004
+  dollars unless the surrounding code clearly says otherwise; use `deflator.csv`
+  rather than hard-coded conversions.
 
 ## Debugging Notes
 
@@ -217,7 +252,7 @@ Inputs and CSVs:
   in `runs/<case>/lstfiles/`.
 - For input-processing failures, inspect `inputs_case/`, `1_Inputs.lst`, and
   the script call generated in `call_<case>.bat` or `call_<case>.sh`.
-- For output/report failures, compare `outputs/`, `e_report_params.csv`, and
+- For output/report failures, compare `outputs/`, `report_params.csv`, and
   `postprocessing/bokehpivot` report logs.
 - When an expected output is missing, first check the effective run switches in
   `runs/<case>/inputs_case/switches.csv`; repository defaults in `cases.csv`
@@ -232,7 +267,7 @@ Inputs and CSVs:
 - Current `health_damages_caused_r.csv` files use the air-quality postprocessor
   schema (`ba`, `pollutant`, `tons`, `md`, `damage_$`, `mortality`); bokehpivot
   normalizes this to legacy report display columns in `postprocessing/bokehpivot/reeds2.py`.
-- `runstatus.py` summarizes running/failed/finished cases for a batch prefix.
+- `helpers/runstatus.py` summarizes running/failed/finished cases for a batch prefix.
 - `postprocessing/check_error.py` reads the `error_check` output for solved
   cases.
 - For GAMS data comparison, developer docs recommend targeted `execute unload`
@@ -244,20 +279,21 @@ Inputs and CSVs:
 
 - Remote data: `reeds.remote` reads `inputs/remote_files.csv` and manages
   downloads under `inputs/remote/`.
-- Monte Carlo sampling: `input_processing/mcs_sampler.py` plus YAML
+- Monte Carlo sampling: `reeds/input_processing/mcs_sampler.py` plus YAML
   distribution files described in the user guide.
-- Temporal clustering and hourly data: `input_processing/hourly_repperiods.py`,
+- Temporal clustering and hourly data: `reeds/input_processing/hourly_repperiods.py`,
   `hourly_writetimeseries.py`, `hourly_load.py`, and `inputs_case/rep/`.
-- Renewable capacity factors and resources: `input_processing/recf.py`,
+- Renewable capacity factors and resources: `reeds/input_processing/recf.py`,
   `writesupplycurves.py`, `hourlize/`, and `inputs_case/recf.h5`.
-- Resource adequacy/stress periods: `Augur.py`, `ReEDS_Augur/`,
-  `reeds2pras/`, and `GSw_PRM_*` switches.
-- Standard reports: `e_report.gms`, `e_report_dump.py`,
+- Resource adequacy/stress periods: `reeds/resource_adequacy/` (`ra_calcs.py`,
+  `capacity_credit.py`, `stress_periods.py`, `run_pras.jl`, `reeds2pras/`) and
+  `GSw_PRM_*` switches.
+- Standard reports: `reeds/core/terminus/report.gms`, `report_dump.py`,
   `postprocessing/bokehpivot/`, and `postprocessing/single_case_plots.py`.
 - Run comparisons: `postprocessing/compare_cases.py`,
   `postprocessing/combine_runs/`, and `postprocessing/uncertainty_plots.py`.
 - Retail rates: `postprocessing/retail_rate_module/`.
-- R2X translation: `scripts/run_r2x.py` and CI's `r2x-reeds` invocation.
+- R2X translation: `postprocessing/run_r2x.py` and CI's `r2x-reeds` invocation.
 
 ## Security And Data Handling
 
