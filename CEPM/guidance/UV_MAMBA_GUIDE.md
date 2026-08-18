@@ -8,18 +8,18 @@ automatic converter, so this is a manual mapping.
 
 ## Automated drift check
 
-`CEPM/check_env_sync.py` compares the two files and warns when they drift beyond
+`CEPM/scripts/check_env_sync.py` compares the two files and warns when they drift beyond
 a hard-coded allowlist of intentional exceptions (the "known-accepted" cases
 below). `run_cepm.ps1` runs it as a non-fatal step, or run it directly:
 
 ```bash
-uv run python CEPM/check_env_sync.py
+uv run python CEPM/scripts/check_env_sync.py
 ```
 
 It reports three things: packages only in one file and packages pinned to
 incompatible versions. Exit code `0` means aligned (all differences are on the
 allowlist); `1` means new/unexpected drift. When you intentionally add an
-exception, update both the allowlist in `CEPM/check_env_sync.py` and the
+exception, update both the allowlist in `CEPM/scripts/check_env_sync.py` and the
 "Known current drift" / "Things that don't map 1:1" sections below so the two
 stay in agreement.
 
