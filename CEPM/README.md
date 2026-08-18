@@ -24,6 +24,7 @@ investigations near the end.
 | [`guidance/reeds-data-sources.md`](guidance/reeds-data-sources.md) | How `runfiles.csv` and `copy_files.py` turn a switch value into an input file path, and why bespoke CEPM inputs belong in `inputs/` if we want to keep access to upstream defaults. |
 | [`guidance/UV_MAMBA_GUIDE.md`](guidance/UV_MAMBA_GUIDE.md) | How to keep `environment.yml` (conda/mamba) and `pyproject.toml`/`uv.lock` (uv) in sync by hand, plus the list of known-accepted drift between them. |
 | [`guidance/internal-ci-testing.md`](guidance/internal-ci-testing.md) | Runbook for reproducing the GitHub PR CI checks on an on-prem machine, for the CI jobs that cannot run on GitHub-hosted runners because of GAMS licensing. |
+| [`guidance/tech-limit-options.md`](guidance/tech-limit-options.md) | The mechanisms available for restricting a technology's capacity — `ban`/`bannew`, resource supply curve edits, the interconnection-queue cumulative cap, growth-rate constraints, cost multipliers, and customizing `tg` — with the implications of each. |
 | [`guidance/GAMS_ERROR_579_INVESTIGATION.md`](guidance/GAMS_ERROR_579_INVESTIGATION.md) | Investigation and fix for the 16x `Error 579` model-compile failure on GAMS 44.4.0, caused by declaring every set before loading any of them in the h5-to-gdx pipeline. |
 | [`scripts/check_env_sync.py`](scripts/check_env_sync.py) | Stdlib-only script that reports dependency drift between `environment.yml` and `pyproject.toml`, warning only on differences that are not on its known-accepted allowlist. |
 
