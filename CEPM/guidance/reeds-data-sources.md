@@ -159,18 +159,18 @@ themselves staged through the manifest.
 
 The full chain for `USA_gas_mvp` in `cases_cepm.csv`:
 
-1. `cases_cepm.csv` sets `plantchar_gas = gas_CAPEX_ccgt_all`, overriding the
+1. `cases_cepm.csv` sets `plantchar_gas = gas-ccgt_CEPM_all`, overriding the
    `cases.csv` default `gas_ATB_2024_moderate`. `cases.csv` also documents the
    convention: `inputs\plant_characteristics\{plantchar_gas}.csv`.
 2. `runreeds.py` writes the resolved switches to `inputs_case/switches.csv`.
 3. `runfiles.csv` row: `plantchar_gas.csv,inputs/plant_characteristics/{plantchar_gas}.csv,1,…`
 4. `copy_files.py` formats it to
-   `inputs/plant_characteristics/gas_CAPEX_ccgt_all.csv` and copies it to
+   `inputs/plant_characteristics/gas-ccgt_CEPM_all.csv` and copies it to
    `inputs_case/plantchar_gas.csv`.
 5. `plantcostprep.py` reads the generic `inputs_case/plantchar_gas.csv`, and uses
    the switch value once more for the deflator lookup — which is why
    `inputs/plant_characteristics/dollaryear.csv` needs a
-   `gas_CAPEX_ccgt_all,2022` row (it has one).
+   `gas-ccgt_CEPM_all,2022` row (it has one).
 
 ### The manifest itself can be swapped per case
 
@@ -201,7 +201,7 @@ the upstream files they are alternatives to.
 Because the switch selects among **siblings in a single directory**, an upstream
 default and a CEPM variant must co-locate for the switch to be able to choose
 between them. `plantchar_gas` can only flip between `gas_ATB_2024_moderate` and
-`gas_CAPEX_ccgt_all` because both are in `inputs/plant_characteristics/`. Moving
+`gas-ccgt_CEPM_all` because both are in `inputs/plant_characteristics/`. Moving
 our file elsewhere would force us to either rewrite the template — losing the
 ability to select the upstream default at all — or add a second switch and
 another manifest row.

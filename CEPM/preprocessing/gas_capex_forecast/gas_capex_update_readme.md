@@ -23,11 +23,11 @@ In this folder:
 - `ct_regression_forecast.csv` — CT forecast 2026-2032 (single scenario).
 
 In `inputs/plant_characteristics/` (new files, the original `gas_ATB_2024_moderate.csv` is left unmodified):
-- `gas_CAPEX_ccgt_low.csv` — Gas-CC = CCGT low-cost scenario, Gas-CT = CT forecast.
-- `gas_CAPEX_ccgt_high.csv` — Gas-CC = CCGT high-cost scenario, Gas-CT = CT forecast.
-- `gas_CAPEX_ccgt_all.csv` — Gas-CC = CCGT all-data (mid/reference) scenario, Gas-CT = CT forecast.
+- `gas-ccgt_CEPM_low.csv` — Gas-CC = CCGT low-cost scenario, Gas-CT = CT forecast.
+- `gas-ccgt_CEPM_high.csv` — Gas-CC = CCGT high-cost scenario, Gas-CT = CT forecast.
+- `gas-ccgt_CEPM_all.csv` — Gas-CC = CCGT all-data (mid/reference) scenario, Gas-CT = CT forecast.
 
 These names must match the `plantchar_gas` switch values allowed by the
-`Choices` column in `cases.csv` (`gas_CAPEX_ccgt_(low|high|all)`) and be
+`Choices` column in `cases.csv` (`gas-ccgt_CEPM_(low|high|all)`) and be
 registered in `inputs/plant_characteristics/dollaryear.csv`; renaming them
 requires updating both.
