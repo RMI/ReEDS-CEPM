@@ -207,6 +207,60 @@ Several `postprocessing/` scripts reference these category names; a new label
 that isn't consumed the same way downstream could silently be missing from
 plots and summaries rather than erroring.
 
+## Combining mechanisms: cost tiers for a single technology
+
+A natural follow-on question: can a technology have a cheap tier with a hard
+capacity limit, and a pricier tier that picks up whatever exceeds it — the
+same shape as an RSC supply curve's bins, but for a technology that isn't
+`rsc_i`?
+
+**Yes, conceptually.** RSC technologies already get this for free: each
+`rscbin` is a cost/quantity pair, so the model exhausts cheap bins before
+touching expensive ones (Option 1). For a non-RSC technology, the same effect
+can be approximated by **duplicating the technology under two `i` labels**
+with identical technical characteristics but different constraint treatment:
+
+- **Tier 1** (`mytech_tier1`) — its own `tg` group, with Option 2's
+  interconnection-queue mechanism repurposed and `CAP_ABOVE_LIM.up(tg,r,t) = 0`
+  fixed for that group, giving it a genuine hard ceiling.
+- **Tier 2** (`mytech_tier2`) — a `cost_cap_fin_mult` multiplier (Option 4,
+  by analogy to `GSw_NukeStateBan` mode 2) making it strictly pricier than
+  tier 1, left uncapped (or capped higher, for a third tier).
+
+Because tier 2 costs more, the model fills tier 1 first and only spills into
+tier 2 once tier 1's hard cap binds — a tiered merit order out of two
+independent mechanisms, rather than one purpose-built equation.
+
+**Warning: this is a lot more plumbing than it sounds like, and easy to get
+partially wrong.** `i` is not a cosmetic label — it's the join key for a large
+number of sets and input tables across the model, and a duplicated tech only
+behaves identically to the original in the places someone has explicitly gone
+and duplicated it too. In practice that likely means auditing and updating:
+
+- Every tag/subset the original tech belongs to (e.g. `pv(i)`, `nuclear(i)`,
+  `gas(i)`, `tg_i(tg,i)`) — miss one and tier 2 silently drops out of whatever
+  logic that tag drives (curtailment, capacity credit, reserve margins, RPS
+  eligibility, etc.).
+- All per-technology input CSVs the model reads for `i` (cost, heat rate,
+  capacity factor, minimum loading, emissions, `dollaryear.csv`, and whatever
+  else `runfiles.csv` maps to `i`), duplicated for the new label with the
+  correct values.
+- Where existing/prescribed capacity gets assigned — it needs to land in one
+  tier (presumably tier 1, since it already exists and shouldn't compete
+  against the new-build cap).
+- Any postprocessing/reporting script that hardcodes tech names or a fixed
+  tech list rather than iterating a set dynamically — a new `i` label that
+  isn't consumed the same way downstream can silently vanish from plots and
+  summaries instead of erroring (the same caution called out above for
+  extending `tg`).
+
+None of this is exotic — it's the same category of work as adding any new
+technology to ReEDS — but "duplicate the tech and apply two different
+constraints" is the easy 10% of this pattern. The other 90% is making sure
+the duplicate is indistinguishable from the original everywhere except cost
+and cap. Treat it as a multi-file change with real risk of partial
+implementation, not a config tweak.
+
 ## Option not recommended: bounding `INV`/`CAP` directly
 
 It's tempting to reach for a plain GAMS variable bound (`INV.up(i,v,r,t) = ...`
