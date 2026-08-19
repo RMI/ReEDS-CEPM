@@ -1,8 +1,8 @@
 ,Default Value,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas_mvp,USA_optimized_mvp
-ignore,1,0,1,1,1,1
+ignore,1,1,1,1,0,1
 GSw_Region,cendiv/Pacific,st/NM,st/NM,st/NM,country/USA,country/USA
 GSw_ZoneSet,,,,,z48,z48
-startyear,2010,,,,2026,2026
+startyear,2010,,,,,2026
 endyear,2032,,,,,
 yearset,,2026_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032
 plantchar_gas,,,,,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all
