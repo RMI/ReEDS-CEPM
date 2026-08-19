@@ -6,7 +6,7 @@
 Rebuilds the state-level data center load-site inputs for every contiguous US
 state from EPRI Powering Intelligence projections, in three scenarios (Low /
 Medium / High). This is the load-site input CEPM's national cases actually run
-with, and it reproduces a methodology previously applied by hand.
+with.
 
 ## Key Info
 | | |
@@ -26,9 +26,11 @@ with, and it reproduces a methodology previously applied by hand.
 
 ### Method and assumptions
 
-- Uses **`Nominal Capacity (GW)` only**. `Peak Load` and `Annual Energy` are read
-  but not used for this input. The MW written is nameplate capacity; the capacity
-  factor is supplied separately by ReEDS via `GSw_LoadSiteCF`.
+- Uses **`Peak Load (GW)` only**. `Nominal Capacity` and `Annual Energy` are
+  present in the export but not used for this input. (Changed in 92db6386, which
+  switched the metric from nominal capacity to peak load and regenerated all three
+  outputs.) How that load is shaped across hours comes from `GSw_LoadSiteCF`, not
+  from this file.
 - Keeps EPRI years **2026-2030**; the `Historical` scenario and all pre-2026 rows
   are dropped.
 - Drops `AK`, `HI`, and the `US` national-total row, leaving **48 states**. (EPRI's
@@ -41,7 +43,7 @@ with, and it reproduces a methodology previously applied by hand.
   `rate = MW(2030) / MW(2029)`, then `MW(2031) = MW(2030) x rate` and
   `MW(2032) = MW(2031) x rate`
 
-  A state with zero 2029 capacity has an undefined rate and is held flat at its
+  A state with zero 2029 peak load has an undefined rate and is held flat at its
   2030 value instead — currently only `WV`, which is zero throughout.
 - Writes one CSV per scenario in the `loadsitereg,t,MW` long format, with the
   standard three-line comment header ReEDS expects.
@@ -50,18 +52,29 @@ Paths in this notebook resolve from a `REPO_ROOT` walk, so it can be run from an
 working directory.
 
 **Reproduction check:** re-deriving all three outputs from the raw export by this
-documented method matches the committed files exactly — 48 states x 7 years,
-zero mismatches in Low, Medium, and High.
+documented method (peak load x 1000, then the compounded 2029→2030 rate) matches
+the committed files exactly — 48 states x 7 years, zero mismatches in Low,
+Medium, and High.
 
 ## Issues
 
 - **The 2031-2032 extrapolation rests on a single year-over-year step.** Because
   the 2029→2030 ratio is both the only input to the trend and then compounded
   twice, noise in that one pair propagates. The rates are large for several
-  states: MS 20.0%/yr, LA 19.8%, MD 19.7%, IN 18.8% — carrying MS from 1,320 MW in
-  2030 to 1,901 MW in 2032 and IN from 5,240 MW to 7,398 MW. A fit across
-  2026-2030 would be less sensitive to the endpoint, at the cost of departing from
-  the method being reproduced.
+  states: LA 31.7%/yr, MS 30.0%, MD 28.6%, IN 27.6% — carrying LA from 765 MW in
+  2030 to 1,326 MW in 2032 and IN from 3,280 MW to 5,343 MW. A fit across all of
+  2026-2030 would be less sensitive to the endpoint. The switch to peak load made
+  these rates steeper than they were under nominal capacity.
+
+- **Two folders build load-site inputs by inconsistent methods.**
+  `CEPM/preprocessing/dc_load_nm` produces a New-Mexico-only series from the same
+  EPRI dashboard, but converts `Annual Energy (TWh)` to a flat MW load and
+  extrapolates 2031-2032 linearly, where this folder uses `Peak Load (GW)` and
+  compounds a growth rate. They disagree on NM: 273-540 MW for 2026-2030 there
+  versus 284-562 MW here — close now that this folder uses peak load rather than
+  nominal capacity, but still a different quantity. Only this folder's output is
+  wired into `cases_cepm.csv`; the NM-only one is not committed and no case selects
+  it. Worth deciding whether `dc_load_nm` is superseded.
 
 - **The raw export filename is hardcoded, including its date.** `EPRI_CSV_PATH`
   embeds `EPRI Powering Intelligence - All States and Total (2026-08-19).csv`, so

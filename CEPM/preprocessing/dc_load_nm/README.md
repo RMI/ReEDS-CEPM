@@ -61,11 +61,13 @@ any working directory.
   | | this notebook | the national file in use |
   |---|---|---|
   | Regions | NM only | 48 contiguous states (`AK`, `HI`, and the `US` total dropped) |
-  | Metric | flat MW from `Annual Energy (TWh)` x 1,000,000 / 8,760 | `Nominal Capacity (GW)` x 1000 (exact match for NM 2026-2030: 488, 535, 582, 629, 676) |
+  | Metric | flat MW from `Annual Energy (TWh)` x 1,000,000 / 8,760 | `Peak Load (GW)` x 1000 (NM 2026-2030: 284, 380, 483, 523, 562) |
   | 2031-2032 | linear: 2030 + n x average annual increase over 2026-2030 | compounding: 2030 value grown at the 2029→2030 ratio (reproduces every state exactly) |
 
   So the NM values this notebook produces (273, 364, 463, 502, 540 MW for
-  2026-2030) are not the NM values ReEDS currently sees. Now that
-  `datacenter_load_forecast/` documents and reproduces the national input, the
-  open question is whether this NM-only calculation is still needed or is
-  superseded by it.
+  2026-2030) are not the NM values ReEDS currently sees (284, 380, 483, 523, 562).
+  The two are within a few percent since the national pipeline moved to peak load,
+  but they remain different quantities — average versus peak. Now that
+  `datacenter_load_forecast/` documents and reproduces the national input, the open
+  question is whether this NM-only calculation is still needed or is superseded by
+  it.
