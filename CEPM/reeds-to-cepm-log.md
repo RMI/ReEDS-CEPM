@@ -16,7 +16,7 @@ necessarily live in upstream file locations. Those go here.
 
 | Upstream path | Change | Why | Reference |
 |---|---|---|---|
-| `cases.csv` | Added `gas-ccgt_CEPM_(low\|high\|all)` to the `plantchar_gas` row's `Choices` column, and reworded that row's `Description` to distinguish upstream `gas_` options from CEPM `gas-ccgt_CEPM_` ones. | `Choices` is enforced as a regex in [`reeds/inputs.py`](../reeds/inputs.py) (`parse_cases`), so a CEPM switch value that is not listed raises `ValueError` at case setup. There is no per-fork override — the upstream file has to be edited in place. | [`gas_capex_update_readme.md`](preprocessing/gas_capex_forecast/gas_capex_update_readme.md) |
+| `cases.csv` | Added `gas-ccgt_CEPM_(low\|high\|all)` to the `plantchar_gas` row's `Choices` column, and reworded that row's `Description` to distinguish upstream `gas_` options from CEPM `gas-ccgt_CEPM_` ones. | `Choices` is enforced as a regex in [`reeds/inputs.py`](../reeds/inputs.py) (`parse_cases`), so a CEPM switch value that is not listed raises `ValueError` at case setup. There is no per-fork override — the upstream file has to be edited in place. | [`gas_capex_forecast/README.md`](preprocessing/gas_capex_forecast/README.md) |
 
 > **This section is incomplete.** Other upstream files have already been changed
 > without being logged here — `inputs/plant_characteristics/dollaryear.csv` and

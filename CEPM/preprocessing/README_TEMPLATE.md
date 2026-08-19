@@ -19,3 +19,11 @@
 | | |
 | File | Description |
 | | |
+
+## Issues
+<Known problems, data-quality caveats, or unfinished work in this pipeline. One
+bullet each; say whether the issue affects the generated inputs or not, so a
+reader knows whether results are usable today. Delete the section if there are
+none.>
+
+- <Issue — what it is, and whether it changes the output.>
