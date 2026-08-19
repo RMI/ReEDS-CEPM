@@ -10,7 +10,7 @@ What this script does:
 6) Instantiates Julia dependencies only when needed: a fast offline instantiate checks/heals the environment, falling back to the full `julia --project=. instantiate.jl` (which updates the registry) only if that can't satisfy the project (unless bypass mode is enabled).
 7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/scripts/check_env_sync.py.
 8) Starts runreeds.py and forwards any arguments passed to this script.
-9) Sends an ntfy.sh notification (topic: rmi-cepm-runs) before runreeds.py launches and once it returns. Best-effort: a failed or offline notification is ignored. Disabled with -q/--quiet; -u/--user adds a username to the message; the batch name (see below) is always included.
+9) Sends an ntfy.sh notification (topic: rmi-cepm-runs) before runreeds.py launches and once it returns. Best-effort: a failed or offline notification is ignored. Disabled with -q/--quiet; -u/--user adds a username to the message; the batch name and cases suffix (see below) are always included.
 
 
 BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.py):
@@ -23,7 +23,7 @@ BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.
         Include <name> as the username in the ntfy messages. When omitted, no
         username is shown.
 
-INTERCEPTED-AND-FORWARDED OPTION:
+INTERCEPTED-AND-FORWARDED OPTIONS:
     -b, --BatchName <name>   (also --BatchName=<name>)
         Same option runreeds.py defines for the batch prefix. This script reads
         it (prompting interactively if omitted, and expanding '0' to a
@@ -31,6 +31,12 @@ INTERCEPTED-AND-FORWARDED OPTION:
         that the resolved batch name can be included in the ntfy messages. The
         resolved value is then forwarded to runreeds.py as -b, so runreeds.py is
         never left to prompt for it itself.
+    -c, --cases_suffix <suffix>   (also --cases_suffix=<suffix>)
+        Same option runreeds.py defines for the cases_suffix.csv file. Handled
+        the same way as -b/--BatchName above: prompted for here if omitted
+        (using runreeds.py's own prompt text; a blank value is valid and means
+        cases.csv), included in the ntfy messages, and forwarded to runreeds.py
+        as -c.
 
 RESERVED OPTIONS (do NOT add a bootstrap-only flag that reuses these):
     All args other than the options above are forwarded verbatim to runreeds.py,
@@ -40,9 +46,10 @@ RESERVED OPTIONS (do NOT add a bootstrap-only flag that reuses these):
         -l/--forcelocal  -f/--skip_checks   -d/--debug       -n/--debugnode
         -p/--cases_per_node                 -t/--dryrun
     (plus -h/--help from argparse). The bootstrap-only options above (-y, -q, -u)
-    were chosen to avoid these; -b/--BatchName is deliberately intercepted (see
-    above) rather than avoided. If you add a new bootstrap-only switch, pick a
-    letter outside that set (and re-check against runreeds.py, which may change).
+    were chosen to avoid these; -b/--BatchName and -c/--cases_suffix are
+    deliberately intercepted (see above) rather than avoided. If you add a new
+    bootstrap-only switch, pick a letter outside that set (and re-check against
+    runreeds.py, which may change).
 
 Usage examples:
     .\run_cepm.ps1
@@ -63,6 +70,8 @@ param(
     [string]$b = '', # BatchName: same short flag as runreeds.py's -b/--BatchName. Intercepted here so
                       # we can resolve it (prompting if needed) and echo it in ntfy messages, then
                       # forwarded back to runreeds.py explicitly (see below).
+    [string]$c = '', # cases_suffix: same short flag as runreeds.py's -c/--cases_suffix. Intercepted
+                      # the same way as -b above.
 
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$RunbatchArgs
@@ -86,8 +95,9 @@ if ($ForwardArgs -contains '--quiet') {
     $ForwardArgs = @($ForwardArgs | Where-Object { $_ -ne '--quiet' })
 }
 # --user NAME and --user=NAME take a value; pull them (and the value) out by hand.
-# --BatchName NAME and --BatchName=NAME (runreeds.py's long form of -b) are pulled out
-# the same way, so -b/--BatchName is recognized regardless of which form is used.
+# --BatchName NAME/--BatchName=NAME and --cases_suffix NAME/--cases_suffix=NAME (runreeds.py's
+# long forms of -b and -c) are pulled out the same way, so both are recognized regardless of
+# which form is used.
 $remainingArgs = @()
 for ($i = 0; $i -lt $ForwardArgs.Count; $i++) {
     $arg = $ForwardArgs[$i]
@@ -105,6 +115,14 @@ for ($i = 0; $i -lt $ForwardArgs.Count; $i++) {
     }
     if ($arg -like '--BatchName=*') {
         $b = $arg.Substring('--BatchName='.Length)
+        continue
+    }
+    if ($arg -eq '--cases_suffix') {
+        if ($i + 1 -lt $ForwardArgs.Count) { $c = $ForwardArgs[$i + 1]; $i++ }
+        continue
+    }
+    if ($arg -like '--cases_suffix=*') {
+        $c = $arg.Substring('--cases_suffix='.Length)
         continue
     }
     $remainingArgs += $arg
@@ -144,6 +162,27 @@ $ForwardArgs = @('-b', $BatchName) + $ForwardArgs
 
 # ntfy fragment naming the batch, included in every notification below.
 $ntfyBatch = " for batch '$BatchName'"
+
+# Resolve the cases suffix using the same logic as runreeds.py's setupEnvironment(): prompt
+# interactively if it was not supplied. Unlike BatchName, a blank value is valid here (it means
+# "use cases.csv" -- see runreeds.py's cases_filename derivation below), so no re-prompt loop.
+if ([string]::IsNullOrEmpty($c)) {
+    Write-Host ' '
+    Write-Host 'Specify the suffix for the cases_suffix.csv file'
+    Write-Host 'A blank input will default to the cases.csv file'
+    Write-Host ' '
+    $c = Read-Host -Prompt 'Case Suffix'
+}
+$CasesSuffix = $c
+
+# Forward the resolved cases suffix to runreeds.py explicitly so it is never left to prompt
+# for it itself.
+$ForwardArgs = @('-c', $CasesSuffix) + $ForwardArgs
+
+# ntfy fragment naming the cases file, included in every notification below. Mirrors
+# runreeds.py's own cases_filename derivation ('' or 'default' -> cases.csv).
+$casesFilename = if ($CasesSuffix -in @('', 'default')) { 'cases.csv' } else { "cases_$CasesSuffix.csv" }
+$ntfyCases = " ($casesFilename)"
 
 # Fail immediately on PowerShell (cmdlet) errors so setup issues do not get masked.
 $ErrorActionPreference = 'Stop'
@@ -339,7 +378,7 @@ Write-Host 'Bootstrap complete. Starting ReEDS runreeds.py with forwarded argume
 if (-not $q) {
     try {
         Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
-            -Body "ReEDS run batch started on $(hostname)$ntfyUser$ntfyBatch at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+            -Body "ReEDS run batch started on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
     } catch {}
 }
 
@@ -353,7 +392,7 @@ if ($LASTEXITCODE -ne 0) {
     if (-not $q) {
         try {
             Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
-                -Body "ReEDS run batch failed to finish on $(hostname)$ntfyUser$ntfyBatch at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+                -Body "ReEDS run batch failed to finish on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
         } catch {}
     }
     throw 'runreeds.py failed.'
@@ -365,7 +404,7 @@ if ($LASTEXITCODE -ne 0) {
 if (-not $q) {
     try {
         Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
-            -Body "ReEDS run batch finished on $(hostname)$ntfyUser$ntfyBatch at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+            -Body "ReEDS run batch finished on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
     } catch {}
 }
 
