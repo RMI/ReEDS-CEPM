@@ -1,4 +1,4 @@
-,Default Value,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas_mvp,USA_optimized_mvp
+,Default Value,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas_mvp_NOTE-DEPRECATED,USA_optimized_mvp
 ignore,1,1,1,1,0,1
 GSw_Region,cendiv/Pacific,st/NM,st/NM,st/NM,country/USA,country/USA
 GSw_ZoneSet,,,,,z48,z48
@@ -19,7 +19,7 @@ GSw_OfsWind,1,,,,0,
 GSw_OnsWind6to10,1,,,,0,
 GSw_distpv,1,,,,0,
 supplycurve,default,,,,,
-file_replacements,none,,,,reeds/input_processing/runfiles.csv << reeds/input_processing/runfiles_no_new_windsolar_ccs.csv,
+file_replacements,none,,,,,
 GSw_GrowthPenalties,,,,,,
 GSw_Upstream,,,,,,
 GSw_TransHurdleRate,,,,,,
