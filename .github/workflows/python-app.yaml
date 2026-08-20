@@ -24,7 +24,8 @@ defaults:
 
 env:
   JULIA_VERSION: '1.12.1'
-  ENABLE_GAMS_CI: 'false'
+# Note that ENABLE_GAMS_CI is set to 'false' at the Github repo level;
+# We do this because our test runners don't have a GAMS license.
 
 jobs:
   reeds-env:
