@@ -20,3 +20,4 @@ that we adjust our appraoch.
     * **dollaryear.csv**: All plant characteristics files need to specify their dollaryear.
     * `reeds-data-sources.md` might be helpful for identifying other files that need updating.
 * **You've kicked off at least one run and confirmed that it loads in the new inputs.**
+* Update [`CEPM/README.md`](../README.md) and [`CEPM/reeds-to-cepm-log.md`](../reeds-to-cepm-log.md) appropriately with links, descriptions, and what files have been added and/or changed.
