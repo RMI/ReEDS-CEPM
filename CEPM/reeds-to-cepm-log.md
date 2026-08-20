@@ -23,15 +23,6 @@ or adjust ReEDS functionality for CEPM's needs. Most of these are captured in [`
 
 ### What to test in new releases:
 
-## run_cepm helper script
-
-### Description of issue:
-### Files changed:
-### Reference: 
-[`run_cepm.ps1`](run_cepm.ps1), [`CEPM/scripts`](CEPM/scripts)
-### What to test in new releases:
-Does environemtn still resolve? Did Python version expectations change? Do we need to change the environemnt variables that the script automatically sets?
-
 ## Resolving census divisions in fuelcostprep.py
 
 ### Description of issue:
@@ -50,6 +41,8 @@ Does environemtn still resolve? Did Python version expectations change? Do we ne
 # Custom CEPM inputs and changes to ReEDS files
 
 We also implement several custom inputs to our CEPM scenarios, which add new input files and also change some underlying ReEDS files. These should all have documentation in [CEPM/preprocessing](CEPM/preprocessing).
+
+
 
 ## Updated CAPEX for gas resources
 
@@ -74,12 +67,54 @@ We also implement several custom inputs to our CEPM scenarios, which add new inp
 
 ### Underlying ReEDS files changed:
 
-
 ### Reference:
 [CEPM/preprocessing/datacenter_load_forecast](CEPM/preprocessing/datacenter_load_forecast)
 
 ### What to test in new releases:
 - Has loadsite's compatibility changed?
 - Are we changing underlying load forecast / would that double-count data center loads?
+
+# CEPM documentation and functionality
+
+## Github repo-level ENABLE_GAMS_CI variable:
+
+### Description:
+### Files included:
+### Reference: 
+### What to test in new releases:
+
+## Using uv isntead of mamba for environemnt/apckage management
+
+### Description:
+### Files included:
+### Reference: 
+### What to test in new releases:
+
+
+## run_cepm helper script
+
+### Description:
+### Files included:
+### Reference: 
+[`run_cepm.ps1`](run_cepm.ps1), [`CEPM/scripts`](CEPM/scripts)
+### What to test in new releases:
+Does environemtn still resolve? Did Python version expectations change? Do we need to change the environemnt variables that the script automatically sets?
+
+## CEPM documentation
+### Description:
+### Files included:
+### Reference: 
+[`run_cepm.ps1`](run_cepm.ps1), [`CEPM/scripts`](CEPM/scripts)
+### What to test in new releases:
+Does environemtn still resolve? Did Python version expectations change? Do we need to change the environemnt variables that the script automatically sets?
+
+## cases_cepm.csv file
+### Description:
+### Files included:
+### Reference: 
+
+### What to test in new releases:
+
+
 
 
