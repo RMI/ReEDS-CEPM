@@ -3,7 +3,7 @@ ignore,1,0,1,1,1,1,1
 GSw_Region,cendiv/Pacific,nercr/WECC_SW,st/NM,st/NM,st/NM,country/USA,country/USA
 GSw_ZoneSet,,z132,,,,z48,z48
 startyear,2010,,,,,,2026
-endyear,2032,,,,,,
+endyear,2032,2026,,,,,
 yearset,,2026,2026_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032
 plantchar_gas,,,,,,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all
 GSw_GasCurve,2,,,,,,
@@ -34,7 +34,8 @@ GSw_NG_CRF_penalty,,,,,,,
 GSw_PRM_NetImportLimit,,,,,,,
 GSw_RetirePenalty,,,,,,,
 GSw_FakeData,,,,,,,
-GSw_PRM_CapCredit,,,,,,,
+GSw_PRM_CapCredit,,1,,,,,
+GSw_PRM_UpdateMethod,0,1,,,,,
 GSw_PRM_scenario,,,,,,,
 GSw_HourlyType,,,,,,,
 GSw_InterDayLinkage,,,,,,,
@@ -77,4 +78,3 @@ pras_scheduled_outage,,,,,,,
 pras_unitsize_source,,,,,,,
 pras_vre_combine,,,,,,,
 pras_samples,,,,,,,
-,,
