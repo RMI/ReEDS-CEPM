@@ -112,6 +112,28 @@ Two consequences:
   to a narrower slice than the existing groups, see the `tg` customization
   section below.
 
+**Not actually case-customizable in this fork today.** The "data-only change"
+framing above is true for editing the file once, repo-wide — it is not true
+per-case. `copy_files.py:1404-1433` computes `cap_limit.csv` directly from
+`inputs/capacity_exogenous/interconnection_queues.csv` (real interconnection
+queue data), reading the source via `reeds_path` rather than the case
+directory, with no scenario switch and no corresponding row in
+`reeds/input_processing/runfiles.csv`. That means:
+
+- It can't be parameterized by a `cases_cepm.csv` switch the way `distpvscen`
+  or `GSw_SitingUPV` parameterize their files.
+- It can't be swapped per case via `file_replacements` either — that
+  mechanism only substitutes files already staged under `casedir/reeds/...`
+  by the time it runs (`runreeds.py:1249-1274`), and `cap_limit.csv`'s source
+  never passes through there.
+
+Repurposing this option for a policy ceiling today means editing the shared
+queue-data CSV for every case that reads it, or adding new plumbing (a
+scenario switch plus a `runfiles.csv` row) — meaningfully more work than "edit
+a CSV," and out of scope for a single-case ask. See the CEPM-specific
+recommendation below for what to reach for instead when the ceiling needs to
+vary by case.
+
 ## Option 3 — Growth-rate constraints (not a ceiling — a pace limiter)
 
 `GSw_GrowthAbsCon` / `GSw_GrowthPenalties` (`cases.csv:153-156`) drive
@@ -137,6 +159,20 @@ this repo, carry near-term end years (`GSw_GrowthConLastYear` default 2026,
 transition-pace realism, not permanent limits. Don't reach for this if the ask
 is "never exceed X GW"; reach for it if the ask is "don't let X grow faster
 than Y per year."
+
+**CEPM-specific exception: short horizons turn this into a de facto ceiling.**
+`eq_growthlimit_absolute` is national-only in its indexing (no `r` term, just
+`tg,t`) — but for a subnational case that's harmless, since the sum only ever
+runs over whatever regions are actually in the model, so it naturally becomes
+your run's total. More importantly: because CEPM cases typically run a short
+horizon (e.g. `endyear=2032`, build years `2026/2029/2032`), setting
+`GSw_GrowthConLastYear` to cover the *entire* run means there are no
+later years left for the model to "catch up" in — the pace limiter and the
+cumulative cap become numerically equivalent for the run's duration. This
+turns Option 3 into the practical answer for a deployment cap on non-RSC techs
+(gas, coal, nuclear, battery, h2, biomass, hydro) in CEPM specifically, even
+though it's explicitly the wrong tool for a full 2050-horizon ReEDS run. See
+the recommendation section below for the concrete switch/data values.
 
 ## Option 4 — CAPEX/cost multiplier (discourage, don't cap)
 
@@ -273,6 +309,55 @@ ceiling requires either the interconnection-queue mechanism above (already
 built for exactly this) or a new equation modeled on it. Don't spend time
 trying to fake a cumulative cap with instance-level bounds — Option 2 already
 solves this problem.
+
+## CEPM recommendation: a deployment cap by tech group, using default `tg` groups
+
+For the common CEPM ask — "cap how much of tech group X gets built," using the
+default `tg` roster, without new GAMS code — split by whether the tech is
+`rsc_i` or not, since no single mechanism cleanly covers both:
+
+**RSC techs (`wind-ons`, `wind-ofs`, `pv`, `geothermal`, `pumped-hydro`):** cap
+the resource supply curve (Option 1), but don't edit the shared default file —
+these already key off scenario switches. `supplycurve_upv-{GSw_SitingUPV}.csv`,
+`supplycurve_wind-ons-{GSw_SitingWindOns}.csv`, and
+`supplycurve_wind-ofs-{GSw_SitingWindOfs}.csv`
+(`reeds/input_processing/runfiles.csv:231-233`) are all parameterized by a
+siting-scenario switch already. Add a new siting-scenario value pointing at a
+capped copy of the supply curve, rather than shrinking the default file that
+every other case also reads. Genuinely data-only, no code touched, and it's a
+real physical ceiling — `m_rscfeas` simply won't allow more capacity than what
+the bins contain.
+
+**Everything else (`gas`, `coal`, `nuclear`, `battery`, `h2`, `biomass`,
+`hydro`):** use `GSw_GrowthAbsCon` + `GSw_GrowthConLastYear`, leaning on the
+short-horizon exception called out above. Concretely, to cap `tg='gas'` at
+5 GW cumulative for a case whose build years are 2026/2029/2032:
+
+1. Add a `gas,<MW/year>` row to `inputs/growth_constraints/growth_limit_absolute.csv`,
+   sized so `MW/year * (number of build-year intervals)` ≈ your GW target
+   (e.g. `5000 / 2` if there are two 3-year intervals between 2026→2029→2032).
+2. In `cases_cepm.csv`, add rows (mirroring the existing `GSw_GrowthPenalties`
+   row at line 23) for that case's column:
+   - `GSw_GrowthAbsCon,1`
+   - `GSw_GrowthConLastYear,2032` (the case's `endyear`)
+
+This is cheap because both switches already exist in `cases.csv:153-154`, and
+the data file already uses the default `tg` groups (`wind-ons`, `pv`,
+`battery` are populated today; add a row for whatever `tg` you're targeting).
+
+**Caveat to carry forward:** this is not a true infinite-horizon hard cap —
+it's "hard for the length of this run." If a case's `endyear` is later
+extended past what `GSw_GrowthConLastYear` was set to, the constraint stops
+binding with no warning, and the model can build past the intended ceiling
+silently. Re-check `GSw_GrowthConLastYear` any time a capped case's horizon
+changes.
+
+**If the ask ever outgrows this** — a true cumulative ceiling that holds
+regardless of horizon length, or one that needs to vary by region rather than
+apply to the whole modeled area — that requires the interconnection-queue
+mechanism (Option 2), which in turn requires adding the scenario-switch/
+`runfiles.csv` plumbing described in that section's caveat above. Not
+currently implemented; flag as follow-up work if it comes up.
 
 ## Recommendation
 

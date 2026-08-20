@@ -1,8 +1,9 @@
 # Sub-national region support: GSw_ZoneSet x GSw_Region audit
 
-**Status:** 1 of 4 issues fixed (`fix/techs-banned-region-mapping`, merged into `zone-region-audit`); 3 documented, not yet fixed
-**Affected versions:** repo state as of commit `fd6fb46a` (branch `mvp-scenario`)
 **Symptom:** Outside of the two national z48 cases already validated in `cases_cepm.csv` (`USA_gas_mvp`, `USA_optimized_mvp`), most `GSw_ZoneSet`/`GSw_Region` combinations fail somewhere between `copy_files.py` and the GAMS solve — including the repo's *default* zoneset (z134), used whenever `GSw_ZoneSet` is left blank, as in `NM_optimized_2yrs`/`NM_optimized_3yrs`/`NM_optimized_LLtest`.
+**Status:** We identified 5 issues within this repo's codebase; 2 fixed (Issue 1 via `fix/techs-banned-region-mapping`, merged into `zone-region-audit`; Issue 5 directly in `fuelcostprep.py`), 3 documented but not yet fixed (Issues 2, 3, 4)
+**Affected versions:** repo state as of commit `fd6fb46a` (branch `mvp-scenario`)
+
 
 ## Motivation
 
@@ -114,11 +115,42 @@ to recover the timestep count from an arbitrary `Line` object, assuming at least
 
 **Impact:** specific to genuinely single-zone region selections (zone count depends on both the zoneset and the chosen region, not either alone) — a smaller blast radius than Issues 1 or 3, but relevant for RMI's use case since a single-BA state under an aggregated zoneset (e.g. z48) is exactly the kind of minimal test case one would reach for.
 
+**Upstream comparison:** unlike Issues 1 and 3, this one is upstream's own bug rather than RMI-introduced drift. `reeds/resource_adequacy/reeds2pras/src/models/utils.jl` is byte-identical between this fork and `upstream/main` — both resolve to blob `cbb20a69`, checked against `upstream/main` at `bc804315` (2026-08-18) — carrying the same unguarded `timesteps = first(sorted_lines).timesteps`. Upstream has never modified the file since it arrived in the initial `bda96d54` ("copy .gov branch") import, and a blob comparison across every `upstream/*` branch turns up only two that differ at all (`ko/itl_hourly`, `pb/itl_hourly`), whose change is confined to VSC converter capacities in `process_vsc_lines` (`forward_cap`/`backward_cap` wrapped in `fill(..., timesteps)`) and leaves line 334 untouched. Nor is there a single-zone guard anywhere else in upstream's resource-adequacy layer to inherit: upstream's `ra_calcs.py` differs from ours only in commented-out debug scaffolding, and the vendored test suite has no single-region or zero-line case. Notably, upstream *does* already defend against empty component vectors in immediately adjacent code — `isempty` ternaries for storages and gen_stors in `create_pras_system.jl:74-126`, empty-legacy-line checks in `Line.jl:150` and `Interface.jl:145` — so the defensive pattern exists in this codebase; lines and interfaces simply never received the same treatment.
+
+Two consequences for how to act on this. First, there is no upstream fix to pull and no upstream work in flight to wait for — whichever option below is taken puts us ahead of upstream, and Option A in particular (behavior-preserving for every multi-zone case, no new code path) is a clean candidate to contribute back as a PR rather than carry indefinitely as a fork patch. Second, the vendored `reeds2pras/` tree is currently close to pristine: it diverges from `upstream/main` in exactly two files, `README.md` (test-path corrections, cosmetic) and `src/utils/reeds_data_parsing.jl` (8 lines). A local patch to `utils.jl` would be the third divergence, and the one most exposed to being silently clobbered on the next upstream sync — a further argument for upstreaming it. Option C sidesteps that entirely by staying in `ra_calcs.py`, where the surrounding Python RA layer (`stress_periods.py`, `diagnostic_plots.py`) is already substantially diverged, so it would introduce no new class of drift.
+
 **Potential solutions:**
 
-- **Option A — thread `timesteps` through explicitly (smallest, most surgical).** `create_pras_system()` already receives `timesteps::Int` as its own parameter (it's used a few lines later for `PRAS.Regions{timesteps, ...}`), so `make_pras_interfaces()` doesn't need to derive it from a line at all. Adding `timesteps` as an explicit argument to `make_pras_interfaces()` and using it directly instead of `first(sorted_lines).timesteps` removes the empty-vector access entirely, with no behavior change for any multi-zone case (there, the line-derived value and the passed-in value are already guaranteed equal).
+- **Option A — thread `timesteps` through explicitly (smallest, most surgical).** `create_pras_system()` already receives `timesteps::Int` as its own parameter (`create_pras_system.jl:44`, used a line later for `PRAS.Regions{timesteps, ...}`), so `make_pras_interfaces()` doesn't need to derive it from a line at all. Note there are *two* `make_pras_interfaces` methods: the one at `utils.jl:286` takes `regions::Vector{Region}` and does nothing but forward to the one at `utils.jl:324`, which takes `region_names::Vector{String}` and holds the offending `first(sorted_lines)` call. Since `create_pras_system.jl:54` calls the `Vector{Region}` form, `timesteps` has to be added to *both* signatures — the forwarder passing it straight through, the inner method using it directly in place of `first(sorted_lines).timesteps`. That removes the empty-vector access entirely, with no behavior change for any multi-zone case (there, the line-derived value and the passed-in value are already guaranteed equal).
 - **Option B — guard the empty case specifically.** `if isempty(sorted_lines) ... construct empty PRAS.Lines/PRAS.Interfaces directly ... else ... (existing logic)`. More localized/defensive than Option A, at the cost of a second code path that duplicates part of the construction logic.
 - **Option C — skip PRAS for single-zone runs at the Python level**, e.g. in `ra_calcs.py`, detect a 1-zone region before calling `run_pras` and skip it with a logged warning instead. This avoids touching the vendored Julia code at all, and arguably reflects what PRAS is actually for — its entire value is modeling capacity-credit sharing *between* zones, which is undefined for a literal single-zone island. Tradeoff: single-zone regions would then never get a resource-adequacy metric at all, which is fine for small test regions but would need a conscious decision if a real production analysis ever intentionally selects a single-BA region.
+
+## Issue 5 — `cendivweights.csv` includes census divisions outside the run's own region set (FIXED)
+
+**Symptom:** `a_createmodel.gms` fails to compile with
+```
+*** Error 170 in .../inputs_case/cendivweights.csv
+    Domain violation for element
+--- a_createmodel.gms(10) 89 Mb 1 Error
+*** Status: Compilation error(s)
+```
+flagged at line 1 (the header row) of `cendivweights.csv`. Hit on a `nercr/WECC_SW` run under `z132` (case `WECC_SW-test`, run dir `runs/20260820_WECC_SW-test`) — the first test in this audit to select a region large enough to touch a census-division border. The same error, with no root cause identified at the time, was hit earlier by a colleague on a `v20260716_WECC_optimized` run (see `cepm_errorlog.md`).
+
+**Root cause:** `reeds/core/setup/b_inputs.gms` declares `table cendiv_weights(r,cendiv)` domain-checked against the run's own `cendiv` set — for `WECC_SW-test` that set has exactly one member, `Mountain` (confirmed via `inputs_case/hierarchy.csv`). `cendivweights.csv` is generated in `reeds/input_processing/fuelcostprep.py` by `smear(dfzones=dfmap['r'], dfgroups=dfmap['cendiv'], ...)`, a distance-decay weighting between every model region and every census division. The bug: `dfmap['cendiv']` (from `reeds.io.get_dfmap()`) is built from the *original*, national hierarchy, not filtered to the divisions actually present in this run's region set. A border region (`p59`, geographically near the Mountain/West-South-Central boundary) picked up a real, non-negligible decay weight (0.544) toward `West_South_Central` — a division that doesn't exist in this run's `cendiv` set — so it showed up as an extra column in `cendivweights.csv`, which GAMS then rejected as a domain violation.
+
+**Impact:** any sub-national region selection whose zones sit near a census-division border, under any zoneset — not specific to `z132` or `nercr/WECC_SW`. It went unnoticed until now because the zonesets validated so far in this audit (`z132`/`st/NM`, `z54`/`st/CA`, `PJMcounty`/`st/MD`) all happened to select regions sitting well clear of a cendiv boundary, and the two national z48 cases already in `cases_cepm.csv` include every census division by construction, so no out-of-scope column could ever appear.
+
+**Upstream comparison:** inherited, not RMI-introduced. Upstream's current `fuelcostprep.py` (substantially refactored past our fork's version — it adds a `daily_gasprice_multipliers`/`gasreg_cendiv_weights` layer ours doesn't have) still has the identical unrestricted call, `cendivweights = smear(dfzones=dfmap['r'], dfgroups=dfmap['cendiv'], ...)`. Notably, upstream *does* already restrict several sibling outputs in the same script to the run's own `val_cendiv` before writing them out (`ngdemand`, `ngtotdemand`, `alpha` are each filtered via `.isin(val_cendiv)`) — it simply never applied that same pattern to `cendivweights`. That makes this fix a small, self-contained candidate to upstream: it's the same restriction upstream already applies elsewhere in this exact file, just extended to the one output that was missing it.
+
+**The fix** (`reeds/input_processing/fuelcostprep.py`, `smear()` call site): restrict `dfgroups` to the divisions in `val_cendiv` (the run's own `cendiv` set, already loaded earlier in the script for the sibling-output filtering above) before computing weights:
+```python
+cendivweights = smear(
+    dfzones=dfmap['r'],
+    dfgroups=dfmap['cendiv'].loc[dfmap['cendiv'].index.isin(val_cendiv)],
+    decay_km=float(sw.GSw_GasRegionSmooth),
+).round(3)
+```
+Verified directly against `WECC_SW-test`'s own `inputs_case` data: the unfixed call reproduces the `West_South_Central` column exactly (weights `[0.994, 0.958, 0.883, 0.456, 0.965]` for `Mountain` and `[0.006, 0.042, 0.117, 0.544, 0.035]` for `West_South_Central` across `p27/p29/p31/p59/z28`); the fixed call produces only the `Mountain` column, correctly renormalized to 1.0 for every region.
 
 ## Compatibility matrix (as tested)
 
@@ -128,7 +160,7 @@ to recover the timestep count from an arbitrary `Line` object, assuming at least
 | z54 | **Full success** (tested with `st/CA`) | NM itself is unsplit in z54; CA is split — confirms Issue 1's fix generalizes |
 | z69 | Fails at `copy_files.py` pre-fix (Issue 1); not re-tested post-fix | NM is split in z69 |
 | z90 | Blocked — missing `hierarchy_from134.csv` (Issue 2) | Untestable in current state |
-| z132 | **Full success** | Confirms Issue 1's fix, and the `aggreg`-resolution path generally |
+| z132 | **Full success** for `st/NM`; hit Issue 5 on the larger `nercr/WECC_SW` selection (fixed) | Confirms Issue 1's fix, and the `aggreg`-resolution path generally; `st/NM` alone doesn't cross a cendiv border, so Issue 5 only surfaced at the larger region |
 | z134 (default) | Fails at `writecapdat.py` regardless of region (Issue 3) | Blocks national z134 runs too, not just sub-national |
 | z3109 (county) | Not tested — flagged as too granular for this use case | |
 | PJMcounty (mixed) | **Full success** (tested with `st/MD`) | First confirmation the `mixed`-resolution path works at all |
@@ -142,3 +174,5 @@ One test-design artifact, not a real bug: all three fully-successful cases (`z13
 - Issues 2 and 3 both trace back to the same underlying drift: our fork is still on a `hierarchy_from134.csv`-based hierarchy assembly that upstream has already replaced with `reeds.io.assemble_hierarchy()` (our own `copy_files.py` has a dormant `## TEMPORARY 20260402` TODO marking this exact migration). If both get fixed, doing the upstream migration once (Issue 2's Option B / Issue 3's Option C) is likely more valuable than patching each symptom locally (Issue 2's Option A, Issue 3's Option A/B) — but the migration is also the highest-risk option of the three, particularly because it isn't yet known whether it would preserve the `mixed`-resolution (`PJMcounty`/`UTcounty`) support this audit confirmed currently works.
 - z69, z3109, and UTcounty were not pushed through the full pipeline — Issue 1's fix should unblock z69's `copy_files.py` stage, but nothing downstream has been verified for it.
 - Issue 4's fix (Option A) is self-contained to the vendored `reeds2pras/` code and doesn't interact with Issues 2/3 at all — it can be picked up independently of any decision on the hierarchy-assembly migration.
+- Issue 5's fix is a one-line change inherited by upstream too (see its "Upstream comparison") — a good candidate to contribute back, similar in spirit to Issue 4's Option A.
+- Any zoneset/region combination not yet run at a large enough spatial extent to cross a census-division border should be considered untested for Issue 5, even where it's listed as "Full success" above for a smaller test region — the bug is about region geography relative to cendiv boundaries, not the zoneset or `GSw_Region` mechanism itself.

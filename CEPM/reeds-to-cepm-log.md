@@ -1,49 +1,85 @@
+**Note: This document is incomplete!**
+
 # ReEDS-to-CEPM change log
 
 This file will track the changes made by the CEPM repo compared to the ReEDS
 repo, including the location of files in the ReEDS repo that were changed by
 CEPM.
 
-> **Status: incomplete.** The tables below have been started but are not a
-> complete record of divergence from upstream. Until they are filled in, `git
-> diff` against the upstream remote remains the authoritative answer to "what
-> did CEPM change?"
+**Current ReEDS base release: June 2026**
 
-## Changed upstream files
+# Changes to base ReEDS files
 
-CEPM-specific additions are kept in `CEPM/` where practical, but some changes
-necessarily live in upstream file locations. Those go here.
+In some cases, we change base ReEDS files to fix bugs, ensure compatiability,
+or adjust ReEDS functionality for CEPM's needs. Most of these are captured in [`known issues`](known-issues.md).
 
-| Upstream path | Change | Why | Reference |
-|---|---|---|---|
-| `cases.csv` | Added `gas-ccgt_CEPM_(low\|high\|all)` to the `plantchar_gas` row's `Choices` column, and reworded that row's `Description` to distinguish upstream `gas_` options from CEPM `gas-ccgt_CEPM_` ones. | `Choices` is enforced as a regex in [`reeds/inputs.py`](../reeds/inputs.py) (`parse_cases`), so a CEPM switch value that is not listed raises `ValueError` at case setup. There is no per-fork override — the upstream file has to be edited in place. | [`gas_capex_forecast/README.md`](preprocessing/gas_capex_forecast/README.md) |
+## GAMS Compatibility
 
-> **This section is incomplete.** Other upstream files have already been changed
-> without being logged here — `inputs/plant_characteristics/dollaryear.csv` and
-> the `inputs/` CSVs themselves among them. Add a row whenever you change a file
-> that came from upstream.
+### Description of issue:
 
-## CEPM-only additions
+### Files changed:
 
-Files that exist only in this repo and have no upstream counterpart. See
-[`README.md`](README.md) for what each one does.
+### Reference: [`known issues`](known-issues.md)
 
-| Path | Purpose |
-|---|---|
-| _(not yet populated)_ | |
+### What to test in new releases:
 
-## CEPM inputs criteria:
+## run_cepm helper script
 
-* **Each CEPM input category gets its own file or folder in `CEPM/preprocessing'**: It's OK if one folder creates multiple types of outputs, but the folder name should be descriptive.
-* **Pre-processing folders are easily understandable.**: Pre-processing folders should contain a file named, for example, "main.ipynb" or "README.md" that orients the reader to what's in the folder--what each file does, and if needed which order they run in. Any main or README file should include a header with a concise description of what we're making, where the source comes from, where the new inputs files live in the repo, and any other files that were changed to facilitate this input.
-* **Raw inputs are either in the CEPM preprocessing folder or are easily accessible:** Documentation explicitly identifies the exact source of our data. The raw data file is either included in `CEPM/preprocessing` or is linked somewhere in the folder.
-* **Pre-processing converts raw inputs to ReEDS-ready inputs**: A user should be able to track the raw inputs all the way to what ReEDS sees.
-* **Custom CEPM input files include `CEPM` in their titles**: This way it's easy to know what's a custom input and what's not.
-* **CEPM inputs are validated against ReEDS inputs.**: This should happen, if possible, in the preprocessing scripts. Can we compare our inputs against what's already in ReEDS to show that they're apples-to-apples?
-* **Pre-processing scripts save CEPM input files in the right location in the repo**: Pre-processing scripts should save CEPM input files directly where they can be used by ReEDS--no manual moving required. If you don't kinow where the file eventually needs to go, consult runfiles.csv or your favorite LLM.
-* **CEPM inputs are integrated into relevant ReEDS infrastructure.**: Any changes to other files in the ReEDS repo that are required for this input to run should be implemented and recorded somewhere in the ReEDS preprocessing folder. This could include, but likely is not limited to:
-    * **cases.csv**: Any change to switch options will require a change here.
-    * **runfiles.csv**: Double-check that the path is correct for this.
-    * **dollaryear.csv**: All plant characteristics files need to specify their dollaryear.
-    * `reeds-data-sources.md` might be helpful for identifying other files that need updating.
-* **You've kicked off at least one run and confirmed that it loads in the new inputs.**
+### Description of issue:
+### Files changed:
+### Reference: 
+[`run_cepm.ps1`](run_cepm.ps1), [`CEPM/scripts`](CEPM/scripts)
+### What to test in new releases:
+Does environemtn still resolve? Did Python version expectations change? Do we need to change the environemnt variables that the script automatically sets?
+
+## Resolving census divisions in fuelcostprep.py
+
+### Description of issue:
+### Files changed:
+### Reference: [`known issues`](known-issues.md)
+### What to test in new releases:
+
+## Resolving recf.py when offshore wind is disabled
+
+### Description of issue:
+### Files changed:
+### Reference:
+[`known issues`](known-issues.md)
+### What to test in new releases:
+
+# Custom CEPM inputs and changes to ReEDS files
+
+We also implement several custom inputs to our CEPM scenarios, which add new input files and also change some underlying ReEDS files. These should all have documentation in [CEPM/preprocessing](CEPM/preprocessing).
+
+## Updated CAPEX for gas resources
+
+### Description:
+
+### Input files created:
+
+### Underlying ReEDS files changed:
+- cases.csv
+- dollaryear.csv
+
+### Reference:
+[CEPM/preprocessing/gas_capex_forecast](CEPM/preprocessing/gas_capex_forecast)
+
+### What to test in new releases
+
+## Updated load forecasts for data centers
+
+### Description:
+
+### Input files created:
+
+### Underlying ReEDS files changed:
+
+
+### Reference:
+[CEPM/preprocessing/datacenter_load_forecast](CEPM/preprocessing/datacenter_load_forecast)
+
+### What to test in new releases:
+- Has loadsite's compatibility changed?
+- Are we changing underlying load forecast / would that double-count data center loads?
+
+
