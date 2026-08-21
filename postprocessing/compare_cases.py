@@ -2319,7 +2319,7 @@ try:
             title='Sited demand [GW]',
         )
         ## Save it
-        slide = reeds.results.add_to_pptx('Flexibly Sited Demand', prs=prs, width=SLIDE_WIDTH)
+        slide = reeds.report_utils.add_to_pptx('Flexibly Sited Demand', prs=prs, width=SLIDE_WIDTH)
         if interactive:
             plt.show()
 except Exception:

@@ -33,6 +33,7 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `reeds/input_processing/fuelcostprep.py` | Modified | Census divisions in fuelcostprep.py |
 | `reeds/input_processing/recf.py` | Modified | recf.py when offshore wind is disabled |
 | `reeds/resource_adequacy/reeds2pras/README.md` | Modified | Minor and cosmetic |
+| `postprocessing/compare_cases.py` | Modified | Wrong module in compare_cases.py's "Flexibly Sited Demand" slide |
 | `cases_small.csv` | Modified | Minor and cosmetic |
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/dollaryear.csv` | Modified | Updated CAPEX for gas resources |
@@ -152,6 +153,39 @@ input file.
 - Note the related trap in [`known-issues.md`](known-issues.md): disabling
   offshore wind via `techs_banned` instead of `GSw_OfsWind = 0` leaves the
   `eq_RPS_OFSWind` state mandate active and the model infeasible.
+
+## Wrong module in compare_cases.py's "Flexibly Sited Demand" slide
+
+### Description of issue:
+
+Running `compare_cases.py` on a case pair with load-site (data-center) demand
+enabled crashed while building the "Flexibly Sited Demand" slide:
+`AttributeError: module 'reeds.results' has no attribute 'add_to_pptx'`. Every
+other slide in the file calls `reeds.report_utils.add_to_pptx(...)` —
+`add_to_pptx` is only ever defined in `reeds/report_utils.py`, never in
+`reeds/results.py`. `git blame` traces the bad line back to upstream's initial
+`2026.04.15` tag, so this is an inherited upstream typo, not something CEPM
+introduced. Caught during a `WECC_SW-baseline` vs. `WECC_SW-dcload` comparison
+run, 2026-08-21; the script's per-section `try`/`except` meant this only
+dropped one slide rather than aborting the comparison.
+
+### Files changed:
+
+- `postprocessing/compare_cases.py` — the "Flexibly Sited Demand" slide's call
+  changed from `reeds.results.add_to_pptx(...)` to
+  `reeds.report_utils.add_to_pptx(...)`.
+
+### Reference:
+
+n/a
+
+### What to test in new releases:
+
+- Has upstream fixed this typo itself? If so, drop our patch and take
+  upstream's version to shrink the diff.
+- Confirm `add_to_pptx` still lives in `reeds/report_utils.py` under that name
+  after a rebase — if upstream moves or renames it, this call site needs
+  updating again regardless of which module it points at.
 
 ## Minor and cosmetic
 
