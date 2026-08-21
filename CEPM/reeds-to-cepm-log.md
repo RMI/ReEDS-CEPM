@@ -287,7 +287,7 @@ load sites are MW, not monetary values.
 
 # CEPM documentation and functionality
 
-## GitHub repo-level ENABLE_GAMS_CI variable
+## GitHub repo-level ENABLE_GAMS_CI variable and workflow changes
 
 ### Description:
 
@@ -306,6 +306,8 @@ Two footguns worth knowing. An unset variable evaluates to an empty string rathe
 than erroring, so deleting it silently skips both jobs while still reporting a
 green check. And the comparison is a case-sensitive string match against
 `'true'`, so `True`, `TRUE`, or `1` will not enable it.
+
+Note that workflow files seem to automatically change the commit SHA that accompanies some of the workflow steps--this is not something we need to worry about when updating ReEDS releases.
 
 ### Files included:
 
@@ -329,6 +331,7 @@ value via `gh variable list --repo RMI/ReEDS-CEPM`
   upstream's side restores unconditional execution and turns CI red.
 - Does the variable still exist at the repo level? It is not version-controlled,
   so it can be deleted without leaving any trace in the repo.
+- Don't worry about changes to the alphanumeric SHAs after the steps in the workflow files.
 
 ## Using uv instead of mamba for environment/package management
 
@@ -425,7 +428,7 @@ section of the [root README](../README.md)
 
 ### Description:
 
-CEPM-specific documentation is collected under [`CEPM/`](README.md) rather than
+CEPM-specific documentation is collected under [`CEPM/`](./README.md) rather than
 scattered through the upstream tree, so the fork's surface area stays reviewable
 against upstream. Two documentation files nonetheless live in upstream locations,
 because that is where readers and tools look for them.
@@ -439,6 +442,7 @@ because that is where readers and tools look for them.
 - `AGENTS.md` (repo root) — coding-agent guide: project structure, environment,
   build/run commands, testing, run flow, code style, debugging notes, key
   subsystems, data handling, and git workflow.
+- `CONTRIBUTING.md` (repo root) - Added a short preamble to guide CEPM contributors.
 - [`CEPM/`](README.md) — everything else, indexed by
   [`CEPM/README.md`](README.md).
 
@@ -458,8 +462,9 @@ because that is where readers and tools look for them.
 - Do the CEPM docs still describe reality? On a rebase, re-check
   [`known-issues.md`](known-issues.md)'s "Fixed upstream?" verdicts, which are
   pinned to a specific upstream tag.
+- Is the `CONTRIBUTING.md` guidance still up-to-date?
 
-## cases_cepm.csv file
+## Custom cases files, including cases_cepm.csv
 
 ### Description:
 
