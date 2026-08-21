@@ -446,6 +446,12 @@ browsable at all from the machine running the case.
 **Impact:** built capacity for the affected tech(s) can't be disaggregated for the
 reV handoff step, so those reV output files aren't produced. The core ReEDS solve
 outputs are unaffected — this only breaks the reV/site-level disaggregation output.
+This also cascades into `single_case_plots.py`: without the reV handoff,
+`outputs/df_sc_out_{upv,wind-ons,wind-ofs}_reduced.csv` never get written, so the
+supply-curve overlay on the VRE-sites maps (`map_VREsites-*`) fails with
+`FileNotFoundError` for each missing tech (each caught individually — the run and
+the rest of `single_case_plots.py` continue). Confirmed in
+`runs/20260821_USA_fasterish/gamslog.txt`.
 
 **Status:** environment issue, not a repo bug. Verify network/VPN access to
 `nrelnas01` before assuming this is a code problem.
@@ -463,8 +469,10 @@ completes and later plots still generate:
   `ValueError`/`IndexError` from empty-array or scalar-mismatch assumptions.
 - `plot_interreg_transfer_ratio`, `plot_interface_flows` — explicit
   `NotImplementedError` ("only one region modeled" / "no interfaces to plot").
-- `plot_capacity_offline` — `KeyError` for a hardcoded region name (e.g. `'AZ'`) not
-  present in the run's region set.
+- `plot_capacity_offline` — `KeyError` for a region name not present in the run's
+  region set (e.g. `'AZ'`; also seen as `'CA'` on a `country/USA`/`z54` run — not
+  single-region-specific, just needs the missing region to be absent from whatever
+  aggregation the run uses).
 - `map_capacity_techs` — `ValueError: list.remove(x): x not in list` for a hardcoded
   tech not present in the run's tech set.
 - `map_prm` — `TypeError: 'Axes' object is not subscriptable`, from
@@ -494,15 +502,72 @@ tag `2026.08.03`:
 - `plot_interreg_transfer_ratio`/`plot_interface_flows`'s explicit
   `NotImplementedError` guards are present at the same call sites in the tag too —
   these are intentional upstream guards, not bugs to fix.
-- `plot_capacity_offline`'s temperature/region-aggregation code has been
-  substantially rewritten between the tag and our fork (different intermediate
-  variables, different level-mapping logic), so it's not confirmed whether the
-  exact `KeyError: 'AZ'` reproduces verbatim upstream — but the same underlying
-  pattern (temperature data mapped from a broader/unfiltered region source, then
-  indexed against the run's own narrower `capacity_offline` output) exists in both
-  versions' structure.
+- `plot_capacity_offline`: confirmed root cause, no hardcoded literal involved.
+  `reedsplots.py`'s `plot_capacity_offline()` builds `regions` from
+  `dftemp['min'].columns.tolist()` (an unfiltered/broader temperature-data region
+  list) and then indexes `capacity_offline[region]` — but `capacity_offline`'s
+  columns are the run's own, narrower region set, so any region present in the
+  temperature source but absent from the run's aggregation raises `KeyError`. Seen
+  live as `KeyError: 'CA'` in `runs/20260821_USA_fasterish/gamslog.txt` (a
+  `country/USA`/`z54` run) — different region than the original `'AZ'` case,
+  confirming it's this systemic region-list/column-set mismatch, not one bad
+  literal. `reedsplots.py`'s temperature/region-aggregation code has been
+  substantially rewritten between tag `2026.08.03` and our fork (different
+  intermediate variables, different level-mapping logic), so it's unconfirmed
+  whether upstream's version hits the identical failure, but the same underlying
+  pattern exists in both versions' structure. Fix would be intersecting `regions`
+  with `capacity_offline.columns` before the plot loop; not yet implemented.
 - `map_translines_all`, `map_translines_vsc`, `map_net_imports`, `plot_max_imports`
   weren't individually diffed against the tag — unconfirmed either way.
+
+## bokehpivot HTML report: every map-type section fails on an aggregated zoneset
+
+**Symptom:** in the `reeds-report`/`reeds-report-reduced` `report.html`/`report.log`
+output, every map-based section — "Final Wind/PV/CSP/Biopower/Geothermal/Hydro and
+Canadian Import/Pumped-hydro/Battery Storage Capacity (GW)", "Final Regional Energy
+Price ($/MWh)", etc. — is silently missing, each logged in `report.log` as
+`***Error in section N...` followed by:
+```
+File ".../postprocessing/bokehpivot/core.py", line 1812, in create_map
+    height=int(height),
+ValueError: cannot convert float NaN to integer
+```
+Non-map chart types (national bar/line totals) for the same underlying data render
+fine — e.g. "Capacity (GW)" (national) succeeds while "Final Wind Capacity (GW)"
+(map) fails immediately after it. Confirmed in
+`runs/20260821_USA_fasterish/outputs/reeds-report/report.log` (sections 24, 36, 37,
+39–44), a `country/USA`/`z54`/`GSw_RegionResolution=aggreg` run.
+
+**Root cause:** `create_maps()` (`postprocessing/bokehpivot/core.py:1667-1680`) reads
+region boundary polygons from `postprocessing/bokehpivot/in/gis_rb.csv` — keyed to
+raw, un-aggregated BA IDs (`p1`, `p2`, ...) — then filters it to
+`region_boundaries['id'].isin(full_rgs)`, where `full_rgs` are the region labels
+actually present in this run's output data. Under an aggregated zoneset
+(`GSw_ZoneSet=z48/z54/z69/z90/z132` with `GSw_RegionResolution=aggreg`), those
+labels are the zoneset's own aggregated zone names, not `p1`...`p134` — none of
+them match anything in `gis_rb.csv`, so the filter empties `region_boundaries`.
+`.max()`/`.min()` on the empty frame return `NaN`, which propagates through
+`aspect_ratio = (y_max-y_min)/(x_max-x_min)` into `height=int(height)` at
+`core.py:1812`, raising. Only `gis_rb.csv` (raw BA) and `gis_st.csv` (state) exist
+in `postprocessing/bokehpivot/in/` — no boundary file for any aggregated zoneset.
+Same underlying family as the aggregated-zoneset assumptions audited in
+[SUBNATIONAL_REGION_SUPPORT.md](guidance/SUBNATIONAL_REGION_SUPPORT.md) (e.g. the
+z134 `'ba'`-key bug above), but this specific bokehpivot map failure isn't covered
+there yet.
+
+**Impact:** every map-type section of the bokeh HTML/Excel report is missing for
+any aggregated-zoneset run — not just z54. Non-map (bar/line/national) sections in
+the same report are unaffected, and the run itself, `single_case_plots.py`, and all
+other postprocessing steps complete normally; this only degrades the bokeh report's
+map coverage.
+
+**Status:** not fixed. Candidate fixes: generate a `gis_<zoneset>.csv` boundary file
+per aggregated zoneset (dissolve/union the `gis_rb.csv` BA polygons per the
+zoneset's BA-to-zone membership), or have `create_maps()`/`create_map()` detect an
+empty `region_boundaries` after filtering and skip the map with a logged message
+instead of crashing on `NaN`.
+
+**Fixed upstream?** Not checked yet.
 
 ## Cosmetic warnings safe to ignore
 
