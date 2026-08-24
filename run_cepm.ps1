@@ -16,7 +16,20 @@ What this script does:
    nothing meaningful to compare). No base case is specified, so
    compare_cases.py defaults to the first alphabetically-sorted completed
    case as the base -- not necessarily the leftmost case in the cases file.
+   compare_cases.py's --startyear is set from the first 4 digits of the
+   `yearset` switch for the first non-ignored case (left to right) in the
+   cases file used for this batch, via CEPM/scripts/get_batch_info.py; if
+   that can't be determined, compare_cases.py's own default (2020) is used
+   instead.
 10) Sends an ntfy.sh notification (topic: rmi-cepm-runs) before runreeds.py launches and once it returns. Best-effort: a failed or offline notification is ignored. Disabled with -q/--quiet; -u/--user adds a username to the message; the batch name and cases suffix (see below) are always included.
+11) Saves the full console output of this script (Steps 1-10, including all
+    forwarded native command output) as bootstraplog.txt in the run folder of
+    the first non-ignored case (left to right) in the cases file used for
+    this batch -- runs/<BatchName>_<first case>, via
+    CEPM/scripts/get_batch_info.py (same script as Step 9). Runs even if an
+    earlier step throws, so a failed bootstrap or run still leaves a log
+    behind; best-effort throughout (a missing run folder, or any other
+    logging failure, is only warned).
 
 
 BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.py):
@@ -250,6 +263,21 @@ function Invoke-Step {
 # Script is located at repository root, so use script directory as repo root.
 $repoRoot = (Resolve-Path $PSScriptRoot).Path
 
+# Capture the full bootstrap+run console output (every Write-Host/Write-Warning line
+# below, plus all native command output) to a staging file, then copy it into the
+# first scenario's run folder as bootstraplog.txt (Step 11) once everything else has
+# run. Staged under $env:TEMP because the target run folder doesn't exist yet when
+# logging starts. The whole rest of the script runs inside the try below so the log
+# is still saved (best-effort) even if a step throws.
+$bootstrapLogPath = Join-Path $env:TEMP "reeds_bootstraplog_$([guid]::NewGuid().ToString('N')).txt"
+try {
+    Start-Transcript -Path $bootstrapLogPath -Force | Out-Null
+} catch {
+    Write-Warning "Could not start bootstrap log transcript (bootstraplog.txt will not be saved): $_"
+}
+
+try {
+
 Write-Host "Using repository root: $repoRoot"
 
 # Step 1: Verify GAMS is available on PATH, check license status, and print version.
@@ -450,6 +478,25 @@ if ($x) {
             Write-Host "[note] Only $($completedCaseDirs.Count) completed case(s) found for batch '$BatchName'; skipping compare_cases.py (nothing to compare)."
         } else {
             Write-Host "[run] postprocessing/compare_cases.py for batch '$BatchName'"
+
+            # Derive --startyear from the first non-ignored case in the cases file used
+            # for this batch (first 4 digits of that case's `yearset` switch), so the
+            # comparison plots start at the model's actual start year instead of
+            # compare_cases.py's hardcoded default (2020). Best-effort: if this fails
+            # (e.g. an unusual yearset format), warn and fall back to that default.
+            Set-Location $repoRoot
+            # Stderr (diagnostics/warnings from get_batch_info.py) streams straight to
+            # the console; only stdout (case name on line 1, year on line 2 if valid)
+            # is captured here.
+            $batchInfo = @(Invoke-Native { uv run python CEPM/scripts/get_batch_info.py $casesFilename })
+            $compareStartYearArgs = @()
+            if (($LASTEXITCODE -eq 0) -and ($batchInfo.Count -ge 2) -and ($batchInfo[1].Trim() -match '^\d{4}$')) {
+                $compareStartYearArgs = @('--startyear', $batchInfo[1].Trim())
+                Write-Host "[ok] Using --startyear $($batchInfo[1].Trim()) (from $casesFilename)."
+            } else {
+                Write-Warning "Could not determine --startyear from $casesFilename (see output above, if any). Falling back to compare_cases.py's default."
+            }
+
             if (-not $q) {
                 try {
                     Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
@@ -457,7 +504,7 @@ if ($x) {
                 } catch {}
             }
             Set-Location $repoRoot
-            Invoke-Native { uv run python postprocessing/compare_cases.py "runs/${BatchName}_" }
+            Invoke-Native { uv run python postprocessing/compare_cases.py "runs/${BatchName}_" @compareStartYearArgs }
             if ($LASTEXITCODE -ne 0) {
                 Write-Warning 'compare_cases.py failed (see output above). Continuing.'
             } else {
@@ -483,4 +530,35 @@ if (-not $q) {
     } catch {}
 }
 
+} finally {
+    # Step 11: Save the captured bootstrap+run log as bootstraplog.txt in the first
+    # scenario's run folder. Uses the same leftmost-non-ignored-case convention as
+    # the --startyear lookup above (CEPM/scripts/get_batch_info.py), since that case
+    # folder is the one guaranteed to exist regardless of which cases in the batch
+    # ran, succeeded, or failed. Runs even if an earlier step threw, so a failed
+    # bootstrap/run still leaves a log behind; best-effort throughout so logging
+    # itself can never fail the script or mask its real exit code.
+    try { Stop-Transcript | Out-Null } catch {}
+
+    try {
+        Set-Location $repoRoot
+        $batchInfo = @(Invoke-Native { uv run python CEPM/scripts/get_batch_info.py $casesFilename })
+        $firstCase = if ($batchInfo.Count -ge 1) { $batchInfo[0].Trim() } else { '' }
+        if (($LASTEXITCODE -eq 0) -and $firstCase) {
+            $firstCaseDir = Join-Path $repoRoot "runs\${BatchName}_${firstCase}"
+            if (Test-Path $firstCaseDir) {
+                Copy-Item -Path $bootstrapLogPath -Destination (Join-Path $firstCaseDir 'bootstraplog.txt') -Force
+                Write-Host "[ok] Saved bootstrap log to $(Join-Path $firstCaseDir 'bootstraplog.txt')"
+            } else {
+                Write-Warning "Could not save bootstraplog.txt: run folder not found at $firstCaseDir"
+            }
+        } else {
+            Write-Warning "Could not save bootstraplog.txt: unable to determine the first non-ignored case in $casesFilename"
+        }
+    } catch {
+        Write-Warning "Could not save bootstraplog.txt: $_"
+    } finally {
+        Remove-Item -Path $bootstrapLogPath -ErrorAction SilentlyContinue
+    }
+}
 

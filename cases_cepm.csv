@@ -1,12 +1,12 @@
-,Default Value,WECC_SW-baseline,WECC_SW-dcload,WECC_SW-dcloco2,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas_mvp_NOTE-DEPRECATED,USA_optimized_mvp
+,Default Value,WECC-SW_baseline,WECC-SW_dcload,WECC-SW_dcloco2,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas_mvp_NOTE-DEPRECATED,USA_optimized_mvp
 ignore,1,0,0,0,1,1,1,1,1
 GSw_Region,cendiv/Pacific,nercr/WECC_SW,nercr/WECC_SW,nercr/WECC_SW,st/NM,st/NM,st/NM,country/USA,country/USA
 GSw_ZoneSet,,z132,z132,z132,,,,z48,z48
 startyear,2010,,,,,,,,2026
 endyear,2032,2032,2032,2032,,,,,
-yearset,,2026..2032..2,2026..2032..2,2026..2032..2,2026_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032
+yearset,,2026..2032..3,2026..2032..3,2026..2032..3,2026_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032
 GSw_SkipRAyear,2020,,,,,,,,
-plantchar_gas,,,,,,,,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all
+plantchar_gas,,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all,,,,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all
 GSw_GasCurve,2,,,,,,,,
 GSw_CCS,1,0,0,0,,,,0,0
 GSw_CCSFLEX_BYP,0,,,,,,,0,0
