@@ -8,7 +8,7 @@ yearset,,2026..2032..2,2026..2032..2,2026..2032..2,2026_2032,2026_2029_2032,2026
 GSw_SkipRAyear,2020,,,,,,,,
 plantchar_gas,,,,,,,,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all
 GSw_GasCurve,2,,,,,,,,
-GSw_CCS,1,,,,,,,0,0
+GSw_CCS,1,0,0,0,,,,0,0
 GSw_CCSFLEX_BYP,0,,,,,,,0,0
 GSw_CCSFLEX_DAC,0,,,,,,,0,0
 GSw_CCSFLEX_STO,0,,,,,,,0,0
