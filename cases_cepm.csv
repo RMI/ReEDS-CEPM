@@ -1,5 +1,5 @@
 ,Default Value,WECC_SW-baseline,WECC_SW-dcload,WECC_SW-dcloco2,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas_mvp_NOTE-DEPRECATED,USA_optimized_mvp
-ignore,1,1,1,0,1,1,1,1,1
+ignore,1,0,0,0,1,1,1,1,1
 GSw_Region,cendiv/Pacific,nercr/WECC_SW,nercr/WECC_SW,nercr/WECC_SW,st/NM,st/NM,st/NM,country/USA,country/USA
 GSw_ZoneSet,,z132,z132,z132,,,,z48,z48
 startyear,2010,,,,,,,,2026
