@@ -569,6 +569,48 @@ instead of crashing on `NaN`.
 
 **Fixed upstream?** Not checked yet.
 
+## `compare_cases.py` crashes when comparing cases via a shared-prefix glob (`TypeError` in `parse_caselist`) (FIXED)
+
+**Symptom:**
+```
+TypeError: expected str, bytes or os.PathLike object, not list
+```
+raised from `reeds/report_utils.py`'s `parse_caselist()` (`os.path.basename(_caselist)`), called from `compare_cases.py` right after argument parsing, before any case data is loaded. Hit every time `compare_cases.py` is invoked with a single shared-casename-prefix argument (e.g. `runs/<BatchName>_`) and no explicit `--titleshorten` — exactly how `run_cepm.ps1`'s `-x/--compare-cases` step calls it.
+
+**Root cause:** in the prefix-glob branch of `parse_caselist()`, when `titleshorten` is left at its default (falsy), the function derives one from the length of the prefix's basename — but passes the whole `_caselist` list to `os.path.basename()` instead of `_caselist[0]`, the single string it actually expects.
+
+**Impact:** blocked `compare_cases.py` immediately for this invocation style, before generating any output. Non-fatal to the overall batch — `run_cepm.ps1` already treats a `compare_cases.py` failure as a warning, not a thrown error — but the comparison report was never produced.
+
+**Status:** fixed.
+
+**Files changed:**
+- `reeds/report_utils.py` — `parse_caselist()`: `os.path.basename(_caselist)` changed to `os.path.basename(_caselist[0])`.
+
+**Fixed upstream?** No. `reeds/report_utils.py` at tag `2026.08.03` has the byte-identical line — same bug, inherited, not RMI-introduced. Good candidate to contribute back.
+
+## `compare_cases.py` hardcodes year 2020 in several plots instead of using `--startyear` (FIXED)
+
+**Symptom:** several plots/slides fail independently — each caught by the script's own per-section `try`/`except`, so the rest of the report still generates — whenever a batch's model years don't include 2020 (e.g. a `yearset` starting at 2026):
+```
+ValueError: 2020 is not in list
+```
+from `reeds/plots.py`'s `annotate()`, via the "Transmission at Different Resolutions" slide, and
+```
+KeyError: 2020
+```
+from `reeds/reedsplots.py`'s `plot_trans_diff()` (`tran_out[case].pivot(...)[subtract_baseyear]`), via the "Transmission maps" slide.
+
+**Root cause:** `compare_cases.py` already resolves a `startyear` variable from its `--startyear` argument and uses it correctly almost everywhere, but five call sites still had a literal `2020`: two `plots.annotate(...)` calls and one `df[case][2020]` lookup in the transmission-resolution slide, plus `subtract_baseyear=2020` in two of the transmission-maps calls. Any batch whose cases don't happen to include exactly year 2020 among their solve years hits one of these — which is any CEPM case, since `cases_cepm.csv`'s `yearset` values all start at 2026.
+
+**Impact:** the affected slides/plots are silently missing from the `.pptx` for any such batch; the rest of the comparison report is unaffected.
+
+**Status:** fixed — all five sites now use the existing `startyear` variable instead of a literal `2020`. Surfaced while wiring up `run_cepm.ps1`'s new `-x`/`--compare-cases` auto-detected `--startyear` (see [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md)), which made `--startyear` actually vary per batch for the first time instead of always sitting at its 2020 default.
+
+**Files changed:**
+- `postprocessing/compare_cases.py` — replaced the five hardcoded `2020` literals with the existing `startyear` variable. Also corrected a stale `### Annotate the 2020 value` comment on a nearby line that was already using `startyear` correctly.
+
+**Fixed upstream?** No. `postprocessing/compare_cases.py` at tag `2026.08.03` has identical hardcoded `2020` literals at all five sites — same bug, inherited, not RMI-introduced. Doesn't surface upstream by default because upstream's own default `--startyear` is also 2020, so it only breaks for a start year other than 2020 — which is what every CEPM case uses.
+
 ## Cosmetic warnings safe to ignore
 
 - **`copy_files.py`** — pandas `DtypeWarning: Columns (N) have mixed types` while

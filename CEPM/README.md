@@ -70,3 +70,4 @@ structure.
 | File | Summary |
 |---|---|
 | [`scripts/check_env_sync.py`](scripts/check_env_sync.py) | Stdlib-only script that reports dependency drift between `environment.yml` and `pyproject.toml`, warning only on differences that are not on its known-accepted allowlist. |
+| [`scripts/get_batch_info.py`](scripts/get_batch_info.py) | Prints the name and `yearset`-derived start year of the first non-ignored case (left to right) in a cases file. Used by `run_cepm.ps1` to set `compare_cases.py`'s `--startyear` and to locate the run folder `bootstraplog.txt` is saved into. |

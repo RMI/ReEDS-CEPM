@@ -34,6 +34,8 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `reeds/input_processing/recf.py` | Modified | recf.py when offshore wind is disabled |
 | `reeds/resource_adequacy/reeds2pras/README.md` | Modified | Minor and cosmetic |
 | `postprocessing/compare_cases.py` | Modified | Wrong module in compare_cases.py's "Flexibly Sited Demand" slide |
+| `reeds/report_utils.py` | Modified | parse_caselist TypeError with a prefix-glob caselist |
+| `postprocessing/compare_cases.py` | Modified | compare_cases.py hardcodes 2020 instead of --startyear |
 | `cases_small.csv` | Modified | Minor and cosmetic |
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/dollaryear.csv` | Modified | Updated CAPEX for gas resources |
@@ -186,6 +188,73 @@ n/a
 - Confirm `add_to_pptx` still lives in `reeds/report_utils.py` under that name
   after a rebase — if upstream moves or renames it, this call site needs
   updating again regardless of which module it points at.
+
+## parse_caselist TypeError with a prefix-glob caselist
+
+### Description of issue:
+
+`compare_cases.py` crashed immediately with
+`TypeError: expected str, bytes or os.PathLike object, not list` whenever called
+with a single shared-casename-prefix argument (e.g. `runs/<BatchName>_`) and no
+explicit `--titleshorten` — exactly the invocation `run_cepm.ps1`'s new
+`-x/--compare-cases` step uses. In `reeds/report_utils.py`'s `parse_caselist()`,
+the prefix-glob branch derives a default `titleshorten` from the prefix's
+basename length, but passed the whole `_caselist` list to `os.path.basename()`
+instead of `_caselist[0]`, the single string it expects.
+
+### Files changed:
+
+- `reeds/report_utils.py` — `parse_caselist()`: `os.path.basename(_caselist)`
+  changed to `os.path.basename(_caselist[0])`.
+
+### Reference:
+
+[`known-issues.md`](known-issues.md)
+
+### What to test in new releases:
+
+- Has upstream fixed this typo itself? If so, drop our patch and take upstream's
+  version to shrink the diff.
+- Re-run `compare_cases.py` with a single shared-prefix argument and no
+  `--titleshorten` (the `run_cepm.ps1 -x` invocation style) after any rebase that
+  touches `parse_caselist()`.
+
+## compare_cases.py hardcodes 2020 instead of --startyear
+
+### Description of issue:
+
+Several `compare_cases.py` plots/slides failed (each caught individually by the
+script's own per-section `try`/`except`) whenever a batch's model years don't
+include 2020 — e.g. `ValueError: 2020 is not in list` from `reeds/plots.py`'s
+`annotate()`, and `KeyError: 2020` from `reeds/reedsplots.py`'s
+`plot_trans_diff()`. `compare_cases.py` already resolves a `startyear` variable
+from its `--startyear` argument and uses it correctly almost everywhere, but five
+call sites — two `plots.annotate(...)` calls and a `df[case][2020]` lookup in the
+transmission-resolution slide, plus `subtract_baseyear=2020` in two of the
+transmission-maps calls — still had a literal `2020`. Every CEPM case models
+years starting at 2026, so this reliably broke those slides once `--startyear`
+started actually varying per batch (see `run_cepm.ps1`'s new
+`-x`/`--compare-cases` auto-detected `--startyear`, below).
+
+### Files changed:
+
+- `postprocessing/compare_cases.py` — replaced the five hardcoded `2020` literals
+  with the existing `startyear` variable; also fixed a stale
+  `### Annotate the 2020 value` comment on an unrelated line that was already
+  using `startyear` correctly.
+
+### Reference:
+
+[`known-issues.md`](known-issues.md)
+
+### What to test in new releases:
+
+- Has upstream fixed these literals itself? If so, drop our patch and take
+  upstream's version to shrink the diff.
+- Re-run `compare_cases.py` (or `run_cepm.ps1 -x`) against a batch whose
+  `yearset` does not include 2020 after any rebase that touches these plotting
+  functions, since upstream's own default `--startyear` is 2020 and won't
+  exercise this path.
 
 ## Minor and cosmetic
 
