@@ -3,7 +3,7 @@
 
 Below is a list of requirements criteria for adding custom inputs to CEPM. These bullets ensure that our custom
 inputs are consistent, understandalbe, and relatively easy to adjust if changes to ReEDS' functionality require
-that we adjust our appraoch.
+that we adjust our approach.
 
 ## CEPM inputs criteria:
 
