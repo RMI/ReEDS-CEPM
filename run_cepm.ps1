@@ -8,9 +8,32 @@ What this script does:
 4) Checks the project Python pin and runs `uv python pin 3.11` when not pinned to 3.11.
 5) Runs `uv sync --extra dev` to ensure the Python environment matches project dependencies (unless bypass mode is enabled).
 6) Instantiates Julia dependencies only when needed: a fast offline instantiate checks/heals the environment, falling back to the full `julia --project=. instantiate.jl` (which updates the registry) only if that can't satisfy the project (unless bypass mode is enabled).
-7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/check_env_sync.py.
+7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/scripts/check_env_sync.py.
 8) Starts runreeds.py and forwards any arguments passed to this script.
-9) Sends an ntfy.sh notification (topic: rmi-cepm-run-batch-finished) before runreeds.py launches and once it returns. Best-effort: a failed or offline notification is ignored. Disabled with -q/--quiet; -u/--user adds a username to the message.
+   Skipped entirely when -o/--compare-only is given (see below) -- along
+   with Steps 1-7, since those only matter for an actual ReEDS run.
+9) When -x/--compare-cases is given and runreeds.py succeeds, OR when
+   -o/--compare-only is given (regardless of -x), runs
+   postprocessing/compare_cases.py against all completed cases in the batch
+   (skipped automatically for -s/--single or -t/--dryrun runs when Step 8
+   actually ran, since there's nothing meaningful to compare -- this check
+   does not apply in -o/--compare-only mode, since Step 8 didn't run). No
+   base case is specified, so compare_cases.py defaults to the first
+   alphabetically-sorted completed case as the base -- not necessarily the
+   leftmost case in the cases file. compare_cases.py's --startyear is set
+   from the first 4 digits of the `yearset` switch for the first
+   non-ignored case (left to right) in the cases file used for this batch,
+   via CEPM/scripts/get_batch_info.py; if that can't be determined,
+   compare_cases.py's own default (2020) is used instead.
+10) Sends an ntfy.sh notification (topic: rmi-cepm-runs) before runreeds.py launches and once it returns. Best-effort: a failed or offline notification is ignored. Disabled with -q/--quiet; -u/--user adds a username to the message; the batch name and cases suffix (see below) are always included.
+11) Saves the full console output of this script (Steps 1-10, including all
+    forwarded native command output) as bootstraplog.txt in the run folder of
+    the first non-ignored case (left to right) in the cases file used for
+    this batch -- runs/<BatchName>_<first case>, via
+    CEPM/scripts/get_batch_info.py (same script as Step 9). Runs even if an
+    earlier step throws, so a failed bootstrap or run still leaves a log
+    behind; best-effort throughout (a missing run folder, or any other
+    logging failure, is only warned).
 
 
 BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.py):
@@ -18,21 +41,58 @@ BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.
         Bypass mode: skip Step 5 (`uv sync --extra dev`) and Step 6 (Julia
         instantiation). Other checks/setup steps still run.
     -q, --quiet
-        Disable the ntfy.sh notifications (both the pre-launch ping and Step 9).
+        Disable the ntfy.sh notifications (both the pre-launch ping and Step 10).
     -u, --user <name>   (also --user=<name>)
         Include <name> as the username in the ntfy messages. When omitted, no
         username is shown.
+    -x, --compare-cases
+        After runreeds.py finishes successfully, run postprocessing/compare_cases.py
+        against all completed cases in this batch (glob on runs/<BatchName>_*).
+        Skipped automatically when -s/--single or -t/--dryrun is also given. Failures
+        are non-fatal (warned, not thrown) since the ReEDS run itself already
+        succeeded. Assumes BatchName is unique to this invocation (never reused
+        across separate runreeds.py calls) -- if a batch name IS reused, folders left
+        over from an earlier call under the same name will be picked up too, since
+        this script only scopes by the runs/<BatchName>_* glob, not by run recency.
+    -o, --compare-only
+        Skip Steps 1-8 entirely (the GAMS/Julia/uv/Julia-instantiate checks and
+        runreeds.py itself) and go straight to running
+        postprocessing/compare_cases.py against all completed cases already in
+        runs/<BatchName>_* for the given -b/-c. Implies -x (compare_cases.py always
+        runs; the -s/--single and -t/--dryrun skip-check does not apply, since no
+        run occurred to check). Use this to re-run or fix up the comparison plots
+        for a batch that already finished, without re-running ReEDS. Still prompts
+        for/forwards -b/--BatchName and -c/--cases_suffix exactly as normal, since
+        they're needed to locate the batch's run folders. Any other forwarded args
+        (that would normally go to runreeds.py) are ignored in this mode.
+
+INTERCEPTED-AND-FORWARDED OPTIONS:
+    -b, --BatchName <name>   (also --BatchName=<name>)
+        Same option runreeds.py defines for the batch prefix. This script reads
+        it (prompting interactively if omitted, and expanding '0' to a
+        timestamped name) using the same logic as runreeds.py's own prompt, so
+        that the resolved batch name can be included in the ntfy messages. The
+        resolved value is then forwarded to runreeds.py as -b, so runreeds.py is
+        never left to prompt for it itself.
+    -c, --cases_suffix <suffix>   (also --cases_suffix=<suffix>)
+        Same option runreeds.py defines for the cases_suffix.csv file. Handled
+        the same way as -b/--BatchName above: prompted for here if omitted
+        (using runreeds.py's own prompt text; a blank value is valid and means
+        cases.csv), included in the ntfy messages, and forwarded to runreeds.py
+        as -c.
 
 RESERVED OPTIONS (do NOT add a bootstrap-only flag that reuses these):
-    All args other than the bootstrap-only options above are forwarded verbatim to
-    runreeds.py, so any short/long option runreeds.py defines is off-limits for this
-    script to claim for itself. As of this writing runreeds.py uses:
+    All args other than the options above are forwarded verbatim to runreeds.py,
+    so any short/long option runreeds.py defines is off-limits for this script to
+    claim for itself. As of this writing runreeds.py uses:
         -b/--BatchName   -c/--cases_suffix  -s/--single      -r/--simult_runs
         -l/--forcelocal  -f/--skip_checks   -d/--debug       -n/--debugnode
         -p/--cases_per_node                 -t/--dryrun
-    (plus -h/--help from argparse). The bootstrap-only options above (-y, -q, -u)
-    were chosen to avoid these. If you add a new bootstrap-only switch, pick a
-    letter outside that set (and re-check against runreeds.py, which may change).
+    (plus -h/--help from argparse). The bootstrap-only options above (-y, -q, -u, -x, -o)
+    were chosen to avoid these; -b/--BatchName and -c/--cases_suffix are
+    deliberately intercepted (see above) rather than avoided. If you add a new
+    bootstrap-only switch, pick a letter outside that set (and re-check against
+    runreeds.py, which may change).
 
 Usage examples:
     .\run_cepm.ps1
@@ -41,6 +101,8 @@ Usage examples:
     .\run_cepm.ps1 --bypass -b v20260625_test -c test
     .\run_cepm.ps1 -q -b v20260625_test -c test
     .\run_cepm.ps1 -u "Tyler Fitch" -b v20260625_test -c test
+    .\run_cepm.ps1 -x -b v20260625_test -c test
+    .\run_cepm.ps1 -o -b v20260625_test -c test
 #>
 
 # Initializing functions and variables for this script.
@@ -50,6 +112,13 @@ param(
     [switch]$y, # Bypass mode for skipping uv sync and Julia instantiate. We use y to prevent collision with runreeds options.
     [switch]$q, # Quiet: disable the ntfy.sh notifications. -q is free of runreeds options.
     [string]$u = '', # Username string to include in ntfy messages. -u is free of runreeds options.
+    [switch]$x, # Compare-cases mode: run compare_cases.py on the batch after runreeds.py succeeds. -x is free of runreeds options.
+    [switch]$o, # Compare-only mode: skip runreeds.py (and its preflight checks) entirely and just run compare_cases.py against the existing batch. -o is free of runreeds options.
+    [string]$b = '', # BatchName: same short flag as runreeds.py's -b/--BatchName. Intercepted here so
+                      # we can resolve it (prompting if needed) and echo it in ntfy messages, then
+                      # forwarded back to runreeds.py explicitly (see below).
+    [string]$c = '', # cases_suffix: same short flag as runreeds.py's -c/--cases_suffix. Intercepted
+                      # the same way as -b above.
 
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$RunbatchArgs
@@ -72,7 +141,18 @@ if ($ForwardArgs -contains '--quiet') {
     $q = $true
     $ForwardArgs = @($ForwardArgs | Where-Object { $_ -ne '--quiet' })
 }
+if ($ForwardArgs -contains '--compare-cases') {
+    $x = $true
+    $ForwardArgs = @($ForwardArgs | Where-Object { $_ -ne '--compare-cases' })
+}
+if ($ForwardArgs -contains '--compare-only') {
+    $o = $true
+    $ForwardArgs = @($ForwardArgs | Where-Object { $_ -ne '--compare-only' })
+}
 # --user NAME and --user=NAME take a value; pull them (and the value) out by hand.
+# --BatchName NAME/--BatchName=NAME and --cases_suffix NAME/--cases_suffix=NAME (runreeds.py's
+# long forms of -b and -c) are pulled out the same way, so both are recognized regardless of
+# which form is used.
 $remainingArgs = @()
 for ($i = 0; $i -lt $ForwardArgs.Count; $i++) {
     $arg = $ForwardArgs[$i]
@@ -84,12 +164,80 @@ for ($i = 0; $i -lt $ForwardArgs.Count; $i++) {
         $u = $arg.Substring('--user='.Length)
         continue
     }
+    if ($arg -eq '--BatchName') {
+        if ($i + 1 -lt $ForwardArgs.Count) { $b = $ForwardArgs[$i + 1]; $i++ }
+        continue
+    }
+    if ($arg -like '--BatchName=*') {
+        $b = $arg.Substring('--BatchName='.Length)
+        continue
+    }
+    if ($arg -eq '--cases_suffix') {
+        if ($i + 1 -lt $ForwardArgs.Count) { $c = $ForwardArgs[$i + 1]; $i++ }
+        continue
+    }
+    if ($arg -like '--cases_suffix=*') {
+        $c = $arg.Substring('--cases_suffix='.Length)
+        continue
+    }
     $remainingArgs += $arg
 }
 $ForwardArgs = @($remainingArgs)
 
 # Optional ntfy username fragment: empty unless -u/--user was given.
 $ntfyUser = if ([string]::IsNullOrWhiteSpace($u)) { '' } else { " by $u" }
+
+# Resolve the batch name using the same logic as runreeds.py's setupEnvironment():
+# prompt interactively if it was not supplied, expand '0' to a timestamped name, and
+# replace '.' with '_'. Resolving it here (rather than letting runreeds.py prompt for
+# it) lets the ntfy messages include it, and avoids leaving runreeds.py to prompt
+# again since we forward the resolved value explicitly via -b below.
+if ([string]::IsNullOrEmpty($b)) {
+    Write-Host ' '
+    Write-Host '------------- '
+    Write-Host ' '
+    Write-Host '-- Specify the batch prefix --'
+    Write-Host ' '
+    Write-Host "The batch prefix is attached to the beginning of all cases' outputs files"
+    Write-Host 'Note - it must start with a letter and not a number or symbol'
+    Write-Host ' '
+    Write-Host 'A value of 0 will assign the date and time as the batch name (e.g. v20190520_072310)'
+    Write-Host ' '
+    $b = Read-Host -Prompt 'Batch Prefix'
+}
+if ($b -eq '0') {
+    $b = 'v' + (Get-Date -Format 'yyyyMMdd_HHmmss')
+}
+# Check for period in batch name and replace with underscore, matching runreeds.py.
+$BatchName = $b.Replace('.', '_')
+
+# Forward the resolved batch name to runreeds.py explicitly so it is never left to
+# prompt for it itself.
+$ForwardArgs = @('-b', $BatchName) + $ForwardArgs
+
+# ntfy fragment naming the batch, included in every notification below.
+$ntfyBatch = " for batch '$BatchName'"
+
+# Resolve the cases suffix using the same logic as runreeds.py's setupEnvironment(): prompt
+# interactively if it was not supplied. Unlike BatchName, a blank value is valid here (it means
+# "use cases.csv" -- see runreeds.py's cases_filename derivation below), so no re-prompt loop.
+if ([string]::IsNullOrEmpty($c)) {
+    Write-Host ' '
+    Write-Host 'Specify the suffix for the cases_suffix.csv file'
+    Write-Host 'A blank input will default to the cases.csv file'
+    Write-Host ' '
+    $c = Read-Host -Prompt 'Case Suffix'
+}
+$CasesSuffix = $c
+
+# Forward the resolved cases suffix to runreeds.py explicitly so it is never left to prompt
+# for it itself.
+$ForwardArgs = @('-c', $CasesSuffix) + $ForwardArgs
+
+# ntfy fragment naming the cases file, included in every notification below. Mirrors
+# runreeds.py's own cases_filename derivation ('' or 'default' -> cases.csv).
+$casesFilename = if ($CasesSuffix -in @('', 'default')) { 'cases.csv' } else { "cases_$CasesSuffix.csv" }
+$ntfyCases = " ($casesFilename)"
 
 # Fail immediately on PowerShell (cmdlet) errors so setup issues do not get masked.
 $ErrorActionPreference = 'Stop'
@@ -136,7 +284,26 @@ function Invoke-Step {
 # Script is located at repository root, so use script directory as repo root.
 $repoRoot = (Resolve-Path $PSScriptRoot).Path
 
+# Capture the full bootstrap+run console output (every Write-Host/Write-Warning line
+# below, plus all native command output) to a staging file, then copy it into the
+# first scenario's run folder as bootstraplog.txt (Step 11) once everything else has
+# run. Staged under $env:TEMP because the target run folder doesn't exist yet when
+# logging starts. The whole rest of the script runs inside the try below so the log
+# is still saved (best-effort) even if a step throws.
+$bootstrapLogPath = Join-Path $env:TEMP "reeds_bootstraplog_$([guid]::NewGuid().ToString('N')).txt"
+try {
+    Start-Transcript -Path $bootstrapLogPath -Force | Out-Null
+} catch {
+    Write-Warning "Could not start bootstrap log transcript (bootstraplog.txt will not be saved): $_"
+}
+
+try {
+
 Write-Host "Using repository root: $repoRoot"
+
+if ($o) {
+    Write-Host "[note] Compare-only mode (-o/--compare-only): skipping Steps 1-8 (GAMS/Julia checks, uv sync, Julia instantiate, and runreeds.py) for batch '$BatchName'."
+} else {
 
 # Step 1: Verify GAMS is available on PATH, check license status, and print version.
 $gamsCmd = Get-Command gams -ErrorAction SilentlyContinue
@@ -271,11 +438,11 @@ if ($y) {
 # beyond the known-accepted exceptions. This always runs -- it only reads two
 # text files -- so it is not gated by bypass mode. It must never abort the
 # bootstrap, so a non-zero result becomes a warning rather than a throw.
-Write-Host '[run] CEPM/check_env_sync.py (environment.yml vs pyproject.toml)'
+Write-Host '[run] CEPM/scripts/check_env_sync.py (environment.yml vs pyproject.toml)'
 Set-Location $repoRoot
-Invoke-Native { uv run python CEPM/check_env_sync.py }
+Invoke-Native { uv run python CEPM/scripts/check_env_sync.py }
 if ($LASTEXITCODE -ne 0) {
-    Write-Warning 'environment.yml and pyproject.toml have drifted (see output above). Update both files, or adjust the allowlist in CEPM/check_env_sync.py. Continuing.'
+    Write-Warning 'environment.yml and pyproject.toml have drifted (see output above). Update both files, or adjust the allowlist in CEPM/scripts/check_env_sync.py. Continuing.'
 } else {
     Write-Host '[ok] environment.yml and pyproject.toml are aligned (within known exceptions).'
 }
@@ -284,8 +451,8 @@ Write-Host 'Bootstrap complete. Starting ReEDS runreeds.py with forwarded argume
 
 if (-not $q) {
     try {
-        Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" -TimeoutSec 5 `
-            -Body "ReEDS run batch started on $(hostname)$ntfyUser at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+        Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+            -Body "ReEDS run batch started on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
     } catch {}
 }
 
@@ -298,21 +465,144 @@ Invoke-Native { uv run python runreeds.py @ForwardArgs }
 if ($LASTEXITCODE -ne 0) {
     if (-not $q) {
         try {
-            Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" -TimeoutSec 5 `
-                -Body "ReEDS run batch failed to finish on $(hostname)$ntfyUser at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+            Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+                -Body "ReEDS run batch failed to finish on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
         } catch {}
     }
     throw 'runreeds.py failed.'
 }
 
-# Step 9: Notify ntfy.sh that the run has finished. Useful for long-running runs.
-# Best-effort only -- wrapped so a failed or offline notification never affects
-# the run outcome; skipped entirely with -q/--quiet.
+} # end of "if ($o) { ... } else { ... }" (Steps 1-8, skipped in compare-only mode)
+
+# Step 9: When -x/--compare-cases was given and runreeds.py succeeded, OR when
+# -o/--compare-only was given (regardless of -x, and regardless of Step 8 --
+# since it didn't run), run compare_cases.py against all completed cases in
+# this batch. Skipped when -s/--single or -t/--dryrun was forwarded to
+# runreeds.py (only relevant when Step 8 actually ran, i.e. not in
+# -o/--compare-only mode), or when a quick folder count shows the batch only
+# produced zero/one completed case (e.g. a cases file with just one
+# non-ignored case, or a batch that hasn't actually run yet) -- in either case
+# there's nothing to compare, so we note it and skip calling compare_cases.py
+# rather than let it fail with a generic error. The folder count is a cheap
+# local directory listing, not a subprocess call. Once we do call it, a
+# single prefix argument (runs/<BatchName>_) is enough -- compare_cases.py
+# globs it itself and filters to cases that actually finished (see
+# reeds/report_utils.py's parse_caselist), so we don't need to enumerate or
+# verify individual run folders ourselves. No base case (-b) is passed, so
+# compare_cases.py defaults to the first alphabetically-sorted completed case
+# -- not necessarily the leftmost case in the cases file. Non-fatal in normal
+# mode (the ReEDS run itself already succeeded, so a comparison failure is
+# only a warning); still non-fatal in -o/--compare-only mode since there is no
+# run to protect the exit code of, but a failure there is the whole point of
+# the invocation, so it's worth a clear warning either way.
+if ($x -or $o) {
+    $isSingleRun = (-not $o) -and (($ForwardArgs -contains '-s') -or ($ForwardArgs -contains '--single') -or `
+        [bool]($ForwardArgs | Where-Object { $_ -like '--single=*' }))
+    $isDryRun = (-not $o) -and (($ForwardArgs -contains '-t') -or ($ForwardArgs -contains '--dryrun'))
+    if ($isSingleRun -or $isDryRun) {
+        Write-Host "[note] Only a single case could have run for batch '$BatchName' (-s/--single or -t/--dryrun was forwarded); skipping compare_cases.py."
+    } else {
+        $runsDir = Join-Path $repoRoot 'runs'
+        $completedCaseDirs = @(
+            Get-ChildItem -Path $runsDir -Directory -Filter "${BatchName}_*" -ErrorAction SilentlyContinue |
+                Where-Object { Test-Path (Join-Path $_.FullName 'outputs\outputs.h5') }
+        )
+        if ($completedCaseDirs.Count -le 1) {
+            Write-Host "[note] Only $($completedCaseDirs.Count) completed case(s) found for batch '$BatchName'; skipping compare_cases.py (nothing to compare)."
+        } else {
+            Write-Host "[run] postprocessing/compare_cases.py for batch '$BatchName'"
+
+            # Derive --startyear from the first non-ignored case in the cases file used
+            # for this batch (first 4 digits of that case's `yearset` switch), so the
+            # comparison plots start at the model's actual start year instead of
+            # compare_cases.py's hardcoded default (2020). Best-effort: if this fails
+            # (e.g. an unusual yearset format), warn and fall back to that default.
+            Set-Location $repoRoot
+            # Stderr (diagnostics/warnings from get_batch_info.py) streams straight to
+            # the console; only stdout (case name on line 1, year on line 2 if valid)
+            # is captured here.
+            $batchInfo = @(Invoke-Native { uv run python CEPM/scripts/get_batch_info.py $casesFilename })
+            $compareStartYearArgs = @()
+            if (($LASTEXITCODE -eq 0) -and ($batchInfo.Count -ge 2) -and ($batchInfo[1].Trim() -match '^\d{4}$')) {
+                $compareStartYearArgs = @('--startyear', $batchInfo[1].Trim())
+                Write-Host "[ok] Using --startyear $($batchInfo[1].Trim()) (from $casesFilename)."
+            } else {
+                Write-Warning "Could not determine --startyear from $casesFilename (see output above, if any). Falling back to compare_cases.py's default."
+            }
+
+            if (-not $q) {
+                $startingCompareMsg = if ($o) {
+                    "Compare-only run on $(hostname)$ntfyUser$ntfyBatch$ntfyCases; starting compare_cases.py at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                } else {
+                    "ReEDS run batch finished on $(hostname)$ntfyUser$ntfyBatch$ntfyCases; starting compare_cases.py at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                }
+                try {
+                    Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+                        -Body $startingCompareMsg | Out-Null
+                } catch {}
+            }
+            Set-Location $repoRoot
+            Invoke-Native { uv run python postprocessing/compare_cases.py "runs/${BatchName}_" @compareStartYearArgs }
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning 'compare_cases.py failed (see output above). Continuing.'
+            } else {
+                Write-Host '[ok] compare_cases.py completed.'
+            }
+            if (-not $q) {
+                try {
+                    Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+                        -Body "compare_cases.py finished on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+                } catch {}
+            }
+        }
+    }
+}
+
+# Step 10: Notify ntfy.sh that the run (or, in -o/--compare-only mode, the
+# comparison) has finished. Useful for long-running runs. Best-effort only --
+# wrapped so a failed or offline notification never affects the run outcome;
+# skipped entirely with -q/--quiet.
 if (-not $q) {
+    $finishedMsg = if ($o) {
+        "Compare-only run finished on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    } else {
+        "ReEDS run batch finished on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    }
     try {
-        Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-run-batch-finished" -TimeoutSec 5 `
-            -Body "ReEDS run batch finished on $(hostname)$ntfyUser at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+        Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+            -Body $finishedMsg | Out-Null
     } catch {}
 }
 
+} finally {
+    # Step 11: Save the captured bootstrap+run log as bootstraplog.txt in the first
+    # scenario's run folder. Uses the same leftmost-non-ignored-case convention as
+    # the --startyear lookup above (CEPM/scripts/get_batch_info.py), since that case
+    # folder is the one guaranteed to exist regardless of which cases in the batch
+    # ran, succeeded, or failed. Runs even if an earlier step threw, so a failed
+    # bootstrap/run still leaves a log behind; best-effort throughout so logging
+    # itself can never fail the script or mask its real exit code.
+    try { Stop-Transcript | Out-Null } catch {}
+
+    try {
+        Set-Location $repoRoot
+        $batchInfo = @(Invoke-Native { uv run python CEPM/scripts/get_batch_info.py $casesFilename })
+        $firstCase = if ($batchInfo.Count -ge 1) { $batchInfo[0].Trim() } else { '' }
+        if (($LASTEXITCODE -eq 0) -and $firstCase) {
+            $firstCaseDir = Join-Path $repoRoot "runs\${BatchName}_${firstCase}"
+            if (Test-Path $firstCaseDir) {
+                Copy-Item -Path $bootstrapLogPath -Destination (Join-Path $firstCaseDir 'bootstraplog.txt') -Force
+                Write-Host "[ok] Saved bootstrap log to $(Join-Path $firstCaseDir 'bootstraplog.txt')"
+            } else {
+                Write-Warning "Could not save bootstraplog.txt: run folder not found at $firstCaseDir"
+            }
+        } else {
+            Write-Warning "Could not save bootstraplog.txt: unable to determine the first non-ignored case in $casesFilename"
+        }
+    } catch {
+        Write-Warning "Could not save bootstraplog.txt: $_"
+    } finally {
+        Remove-Item -Path $bootstrapLogPath -ErrorAction SilentlyContinue
+    }
+}
 

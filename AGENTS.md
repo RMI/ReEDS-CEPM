@@ -9,6 +9,13 @@ This repo was restructured upstream so that most Python and GAMS source now live
 inside the `reeds/` package (the old flat repo-root layout is gone). The main
 orchestrator is `runreeds.py` (formerly `runbatch.py`).
 
+This is RMI's CEPM fork of upstream `ReEDS-Model/ReEDS`. To the extent practical,
+changes made in this fork are located in the `CEPM/` folder, so divergence from
+upstream stays reviewable; changes that must live in upstream file locations are
+tracked in `CEPM/reeds-to-cepm-log.md`. When adding something CEPM-specific,
+prefer `CEPM/` unless the file has to sit elsewhere to be discovered (as
+`cases_cepm.csv` and `run_cepm.ps1` do).
+
 Use this file as the first stop for agent orientation. Deeper references:
 
 - @README.md: repository overview, installation entry points, and basic run
@@ -19,8 +26,8 @@ Use this file as the first stop for agent orientation. Deeper references:
   outputs, and common workflows.
 - @docs/source/developer_best_practices.md: coding conventions, testing
   expectations, and GAMS development guidance.
-- @sources_documentation.md: data-source documentation expectations and input
-  provenance notes.
+- @docs/sources_documentation.md: data-source documentation expectations and
+  input provenance notes.
 
 ## Project Structure
 
@@ -83,16 +90,25 @@ Use this file as the first stop for agent orientation. Deeper references:
 - `tests/` and `hourlize/tests/`: pytest tests. Some tests are lightweight unit
   tests; `tests/test_outputs.py` requires a completed ReEDS case.
 - `.github/workflows/`: CI, docs, and workflow-quality automation.
-- `CEPM/`: RMI/CEPM-specific docs kept separate from upstream docs —
-  `UV_MAMBA_GUIDE.md` (uv/mamba dependency mapping) and `internal-ci-testing.md`
-  (on-prem CI runbook). The CEPM setup-and-run helper is `run_cepm.ps1` at repo root.
+- `CEPM/`: RMI/CEPM-specific docs and helpers kept separate from upstream docs.
+  To the extent practical, CEPM-specific additions belong here rather than
+  scattered through the upstream tree; prefer adding new CEPM-only files under
+  `CEPM/` over placing them elsewhere. `CEPM/README.md` summarizes every file in
+  the folder, and `CEPM/reeds-to-cepm-log.md` tracks divergence from upstream,
+  including which upstream files CEPM changed (currently a placeholder — use
+  `git diff` against upstream for an authoritative answer).
+  `CEPM/guidance/` holds `UV_MAMBA_GUIDE.md` (uv/mamba dependency mapping),
+  `internal-ci-testing.md` (on-prem CI runbook), and
+  `GAMS_ERROR_579_INVESTIGATION.md` (GAMS 44.4.0 compatibility investigation).
+  `CEPM/scripts/` holds `check_env_sync.py` (environment.yml vs pyproject.toml
+  drift check). The CEPM setup-and-run helper is `run_cepm.ps1` at repo root.
 
 ## Environment
 
 - Python is pinned to `3.11` via `.python-version` and `pyproject.toml`.
 - Python dependencies are managed with `uv` and locked in `uv.lock`.
   `environment.yml` is kept as an upstream-compatible conda/mamba fallback; see
-  @CEPM/UV_MAMBA_GUIDE.md for keeping the two in sync.
+  @CEPM/guidance/UV_MAMBA_GUIDE.md for keeping the two in sync.
 - Julia `1.12.1` is the tested version for ReEDS2PRAS and stress-period flows.
 - GAMS is required for model solves. CPLEX is the normal solver; small cases may
   work with other solvers, but CPLEX-oriented settings are the maintained path.

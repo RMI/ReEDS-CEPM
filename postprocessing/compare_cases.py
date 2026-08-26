@@ -838,7 +838,7 @@ try:
             (0.05,1.0), va='top', ha='left',
             xycoords='axes fraction',
             fontsize='x-large', weight='bold',)
-        ### Annotate the 2020 value
+        ### Annotate the startyear value
         if len(df[tech,basecase]):
             plots.annotate(
                 ax[techcoords[tech]], basecase,
@@ -2095,7 +2095,7 @@ try:
         plots.label_last(df, ax[col], colors=colors, extend='both')
         ## Annotate the first value
         plots.annotate(
-            ax[col], list(cases.keys())[0], 2020, (10,-10),
+            ax[col], list(cases.keys())[0], startyear, (10,-10),
             color='C7', arrowprops={'arrowstyle':'-|>','color':'C7'})
     ax[1].set_ylim(0, ax[0].get_ylim()[1])
 
@@ -2116,9 +2116,9 @@ try:
         plots.label_last(df, ax[col], colors=colors, extend='both')
         ## Annotate the first value
         plots.annotate(
-            ax[col], list(cases.keys())[0], 2020, (10,(-10 if col == 2 else 10)),
+            ax[col], list(cases.keys())[0], startyear, (10,(-10 if col == 2 else 10)),
             color='C7', arrowprops={'arrowstyle':'-|>','color':'C7'},
-            decimals=(0 if df[case][2020] >= 10 else 1),
+            decimals=(0 if df[case][startyear] >= 10 else 1),
         )
     ax[3].set_ylim(0, ax[2].get_ylim()[1])
 
@@ -2204,7 +2204,7 @@ try:
             casecomp=casecomp,
             pcalabel=False,
             wscale=0.0004,
-            subtract_baseyear=2020,
+            subtract_baseyear=startyear,
             yearlabel=True,
             year=lastyear,
             alpha=1, dpi=150,
@@ -2217,7 +2217,7 @@ try:
         ### Absolute
         wscale = 0.0003
         alpha = 0.8
-        for subtract_baseyear in [None, 2020]:
+        for subtract_baseyear in [None, startyear]:
             plt.close()
             f,ax = plt.subplots(
                 nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
@@ -2319,7 +2319,7 @@ try:
             title='Sited demand [GW]',
         )
         ## Save it
-        slide = reeds.results.add_to_pptx('Flexibly Sited Demand', prs=prs, width=SLIDE_WIDTH)
+        slide = reeds.report_utils.add_to_pptx('Flexibly Sited Demand', prs=prs, width=SLIDE_WIDTH)
         if interactive:
             plt.show()
 except Exception:

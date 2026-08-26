@@ -2,9 +2,10 @@
 
 RMI/CEPM keeps `environment.yml` as an upstream-compatible conda/mamba fallback
 and `pyproject.toml`/`uv.lock` as the primary uv path (see
-CEPM/UV_MAMBA_GUIDE.md). There is no automatic converter, so the two are kept in
-sync by hand and drift easily. This script reports drift and warns only when it
-finds a difference that is NOT already on the known-accepted allowlist below.
+CEPM/guidance/UV_MAMBA_GUIDE.md). There is no automatic converter, so the two
+are kept in sync by hand and drift easily. This script reports drift and warns
+only when it finds a difference that is NOT already on the known-accepted
+allowlist below.
 
 It is intentionally stdlib-only (tomllib is in Python 3.11) so it can run as a
 bootstrap step without depending on a fully synced environment.
@@ -24,7 +25,7 @@ import re
 import sys
 import tomllib
 
-# --- Known-accepted exceptions (see CEPM/UV_MAMBA_GUIDE.md) ------------------
+# --- Known-accepted exceptions (see CEPM/guidance/UV_MAMBA_GUIDE.md) ---------
 
 # Packages expected to live ONLY in environment.yml -- no uv/pip equivalent by
 # nature (non-Python packages, conda bootstrap tooling, the interpreter itself).
@@ -34,7 +35,8 @@ CONDA_ONLY_OK = {"git-lfs", "mscorefonts", "pip", "python"}
 # have no conda-channel equivalent line yet).
 UV_ONLY_OK = {"rmi-etoolbox"}
 
-# Currently-accepted drift, documented in CEPM/UV_MAMBA_GUIDE.md. Trim as fixed.
+# Currently-accepted drift, documented in CEPM/guidance/UV_MAMBA_GUIDE.md.
+# Trim as fixed.
 KNOWN_DRIFT_CONDA_ONLY = {"proj"}          # in environment.yml, not in pyproject
 KNOWN_DRIFT_UV_ONLY = {"pyyaml"}           # in pyproject, not in environment.yml
 KNOWN_VERSION_MISMATCH = {"tables"}        # pytables 3.8 (conda) vs tables 3.11.1 (uv)
@@ -145,7 +147,11 @@ def versions_align(conda_ver, uv_ver):
 
 
 def main():
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # This script lives at CEPM/scripts/, so the repo root (which holds
+    # environment.yml and pyproject.toml) is three levels up.
+    repo_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
     if len(sys.argv) == 3:  # optional explicit paths, mostly for testing
         env_path, pyproject_path = sys.argv[1], sys.argv[2]
     else:
@@ -199,7 +205,8 @@ def main():
             )
         print(
             "  Update both files, or add an intentional exception to the allowlist "
-            "in CEPM/check_env_sync.py (and note it in CEPM/UV_MAMBA_GUIDE.md)."
+            "in CEPM/scripts/check_env_sync.py (and note it in "
+            "CEPM/guidance/UV_MAMBA_GUIDE.md)."
         )
     else:
         print("[check_env_sync] environment.yml and pyproject.toml are aligned "
@@ -208,7 +215,7 @@ def main():
     if stale_allowlist:
         print(
             "[check_env_sync] note: these allowlist entries no longer drift and can "
-            f"be removed from CEPM/check_env_sync.py: {', '.join(stale_allowlist)}"
+            f"be removed from CEPM/scripts/check_env_sync.py: {', '.join(stale_allowlist)}"
         )
 
     return 1 if has_drift else 0

@@ -147,7 +147,7 @@ def parse_caselist(caselist, casenames, basecase_in, titleshorten=0):
             caselist = sorted(glob(_caselist[0]+'*'))
             ## If no titleshorten is provided, use the provided prefix
             if not titleshorten:
-                titleshorten = len(os.path.basename(_caselist))
+                titleshorten = len(os.path.basename(_caselist[0]))
     else:
         caselist = _caselist
 

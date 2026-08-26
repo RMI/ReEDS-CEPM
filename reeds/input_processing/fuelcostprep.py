@@ -196,10 +196,15 @@ if __name__ == '__main__':
     ngprice.naturalgas = ngprice.naturalgas.round(6)
 
     # Census division weights
+    # Restrict to the cendiv divisions actually present in this run's region set;
+    # dfmap['cendiv'] is drawn from the original national hierarchy and can otherwise
+    # include out-of-scope divisions (e.g. a border region smearing into a neighboring
+    # census division that isn't part of this run), which GAMS then rejects as a
+    # domain violation when reading cendivweights.csv against the run's own cendiv set.
     dfmap = reeds.io.get_dfmap(reeds.io.standardize_case(inputs_case))
     cendivweights = smear(
         dfzones=dfmap['r'],
-        dfgroups=dfmap['cendiv'],
+        dfgroups=dfmap['cendiv'].loc[dfmap['cendiv'].index.isin(val_cendiv)],
         decay_km=float(sw.GSw_GasRegionSmooth),
     ).round(3)
     if int(sw.debug):

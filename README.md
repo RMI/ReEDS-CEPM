@@ -33,9 +33,10 @@ CEPM is designed to answer the question "What's the most cost-effective way to s
 
 * Python package management in UV, instead of conda
 * An additional Powershell helper script `run_cepm.ps1` that verifies the local environment, then passes arguments through to runreeds.py. It also sends an [ntfy.sh](https://ntfy.sh) notification when a batch finishes, since local runs can take a long time. See [section 4.5](#45-optional-powershell-setup-and-run-command-run_cepmps1) for full details and flags.
-* Minor changes to maintain compatibility with GAMS version 44.4.0. This repo's GAMS install is pinned to 44.4.0. To maintain compability with the upstream codebase, which tests on more recent GAMS versions, we implement several minor changes. The main ones are in `h5_to_gdx.py`/`b_input.gms`. See [`CEPM/GAMS_ERROR_579_INVESTIGATION.md`](CEPM/GAMS_ERROR_579_INVESTIGATION.md) for the full investigation and fix.
+* Minor changes to maintain compatibility with GAMS version 44.4.0. This repo's GAMS install is pinned to 44.4.0. To maintain compability with the upstream codebase, which tests on more recent GAMS versions, we implement several minor changes. The main ones are in `h5_to_gdx.py`/`b_input.gms`. See [`CEPM/guidance/GAMS_ERROR_579_INVESTIGATION.md`](CEPM/guidance/GAMS_ERROR_579_INVESTIGATION.md) for the full investigation and fix.
 * Customized cases_*.csv files that reflect CEPM scenarios.
-* A `CEPM` folder contains CEPM-specific documentation.
+* A [`CEPM/`](CEPM/) folder holds the documentation and tooling that exists only in this fork — dependency-management guidance, an on-prem CI runbook, the GAMS 44.4.0 compatibility investigation, and the `environment.yml`/`pyproject.toml` drift checker. See [`CEPM/README.md`](CEPM/README.md) for a one-line summary of each file. To the extent practical, CEPM-specific additions are collected in this folder rather than scattered through the upstream source tree, so the fork stays easy to review against upstream.
+* Some changes necessarily live in upstream file locations — the GAMS compatibility fixes above, the `cases_*.csv` scenario files, `pyproject.toml`, and `run_cepm.ps1` among them. Those are tracked in [`CEPM/reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md), which records which upstream files CEPM changed and why.
 * Additional minor changes throughout.
 
 ## Getting Started
@@ -183,14 +184,15 @@ This script performs the following steps in order:
 4. Checks that Python is pinned to 3.11 and runs `uv python pin 3.11` if needed.
 5. Runs `uv sync --extra dev`.
 6. Instantiates Julia dependencies only when needed: a fast offline check (`Pkg.instantiate` without a registry update) skips the work when the environment is already current, and only falls back to the full `julia --project=. instantiate.jl` (which updates the registry) if dependencies changed or are missing.
-7. Checks `environment.yml` against `pyproject.toml` and prints a non-fatal warning if they have drifted beyond the known-accepted allowlist (see `CEPM/UV_MAMBA_GUIDE.md`).
+7. Checks `environment.yml` against `pyproject.toml` and prints a non-fatal warning if they have drifted beyond the known-accepted allowlist (see `CEPM/guidance/UV_MAMBA_GUIDE.md`).
 8. Forwards all arguments to `runreeds.py`.
-9. Sends a best-effort [ntfy.sh](https://ntfy.sh) notification (topic `rmi-cepm-run-batch-finished`) before `runreeds.py` is launched and once it returns (on fail or success), so you can be alerted when a long-running batch finishes. Subscribe to the topic in the ntfy app or at <https://ntfy.sh/rmi-cepm-run-batch-finished>. A failed or offline notification is ignored. A failed or offline notification is ignored. Note: ntfy.sh topics are public; avoid including sensitive information in notifications.
+9. When `-x` (or `--compare-cases`) is passed and `runreeds.py` succeeds, runs `postprocessing/compare_cases.py` against all completed cases in the batch. Skipped (with a logged note) when `-s`/`--single` or `-t`/`--dryrun` was also passed, or when fewer than two cases in the batch actually completed, since there's nothing meaningful to compare in either case. No base case is specified, so `compare_cases.py` defaults to the first alphabetically-sorted completed case as the base -- not necessarily the leftmost case in the cases file. This assumes the batch name is unique to this run; failures are non-fatal since the ReEDS run itself already succeeded.
+10. Sends a best-effort [ntfy.sh](https://ntfy.sh) notification (topic `rmi-cepm-run-batch-finished`) before `runreeds.py` is launched and once it returns (on fail or success), so you can be alerted when a long-running batch finishes. Subscribe to the topic in the ntfy app or at <https://ntfy.sh/rmi-cepm-run-batch-finished>. A failed or offline notification is ignored. A failed or offline notification is ignored. Note: ntfy.sh topics are public; avoid including sensitive information in notifications.
 
 Passing `-y` (or `--skip-setup` / `--bypass`) skips Step 5 (`uv sync --extra dev`) and Step 6 (Julia instantiation).
 All other checks and setup steps still run, and remaining arguments are still passed to `runreeds.py`
 
-Two more bootstrap-only options: `-q` (or `--quiet`) disables the ntfy.sh notifications, and `-u <name>` (or `--user <name>`) includes `<name>` as the username in the notification messages (omitted when not given). All other arguments are forwarded to `runreeds.py`.
+More bootstrap-only options: `-q` (or `--quiet`) disables the ntfy.sh notifications, `-u <name>` (or `--user <name>`) includes `<name>` as the username in the notification messages (omitted when not given), and `-x` (or `--compare-cases`) runs `compare_cases.py` on the batch after a successful run (see Step 9 above). All other arguments are forwarded to `runreeds.py`.
 
 ```powershell
 .\run_cepm.ps1 -y -b v20250314_main -c test
@@ -199,6 +201,15 @@ Two more bootstrap-only options: `-q` (or `--quiet`) disables the ntfy.sh notifi
 
 ### 6. Run ReEDS
 
+ReEDS currently expects Conda-style environment variables. When using UV, set these variables before running ReEDS or ideally in your dotenv file, like so
+
+```bash
+echo 'export CONDA_DEFAULT_ENV=reeds2' >> ~/.bashrc
+echo 'export CONDA_PREFIX="$PWD/.venv"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+so you don't have to enter this code block before every run.
 
 
 For interactive setup:
