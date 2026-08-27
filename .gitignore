@@ -38,6 +38,9 @@ postprocessing/tableau/out/*
 # Julia stuff
 Manifest.toml
 
+# UV setup files
+.python-version
+
 # raw input files for retail rates
 retail_rate_module/inputs/EIA861/*
 postprocessing/retail_rate_module/inputs/EIA861/*
@@ -63,3 +66,6 @@ slurm_parallel_runs/
 
 # documentation files 
 docs/build/*
+
+# uv stuff
+ReEDS.egg-info/

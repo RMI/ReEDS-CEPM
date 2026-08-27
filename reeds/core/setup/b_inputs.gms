@@ -83,10 +83,16 @@ $onlisting
 $offempty
 
 * Written by h5_to_gdx.py
-$include autocode%ds%b_declare_sets.gms
-$include autocode%ds%b_declare_parameters.gms
+* b_sets.gms declares and loads each set one at a time (primary sets first, then
+* domain-based subsets) rather than declaring everything before loading anything.
+* This repo's GAMS install is pinned to 44.4.0, which raises Error 579 ("Cannot
+* clear a set used as a domain or used in lag/ord operations") if a set is used
+* as another set's domain before it has itself been $loadDCR'd; GAMS 45.6.0 lifted
+* that restriction, but we can't rely on it here. See h5_to_gdx.py's
+* write_sets_declare_and_load() for details.
 $gdxin inputs_case%ds%inputs_0.gdx
-$include autocode%ds%b_load_sets.gms
+$include autocode%ds%b_sets.gms
+$include autocode%ds%b_declare_parameters.gms
 $include autocode%ds%b_load_parameters.gms
 $gdxin
 
