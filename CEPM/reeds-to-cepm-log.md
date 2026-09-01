@@ -36,6 +36,8 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `postprocessing/compare_cases.py` | Modified | Wrong module in compare_cases.py's "Flexibly Sited Demand" slide |
 | `reeds/report_utils.py` | Modified | parse_caselist TypeError with a prefix-glob caselist |
 | `postprocessing/compare_cases.py` | Modified | compare_cases.py hardcodes 2020 instead of --startyear |
+| `runreeds.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
+| `reeds/resource_adequacy/diagnostic_plots.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
 | `cases_small.csv` | Modified | Minor and cosmetic |
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/dollaryear.csv` | Modified | Updated CAPEX for gas resources |
@@ -255,6 +257,66 @@ started actually varying per batch (see `run_cepm.ps1`'s new
   `yearset` does not include 2020 after any rebase that touches these plotting
   functions, since upstream's own default `--startyear` is 2020 and won't
   exercise this path.
+
+## RA diagnostic plots block the solve loop on Windows and are never logged
+
+### Description of issue:
+
+Two independent problems with how `diagnostic_plots.py` is invoked after each
+solve year. Both are upstream bugs, present unchanged at tag `2026.08.03`, and
+neither is CEPM-specific — good candidates to contribute back.
+
+1. **The trailing `&` does not background anything on Windows.** `runreeds.py`
+   writes `python ... diagnostic_plots.py ... &` into the generated run script.
+   On Windows that script is a `.bat` run through `os.system('start /wait cmd ...')`,
+   and in `cmd.exe` `&` is a *command separator*, not a background operator — so
+   a trailing `&` is a no-op and the plots run **synchronously**, blocking the
+   solve loop after every solve year. Measured on a 4-solve-year WECC-SW case:
+   26 figures per solve year, ~30 s per year, **~2.0 min per run (~8.5% of wall
+   clock)**, taken from the mtimes of `outputs/figures/resource_adequacy/*.png`,
+   which cluster into four clean ~30 s bursts.
+
+2. **`diagnostic_plots.py` never calls `reeds.log.makelog`.** `gamslog.txt` is
+   written by each script's own `FileHandler` (see `reeds/log.py`), *not* by
+   shell redirection — the run script is launched with no stdout/stderr
+   redirection on Linux/macOS and via `start /wait cmd /c` on Windows. So a
+   script that skips `makelog` never appears in the run log on any platform,
+   including its tracebacks. In a completed run, 24 scripts appear in
+   `gamslog.txt` with their `makelog` prefixes; `diagnostic_plots.py` appears
+   zero times. Combined with the backgrounding and the unchecked exit code, any
+   failure inside it was completely silent.
+
+### Files changed:
+
+- `runreeds.py` — the RA plot invocation now picks its background mechanism from
+  the existing `LINUXORMAC` global: `start /b "" ` on Windows, the original
+  trailing ` &` on Linux/macOS. The `""` is a window-title placeholder that
+  `start` requires if the command is ever quoted.
+- `reeds/resource_adequacy/diagnostic_plots.py` — added the standard
+  `reeds.log.makelog(scriptname=__file__, logpath=os.path.join(casedir,'gamslog.txt'))`
+  in `__main__`, matching every other script in the repo.
+
+### Reference:
+
+Branch `fix/ra-plot-logging`. Upstream issue text drafted separately; note that
+both files have drifted upstream since our `2026.06.18` base (135 and 140 lines
+respectively), so an upstream PR must be re-authored against their tree rather
+than cherry-picked.
+
+### What to test in new releases:
+
+- Has upstream fixed either of these? If so, drop our patch and take theirs.
+- The insertion points both still existed at `2026.08.03` (`runreeds.py` lines
+  639-642; `casedir = args.casedir` / `sw = reeds.io.get_switches(casedir)` in
+  `diagnostic_plots.py`'s `__main__`), but line numbers move — re-locate by
+  content, not by line.
+- After any rebase, confirm `diagnostic_plots.py |` lines appear in a run's
+  `gamslog.txt`, and that the generated `.bat` contains `start /b` rather than a
+  trailing `&`.
+- Watch for a genuinely concurrent-write issue: with the process now actually
+  backgrounded *and* holding its own append handle on `gamslog.txt`, interleaved
+  lines are possible in principle. Not observed, but it is the one behaviour the
+  two fixes create together that neither creates alone.
 
 ## Minor and cosmetic
 
