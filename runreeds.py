@@ -652,10 +652,17 @@ def setup_sequential(
                 )
                 OPATH.writelines(writescripterrorcheck('check_inputs.py')+'\n')
 
-        ### Run resource adequacy plots in background
+        ### Run resource adequacy plots in background.
+        ### cmd.exe has no '&' background operator -- there '&' is a command
+        ### separator, so a trailing '&' is a no-op and the plots run
+        ### synchronously, blocking the solve loop. Use `start /b` on Windows
+        ### instead. The "" is a window-title placeholder, which `start` requires
+        ### if the command itself is ever quoted.
+        launch = '' if LINUXORMAC else 'start /b "" '
+        background = ' &' if LINUXORMAC else ''
         OPATH.writelines(
-            f"python {Path('reeds','resource_adequacy','diagnostic_plots.py')} "
-            f"--reeds_path={reeds_path} --casedir={casedir} --t={cur_year} &\n")
+            f"{launch}python {Path('reeds','resource_adequacy','diagnostic_plots.py')} "
+            f"--reeds_path={reeds_path} --casedir={casedir} --t={cur_year}{background}\n")
 
 
 def setup_intertemporal(

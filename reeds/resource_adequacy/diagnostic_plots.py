@@ -1326,6 +1326,16 @@ if __name__ == '__main__':
     # iteration = 0
     # debug = True
 
+    #%% Set up logger
+    # Without this, everything this script prints goes to the console and is lost:
+    # gamslog.txt is written by each script's own FileHandler (see reeds/log.py),
+    # not by shell redirection, so a script that never calls makelog never appears
+    # in the run log on any platform -- including its tracebacks.
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(casedir, 'gamslog.txt'),
+    )
+
     #%%### INPUTS
     ### Switches
     sw = reeds.io.get_switches(casedir)
