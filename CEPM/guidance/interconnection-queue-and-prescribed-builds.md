@@ -1,16 +1,20 @@
 # Interconnection queues and prescribed builds: how they work, and why they collide in 2026
 
-**Status:** investigation, 2026-09-03. Findings verified against
-`runs/v20260902t7_WECC-SW_*` (the first end-to-end two-step batch) and against
-the code in this fork at `mvp/two-step-runs`.
+**Status:** investigation, 2026-09-03. Verified against the code in this fork at
+`mvp/two-step-runs` and against two runs of the same three-case two-step batch:
+`runs/v20260902t7_WECC-SW_*` (as shipped) and `runs/v20260903qoff_WECC-SW_*`
+(identical but with the queue penalty disabled via `GSw_CapPenaltyMult`). The
+paired runs are what turned this from an argument into a measurement — and they
+overturned one of this doc's original conclusions; see §4.3 and §4.5.
 
 **Why this doc exists.** Two exogenous mechanisms both constrain what ReEDS
 builds in its early years: an **interconnection-queue ceiling** and a set of
 **prescribed builds**. In CEPM runs they contradict each other — the queue says
 one thing about 2026, the prescriptions say another, and the model resolves the
-contradiction by paying a very large penalty. That penalty turns out to be
-**~77% of the 2026 objective**, which is worth understanding before anyone reads
-a cost number off a CEPM run.
+contradiction by paying a very large penalty. That penalty is **~77% of the 2026
+objective**, it is **invisible in every reported cost metric**, and it
+**materially changes what gets built**. All three are worth knowing before anyone
+quotes a number off a CEPM run.
 
 **Short version:**
 
@@ -46,7 +50,7 @@ a cost number off a CEPM run.
 | Price of violating | $10,000,000/MW, every modeled year | n/a (can't go under) |
 | Indexed by | `(tech group, region, year)` | `(prescription category, region, year)` |
 | Years covered | 2026-2030 only | through ~2030, from unit data |
-| On/off switch | **none** | `GSw_ForcePrescription` (default 1) |
+| On/off switch | none upstream; `GSw_CapPenaltyMult` ≈ 0 disables it (§5.6, CEPM addition) | `GSw_ForcePrescription` (default 1) |
 
 They are not reconciled anywhere. Nothing checks that the capacity the
 prescriptions force into a region fits under the queue ceiling for that region.
@@ -151,8 +155,10 @@ year. `CAP_ABOVE_LIM(tg,r,'2032')` is then penalized but unconstrained, so the
 optimizer drives it to zero. **Every CEPM run today is unconstrained by
 interconnection queues in 2032.**
 
-There is **no switch** to disable the constraint — `cases.csv` contains nothing
-queue-related. The only ways to turn it off are `Sw_PCM=1` or an all-zero year.
+**Upstream has no switch** to disable the constraint — `cases.csv` shipped
+nothing queue-related, and the only upstream ways to turn it off are `Sw_PCM=1`
+or an all-zero year. This fork adds `GSw_CapPenaltyMult` (§5.6) for exactly that
+purpose; it defaults to 1 and is inert unless set.
 
 ### 2.4 The optimizer sees it; no cost metric reports it
 
@@ -189,10 +195,14 @@ Practical consequences:
   the penalty is zero. A clean `error_check` therefore says nothing about whether
   large penalties were paid in 2026 or 2029.
 
-"The optimizer sees it" is true but needs the qualifier from §4.3: for ~94.5% of
-the penalty the optimizer sees a **constant** — a term with no gradient, because
-the capacity it is levied on is forced by `eq_forceprescription`. Only the
-voluntary remainder is a live signal that changes a decision.
+**And the optimizer does act on it.** For the portion levied on prescribed
+capacity the term is a constant with no gradient, because `eq_forceprescription`
+pins `INV` — but that is not the whole penalty. In any `(tg,r)` cell already
+over its limit, every *additional* MW in every year carries the full $10M/MW,
+and that surcharge does have a gradient. Measured in §4.5: removing the penalty
+shifts WECC-SW by −14.9% PV / +12.6% onshore wind / +157.6% h2. So a reader
+should not conclude from "most of the 2026 violation is prescribed" that the
+penalty is passive — it is not.
 
 ---
 
@@ -425,8 +435,14 @@ violating cell in 2026 against prescriptions summed over 2011-2026 (the window
 | gas z28 | 1,473.4 | 1,651.6 | within prescription |
 | **gas p59** | **1,953.3** | **694.8** | **1,258.5 MW voluntary** |
 
-So **~94.5% of the penalty is unavoidable** and **~5.5% is a live economic
-signal**.
+So **~94.5% of the 2026 violation quantity is unavoidable** — the model had no
+choice about building it — and ~5.5% was a discretionary build.
+
+**Do not read that as "94.5% of the penalty's *effect* is inert."** That was this
+section's original conclusion and §4.5 disproves it. The split above describes
+*which MW* are forced in 2026; it says nothing about the surcharge those MW
+create on every subsequent marginal build in the same `(tg,r)` cell, which is
+where the behavioral effect actually lives.
 
 A clean confirmation of the prescribed reading, which also demonstrates the
 MW_dc trap from §3.1:
@@ -504,6 +520,18 @@ conclusion.** WECC-SW baseline, cumulative 2026-2032 MW_ac:
 | battery | 8,583.0 | 8,164.6 | −4.9% |
 | gas | 5,198.5 | 4,161.8 | −19.9% |
 
+**Read `h2` carefully.** The tech group is `tg_i('h2',i)$h2_combustion(i)` —
+plants that **burn** hydrogen (H2-CC/H2-CT), not plants that make it. The
+production side (`electrolyzer`, `smr`, `smr_ccs`) is governed by `GSw_H2`,
+which is **0** in every CEPM case, and correctly builds nothing. The 1,106 →
+2,849 MW above is `H2-CC` capacity, enabled by `GSw_H2Combustion=1` /
+`GSw_H2CombinedCycle=1` and fuelled at an **exogenous** price via
+`h2combustionfuelscen` — `cases.csv` describes that switch as *"only used if
+endogenous H2 production is turned off"*. So the model is buying a fuel whose
+supply, storage and transport it does not represent. That is a legitimate ReEDS
+mode, but it makes `h2` a soft substitute: treat a large `h2` response in any
+of these comparisons as a flag to check, not as a result.
+
 The mechanism is visible in the 2029 violations. With the penalty on, `wind-ons`
 in `p31` sat 3,867.5 MW over its limit; with it off, **10,570.2 MW** over, plus
 new violations in `p59` and `p29` that did not exist before. The penalty was
@@ -538,17 +566,28 @@ locatable. Options, roughly in increasing order of intrusiveness:
 
 ### 5.1 Recognize what the current 2026 number means
 
-Nothing here changes the *physical* buildout: the prescriptions are what get
-built, and they are the same in every CEPM case. But **`z_rep(2026)` and
-`z_rep(2029)` are not usable as cost figures** — they are 77% and 65% penalty.
-Use `systemcost.csv` (which excludes the penalty) for cost reporting, and treat
-`z` as an optimization artifact. This costs nothing and should happen
-regardless.
+**`z_rep(2026)` and `z_rep(2029)` are not usable as cost figures** — they are 77%
+and 65% penalty. Use `systemcost.csv` (which excludes the penalty) for cost
+reporting, and treat `z` as an optimization artifact. This costs nothing and
+should happen regardless.
 
-Note that comparisons *between* CEPM cases are mostly safe: the penalty was
-identical ($298.8bn in 2026, $182.6bn in 2029) across `_limitre` and
-`_optimized` in the T7 batch, so it cancels. It does **not** cancel between
-`_baseline` and either load case ($226.7bn vs $298.8bn in 2026).
+**Comparisons between cases are *not* as safe as the accounting suggests.** An
+earlier version of this section said the penalty largely cancels between
+`_limitre` and `_optimized` — the *paid amounts* were indeed identical in the T7
+batch ($298.8bn in 2026, $182.6bn in 2029). But §4.5 shows the two cases were
+being steered differently before that accounting: the penalty changes the
+buildout each case chooses, so the difference between them is not preserved. The
+`_limitre` vs `_optimized` gap is **+33.4% with the penalty and +43.4% without**.
+
+Concretely:
+
+- Against `_baseline`, the penalty does not even cancel in level terms
+  ($226.7bn vs $298.8bn in 2026).
+- Between the two load cases the levels cancel but the *result* still moves ~10
+  percentage points, because `_optimized` (41 GW of PV) is pushed further past
+  queue limits than `_limitre` (which substitutes gas).
+
+So report the two-step result as a range, and say which end assumes what.
 
 ### 5.2 Close the provenance gap on the queue data
 
@@ -728,8 +767,10 @@ the strongest argument for doing §5.2 before any of this.
 queue. Since the 2026 solve is really executing 2011-2026 commitments, we are
 charging a 2026 ceiling for sixteen years of work. Options:
 
-- Leave `interconnection_start` alone and accept the penalty as a constant
-  (§5.1). Simplest, and honest as long as it is documented.
+- Leave `interconnection_start` alone and report results as a range, bounded by
+  the penalty-on and penalty-off runs (§4.5, §5.1). Simplest, and honest as long
+  as it is documented — but note this is *not* the same as "accept it as a
+  constant", which is what this bullet used to say and which §4.5 disproves.
 - Advance `interconnection_start` past 2026 so the constraint governs only
   genuinely-endogenous builds (2029+). This makes the queue mean "what can
   interconnect *beyond* what is already committed", which is arguably what we
@@ -828,7 +869,9 @@ actual 2026" goal.
 | `b_inputs.gms:1943-1951` | `m_required_prescriptions` |
 | `b_inputs.gms:909-922` | `prescriptivelink` |
 | `b_inputs.gms:5938-5941` | `force_pcat` |
-| `b_inputs.gms:2024` | `cap_penalty` load, never rescaled |
+| `b_inputs.gms:2024` | `cap_penalty` load (never rescaled upstream) |
+| `b_inputs.gms` (just after the load) | **CEPM addition** — `cap_penalty(tg) = cap_penalty(tg) * Sw_CapPenaltyMult ;` |
+| `5_varfix.gms:29` | fixes `CAP_ABOVE_LIM` for solved years — the reason §5.6 wants an epsilon rather than 0 |
 | `report.gms:129` | `cap_above_limit` reporting |
 | `report.gms:1745` | the only place the penalty enters reporting (an error check) |
 
@@ -836,8 +879,8 @@ actual 2026" goal.
 
 | Name | Where | Default | Effect |
 |---|---|---|---|
-| *(none)* | — | — | **nothing switches the queue constraint on or off** |
-| `interconnection_start` | `scalars.csv:52` | 2025 | first year whose builds count against the queue |
+| `GSw_CapPenaltyMult` | `cases.csv` (**CEPM addition**) | 1 | scales `cap_penalty`; ≈0 disables the queue constraint entirely (§5.6). Use `0.000001`, not `0` |
+| `interconnection_start` | `scalars.csv:52` | 2025 | first year whose builds count against the queue. **`>=`, so a 2025 solve year is included** (§5.3d) |
 | `model_builds_start_yr` | derived, `b_inputs.gms:1248` | — | earliest year the queue equation is generated |
 | `GSw_ForcePrescription` | `cases.csv` | 1 | prescriptions as a floor |
 | `unitdata` | `cases.csv` | `EIA-NEMS` | selects the unit database |

@@ -1157,6 +1157,18 @@ Three things to read off this:
    The substitution is smaller in MW than what it replaces, which is what you
    would expect from the capacity-factor difference.
 
+**Caveat on the `h2` component.** `tg 'h2'` is `h2_combustion(i)` — plants that
+**burn** hydrogen (H2-CC/H2-CT), not hydrogen production. `GSw_H2` (production:
+electrolyzers, SMR, storage, transport) is **0** in every CEPM case and correctly
+builds nothing; the H2-CC capacity comes from `GSw_H2Combustion=1` /
+`GSw_H2CombinedCycle=1`, fuelled at an **exogenous** price set by
+`h2combustionfuelscen`, which `cases.csv` documents as *"only used if endogenous
+H2 production is turned off"*. So that +2.2 GW is hydrogen-fired generation
+buying a fuel the model does not otherwise represent. It is a real ReEDS mode and
+the tech-group mapping is correct (`make_tg_cap.py` mirrors `tg_i` exactly), but
+it makes `h2` a soft substitute — worth deciding deliberately whether CEPM wants
+`GSw_H2Combustion=0` before leaning on a result where h2 absorbs displaced RE.
+
 That third row is the answer §1 set out to get, and the factorial is clean enough
 to attribute each half of it separately.
 
