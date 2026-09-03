@@ -784,12 +784,19 @@ Note `error_check('z')` reconciles only the **final** solve year, where the
 penalty is zero — so a clean `error_check` does not indicate the earlier years
 are penalty-free.
 
-**Impact:** not a run failure, and it does **not** change the physical buildout —
-~94.5% of the penalty falls on prescribed capacity the model had no choice about,
-so it has no gradient. But it makes `z_rep` unusable as a cost figure, and it
-does not cancel between cases with different load (baseline $226.7bn vs
-data-center cases $298.8bn), though it does cancel between two cases that differ
-only in an RE ceiling.
+**Impact:** not a run failure, but larger than it first appears. It makes
+`z_rep` unusable as a cost figure, and it does not cancel between cases with
+different load (baseline $226.7bn vs data-center cases $298.8bn).
+
+**It also changes the physical buildout** — measured, not inferred. Re-running
+the same batch with the penalty disabled (`GSw_CapPenaltyMult=0.000001`) shifts
+WECC-SW by **−14.9% PV, +12.6% onshore wind, +157.6% h2**, and moves the
+two-step `_limitre` vs `_optimized` gap from +33.4% to **+43.4%**. An earlier
+version of this entry said the penalty had no effect on buildout because ~94.5%
+of it falls on prescribed capacity; that quantity split is right but the
+inference was wrong. The active channel is the per-MW surcharge on *marginal*
+builds in cells already over their limit, which bites in every year — most
+visibly on onshore wind in `p31`, whose violation persists while PV's clears.
 
 **Status:** understood, not changed. Use `systemcost.csv` for cost reporting and
 treat `z` as an optimization artifact. Full write-up — including the structural

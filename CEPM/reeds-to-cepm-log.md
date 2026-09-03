@@ -53,6 +53,8 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `reeds/core/setup/b_inputs.gms` | Modified | Cumulative tech-group investment caps |
 | `reeds/input_processing/runfiles.csv` | Modified | Cumulative tech-group investment caps |
 | `cases.csv` | Modified | Cumulative tech-group investment caps |
+| `reeds/core/setup/b_inputs.gms` | Modified | Interconnection-queue penalty multiplier |
+| `cases.csv` | Modified | Interconnection-queue penalty multiplier |
 | `inputs/growth_constraints/cepm_tg_cap_{sys,reg}_none.csv` | Added | Cumulative tech-group investment caps |
 
 # Changes to base ReEDS files
@@ -539,6 +541,58 @@ existing mechanisms don't fit), [`known-issues.md`](known-issues.md) (the
   cheap one and catches any accidental coupling. T3 — a run capped at its own
   harvested buildout must reproduce itself — is the one that proves units,
   tech-group mapping and upgrade inheritance all still line up.
+
+## Interconnection-queue penalty multiplier (`GSw_CapPenaltyMult`)
+
+### Description:
+
+A two-line, default-inert switch that scales `cap_penalty` — the price ReEDS
+charges for exceeding an interconnection-queue limit. Default **1** leaves the
+shipped $10,000,000/MW untouched, so every existing case is bit-identical.
+
+It exists because `cap_penalty` is the *only* thing giving
+`eq_interconnection_queues` any force: `CAP_ABOVE_LIM` is a slack with no upper
+bound appearing in that one constraint and in the objective, and nowhere else.
+Setting the multiplier to ~0 therefore makes the constraint non-binding and
+cleanly answers "how much of this result is the interconnection queue?".
+
+**Use a small epsilon (`0.000001`), not exactly 0.** At exactly 0 the optimizer
+has no incentive to minimize `CAP_ABOVE_LIM`, so it can settle on any value at or
+above the true violation — and `5_varfix.gms:29` then fixes that arbitrary value
+for every later solve year, destroying `cap_above_limit.csv` as a record of the
+exceedance. An epsilon pins it to the true violation for a few parts per million
+of the objective.
+
+**What it revealed.** Re-running the two-step WECC-SW batch with the penalty off
+(`runs/v20260903qoff_*` vs `runs/v20260902t7_*`) confirmed the penalty is ~77% of
+the 2026 objective — `z_rep` and `systemcost` reconcile to 0.0% once it is gone —
+and, contrary to the original written analysis, showed it **does** change the
+buildout: −14.9% PV, +12.6% onshore wind, +157.6% h2, and the two-step headline
+result moving from +33.4% to +43.4%.
+
+### Underlying ReEDS files changed:
+
+- `reeds/core/setup/b_inputs.gms` — one assignment immediately after the
+  `cap_penalty` load, plus a comment block explaining the epsilon.
+- `cases.csv` — one row, `GSw_CapPenaltyMult`, default `1`.
+
+No other plumbing: `reeds.io.write_gswitches` auto-emits `scalar
+Sw_CapPenaltyMult` for any numeric `GSw_` switch.
+
+### Reference:
+
+[`guidance/interconnection-queue-and-prescribed-builds.md`](guidance/interconnection-queue-and-prescribed-builds.md)
+§4.5 (the measurement) and §5.6 (how to use it)
+
+### What to test in new releases:
+
+- Is `cap_penalty` still loaded from `inputs_case/cap_penalty.csv` at the same
+  point in `b_inputs.gms`? The assignment has to come after the load.
+- Is `CAP_ABOVE_LIM` still unbounded above and still confined to
+  `eq_interconnection_queues` plus the objective? If upstream gives it a bound or
+  uses it elsewhere, "multiplier ≈ 0" would stop meaning "constraint off".
+- Does `5_varfix.gms` still fix `CAP_ABOVE_LIM` for solved years? That is the
+  reason for the epsilon rather than 0.
 
 # CEPM documentation and functionality
 
