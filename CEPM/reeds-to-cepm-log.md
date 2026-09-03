@@ -743,17 +743,19 @@ upstream's `cases.csv`. `runreeds.py` already supports this through its
 as the untouched switch-defaults reference.
 
 Current cases: `WECC-SW_{baseline,limitre,optimized,dcloco2}`,
-`SERTP_{baseline,dcload,dcloco2}`, `NM_optimized_{2yrs,3yrs,LLtest}`,
-`USA_gas_mvp_NOTE-DEPRECATED`, and `USA_optimized_mvp`. Set a case's `ignore`
-row to `1` to skip it.
+`SERTP_{baseline,limitre,optimized,dcloco2}`,
+`NM_optimized_{2yrs,3yrs,LLtest}`, `USA_gas_mvp_NOTE-DEPRECATED`, and
+`USA_optimized_mvp`. Set a case's `ignore` row to `1` to skip it.
 
-**`WECC-SW_dcload` was removed 2026-09-03.** `WECC-SW_optimized` — added for the
-two-step workflow — was an exact copy of it: the same scenario under two names,
-because the `<stem>_optimized` convention postdates `_dcload`. `_optimized` is
-the surviving name. `WECC-SW_dcloco2` is an independent column and is unaffected;
-completed runs under the old name are untouched. **SERTP still uses the older
-`_baseline`/`_dcload`/`_dcloco2` shape**, so `run_cepm.ps1 -m SERTP` will fail
-validation until `SERTP_{limitre,optimized}` are added.
+**`_dcload` was removed for both stems, 2026-09-03.** `<stem>_optimized` — added
+for the two-step workflow — was an exact copy of `<stem>_dcload`: the same
+scenario under two names, because the `_optimized` convention postdates
+`_dcload`. `_optimized` is the surviving name. The `_dcloco2` columns are
+independent and unaffected; completed runs under the old names are untouched.
+
+Both `WECC-SW` and `SERTP` therefore support `run_cepm.ps1 -m <stem>` as of
+2026-09-03. The remaining stems (`NM_*`, `USA_*`) do not, and `-m` will refuse
+with a clear message naming the missing columns.
 
 Two things to know about the two-step columns. They are reached through
 `run_cepm.ps1 -m`, which uses `-s` and therefore overrides `ignore`, so they are
