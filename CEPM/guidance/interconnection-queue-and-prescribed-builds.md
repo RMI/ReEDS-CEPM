@@ -556,6 +556,62 @@ yearset), §2.1 (undocumented provenance) and §5.3e (prescribed builds arguably
 should not be charged against a queue at all), the honest position is that the
 truth lies between the two runs and we cannot yet say where.
 
+### 4.6 A 2×2: the queue penalty matters, H2 combustion does not
+
+§4.5 raised a second suspicion — that the `h2` response was soft, because
+`tg 'h2'` is hydrogen-*burning* plant fuelled at an exogenous price with no
+hydrogen system modelled. Both were tested together as a 2×2, four full
+three-case two-step batches differing only in those two switches.
+
+`_limitre` vs `_optimized` 2032 objective gap:
+
+| | queue penalty on | penalty off (`GSw_CapPenaltyMult=1e-6`) |
+|---|---:|---:|
+| **H2 combustion on** (`v20260902t7` / `v20260903qoff`) | **+33.38%** | **+43.43%** |
+| **H2 combustion off** (`v20260903h2off` / `v20260903h2qoff`) | **+33.39%** | **+43.43%** |
+
+**The two effects are independent and one of them is nil.** Turning H2 combustion
+off moves the answer by **0.01 percentage points**; turning the queue penalty off
+moves it by **10.05**. There is no interaction — the penalty effect is 10.05 pt
+with H2 on and 10.04 pt with H2 off.
+
+**Why H2 is inert: it is a gas plant with a different label.** Removing it
+converts H2-CC into gas-CC essentially one-for-one, in all four cases, leaving
+wind/solar/storage untouched:
+
+| case | gas gained | h2 lost | residual |
+|---|---:|---:|---:|
+| `_baseline` (penalty on) | +1,105.8 | 1,106.1 | −0.31 MW |
+| `_limitre` (penalty on) | +3,444.7 | 3,445.2 | −0.52 MW |
+| `_optimized` (penalty on) | +1,273.6 | 1,273.6 | **0.00 MW** |
+| `_optimized` (penalty off) | +3,726.6 | 3,726.6 | **0.00 MW** |
+
+PV, onshore wind and battery move by <0.02% and the 2032 objective by
++0.01-0.03%, so the model was near-indifferent between the two. The right way to
+report the T9 substitution is therefore **thermal capacity, not a gas/h2 split**:
+
+| run | thermal (gas + h2) forced by the RE ceiling |
+|---|---:|
+| `t7` (penalty on, h2 on) | 15,456.8 MW |
+| `h2off` (penalty on, h2 off) | 15,456.3 MW |
+| `qoff` (penalty off, h2 on) | 14,052.5 MW |
+| `h2qoff` (penalty off, h2 off) | 14,052.2 MW |
+
+The gas/h2 split within that total is economically arbitrary; the queue penalty
+changes the total by ~1.4 GW.
+
+**Consequences.**
+
+- Setting `GSw_H2Combustion=0` is worth doing for **interpretability** — it stops
+  us reporting capacity fuelled by hydrogen the model never produces — but it
+  changes no conclusion. It is a labelling fix, not a modelling one.
+- The bottom-right cell (**+43.43%**, no unmodelled fuel and no queue distortion)
+  is the cleanest available estimate of the RE-ceiling cost. It is not
+  automatically the *right* one: §4.5 explains why "penalty off" is a diagnostic
+  rather than a better representation of reality.
+- Anything that moves a result by ~0.01 pt is worth knowing about precisely so it
+  can be ruled out. This one can be.
+
 ---
 
 ## 5. Implications for how we set 2026
