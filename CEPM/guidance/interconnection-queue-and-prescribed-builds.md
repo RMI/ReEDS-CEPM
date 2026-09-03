@@ -601,6 +601,57 @@ early solve year. Worth a single baseline to confirm before adopting — check t
 `cap_above_limit.csv` shrinks as predicted and that 2026's `cap_new_out` drops to
 genuinely-2026 commitments.
 
+#### 5.3e What no solve-year choice fixes
+
+A solve year narrows the mismatch; it does not remove it. Three things remain,
+and they are worth knowing before treating §5.3d as a fix rather than a
+mitigation.
+
+**A 2023 solve year still puts three calendar years into one column.** The 2026
+solve would carry 2024, 2025 *and* 2026 prescriptions. **Upstream has exactly the
+same window** — its default grid puts the prior solve year at 2023, so its 2026
+solve also absorbs 2024-2026. Restoring upstream's cadence therefore cures the
+*16-year* pathology and inherits upstream's own *3-year* one. A 2024 solve year
+narrows it to two years (2025-2026), which is the tightest alignment available
+without changing the equation, because `interconnection_start = 2025`.
+
+**The ceiling side is a ramp allocation, not a near-term physical limit.** The
+queue file's values rise in **equal annual increments** to 2030 rather than
+stepping up in a project's online year — e.g. `p01001 battery`: 0, 0, 26.7,
+53.3, 80.0, and nationally the increments are exactly 170,221 / 170,221 /
+569,935 / 569,935 / 569,935. That is the signature of each project's MW being
+spread linearly across a window ending in 2030. (Inferred from the data shape,
+not documented — see §2.1, and treat the *reason* for the ramp as unconfirmed
+even though the shape itself is unambiguous.) The consequence is that the early
+columns are small by construction:
+
+| | 2026 column | full queue (2030) | 2026 share |
+|---|---:|---:|---:|
+| WECC-SW (`cap_limit`) | 11,794 MW | 121,276 MW | **9.7%** |
+| national (source file) | 170,221 MW | 2,050,246 MW | **8.3%** |
+
+So "the 2026 ceiling" is not "what can interconnect by 2026" — it is roughly a
+tenth of the queue, allocated by a smoothing rule. Any build window, however well
+aligned, is being measured against a systematically low number in the early
+years. This is also why the near-balance quoted in §5.3d for a 2024 solve year
+(~12,810 MW against 11,794 MW) should not be read as "correct" — it is two
+loosely-related quantities happening to land close.
+
+**Most fundamentally, prescribed builds may not belong in this constraint at
+all.** Prescribed builds are projects that are already committed or under
+construction; an interconnection queue describes projects *waiting* to
+interconnect. If the committed projects have already secured interconnection —
+which is normally why they are committed — then charging them against queue
+headroom double-counts, and consumes ceiling that should be available to
+genuinely endogenous builds. ReEDS cannot currently distinguish the two: both
+arrive as `INV`, and `eq_interconnection_queues` sums all of it.
+
+That last point is not fixable by any `yearset`. It would need the equation to
+net prescribed capacity out of its right-hand side, or the queue data to exclude
+already-committed projects. Which of those is right depends on what the queue
+snapshot actually contains — **which we cannot currently answer** (§2.1), and is
+the strongest argument for doing §5.2 before any of this.
+
 ### 5.4 Align `interconnection_start` with the prescription window
 
 `interconnection_start = 2025` means builds from 2025 onward count against the
