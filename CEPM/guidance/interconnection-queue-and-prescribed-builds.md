@@ -542,37 +542,64 @@ which is exactly what the two-step workflow harvests its ceiling from
 every "new capacity" plot reports. **Two runs with different `startyear` values
 are not comparable on new-capacity metrics.** Not a free knob.
 
-#### 5.3d The better lever: add a solve year before 2025, leave `startyear` alone
+#### 5.3d The better lever: restore an early solve year, leave `startyear` alone
 
 Solve years come from `yearset` and are independent of `startyear` except that
 `startyear` is appended to the list and used as a lower bound
 (`copy_files.py:1301-1305`). So an **extra early solve year** can split the
 prescription window without touching any of the traps above.
 
-With `yearset = 2023..2032..3` (or `2023_2026_2029_2032`), solve years become
-2010, **2023**, 2026, 2029, 2032, and per §3.2:
+**This is not an invention — it is what upstream already does.** ReEDS' default
+`yearset` is `2010_2015_2020..2050..3`, which resolves to solve years
+**2010, 2015, 2020, 2023, 2026, 2029, 2032, …**. Upstream therefore *has* a 2023
+solve year, its 2026 solve carries only 2024-2026 prescriptions, and the
+2011-2023 commitments sit in solve years below `interconnection_start` where the
+filter drops them. CEPM's `2026..2032..3` deleted the 2015/2020/2023 steps, and
+that deletion is what created the collision in §4.1.
 
-| | today | with a 2023 solve year |
-|---|---|---|
-| prescriptions landing in 2026 | 2011-2026 (**16 years**) | 2024-2026 (**3 years**) |
-| prescriptions landing earlier | 2010 only | 2011-2023 in the 2023 solve |
+#### The extra solve year must be ≤ 2024. **2025 does not work.**
 
-The 2023 builds then **do not count against the queue at all**, because
-`eq_interconnection_queues` only sums investment with
-`yeart(tt) >= interconnection_start` and `interconnection_start = 2025`. The bulk
-of the pile-up moves into a year the constraint ignores by construction.
+Worth stating explicitly, because 2025 looks like the natural choice and is the
+one value that fails:
 
-It is also safe for the two-step workflow: `make_tg_cap.py` defaults to
-`--from-year 2026` and `Sw_CEPM_TgCapStartYear` defaults to 2026, so a 2023 solve
-year is excluded from both the harvested ceiling and the constraint that enforces
-it — no change to the RE-ceiling results.
+- The filter is `$(yeart(tt) >= interconnection_start)` with
+  `interconnection_start = 2025` — **`>=`, not `>`**. A 2025 solve year is
+  therefore *included* in the sum, so the whole pile-up would still be counted.
+- It is worse than a no-op. The queue file has **no 2025 column** (it starts at
+  2026), so `sum{(tgg,rr), cap_limit(tgg,rr,'2025')}` is zero and the guard drops
+  the equation entirely in 2025 — the 2025 builds are unconstrained *in that
+  year*. But the 2026 solve sums `tt ∈ {2025, 2026}`, both `>= 2025`, so they
+  reappear in full against the 2026 ceiling. The problem is deferred by one
+  solve and otherwise unchanged.
 
-Cost: one extra solve year of runtime (~25 min for WECC-SW).
+So the added year must be **strictly below 2025**. Two sensible choices:
 
-**Untested.** The mechanism above is verified from the code, but no run has been
-done with an added early solve year. Worth a single WECC-SW baseline to confirm
-before adopting — check that `cap_above_limit.csv` shrinks as predicted, and that
-2026's `cap_new_out` drops to genuinely-2026 commitments.
+| added solve year | prescriptions still counted in 2026 | vs 11,794 MW headroom |
+|---|---:|---|
+| none (today) | 2011-2026 → **~29,278 MW_ac** | 2.5× over |
+| **2023** (matches upstream's grid) | 2024-2026 → ~17,835 MW_ac | ~6.0 GW over |
+| **2024** (aligns with `interconnection_start`) | 2025-2026 → ~12,810 MW_ac | ~1.0 GW over |
+
+**2023** restores upstream's own cadence and is the conservative choice.
+**2024** is strictly better at the actual job — it is the largest year still
+below `interconnection_start`, so it moves every genuinely pre-2025 commitment
+out and leaves exactly the 2025-2026 window the queue data is meant to cover,
+very nearly closing the gap. Note even upstream's 2023 grid still counts 2024's
+~5.0 GW of prescriptions against a 2026 ceiling, which is a small residual
+inconsistency upstream carries too.
+
+Either way it is safe for the two-step workflow: `make_tg_cap.py` defaults to
+`--from-year 2026` and `Sw_CEPM_TgCapStartYear` defaults to 2026, so an early
+solve year is excluded from both the harvested ceiling and the constraint that
+enforces it — no change to the RE-ceiling results.
+
+Cost: one extra solve year of runtime (~25-30 min).
+
+**Untested.** The mechanism and the arithmetic above are verified from the code
+and from the run's own prescription files, but no run has been done with an added
+early solve year. Worth a single baseline to confirm before adopting — check that
+`cap_above_limit.csv` shrinks as predicted and that 2026's `cap_new_out` drops to
+genuinely-2026 commitments.
 
 ### 5.4 Align `interconnection_start` with the prescription window
 

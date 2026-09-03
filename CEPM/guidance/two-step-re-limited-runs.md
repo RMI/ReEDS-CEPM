@@ -12,15 +12,18 @@ Working branch `mvp/two-step-runs`, everything still in the working tree
 
 - Done: the GAMS equations, parameters and guardrails (§4); the `cases.csv` /
   `runfiles.csv` plumbing (§5.1); `make_tg_cap.py` (§5.3); the three
-  `cases_cepm.csv` case columns; `run_cepm.ps1 -m` plus
-  `CEPM/scripts/multistep_cases.py` (§5.4); and tests **T0, T1, T2, T3, T4, T4r,
-  T5(a), T5(b), T5(c), T6, T7, T8, T9**.
+  `cases_cepm.csv` case columns for **both `WECC-SW` and `SERTP`**;
+  `run_cepm.ps1 -m` plus `CEPM/scripts/multistep_cases.py` (§5.4); and tests
+  **T0 through T9, all of them**.
 - The headline result (T9): holding wind/solar/storage at the no-data-center
   baseline forces **+13.3 GW of gas and +2.2 GW of h2** in place of 21 GW of
   foregone PV and 2 GW of wind, at a **+33.4%** 2032 objective.
-- Not done: **T5(d)** (blocked on region — needs SERTP; see §7) and the rebase +
-  **T10**. Docs are complete (§9 step 6), and the pre-commit housekeeping is
-  resolved (§9).
+- Not done: the rebase + **T10**. Docs are complete (§9 step 6) and the
+  pre-commit housekeeping is resolved (§9).
+- One partial: **T5(d)** proves the zero-vs-floor mechanism decisively at the
+  equation level, but its solution-level half could not be exercised — neither
+  WECC-SW nor SERTP has economics that would build any of the three zero-build
+  groups even when starved (§7).
 - Sections §4, §5.1 and §5.4 have been corrected to match what was actually
   built; where the built thing differs from the original proposal, the reason is
   recorded inline rather than the proposal being quietly overwritten (see also
@@ -1015,16 +1018,61 @@ asserts the opposite of what this draft first specified.
   So "silently mis-binding" is not a reachable state, which is a stronger result
   than the test asked for. Update expectations accordingly if this is ever
   re-run.
-- **(d) zero-value trap — BLOCKED in WECC-SW.** With `wind-ofs` at the `0.001`
-  floor, confirm offshore wind investment is zero *and the equation was actually
-  generated*, then confirm a literal `0` leaves it uncapped. This is the test
-  that distinguishes "capped at zero" from "silently uncapped". **It cannot be
-  run in WECC-SW:** T3 already established that `csp` and `wind-ofs` produce no
-  equation rows there because there is no investable capacity in the region at
-  all, so the floored ceiling has no variables to bind on and both the working
-  and broken behaviors look identical. Needs either a coastal region (SERTP) or
-  a substitute group that is investable but unbuilt in the reference run. Pick
-  the region before writing the test.
+- **(d) zero-value trap. PASSED 2026-09-03** on the mechanism
+  (`runs/v20260903t5da_SERTP_t5da` vs `runs/v20260903t5db_SERTP_t5db`);
+  inconclusive on the solution, for a reason worth recording.
+
+  **Why not WECC-SW.** T3 established that `csp` and `wind-ofs` produce no
+  equation rows there — no investable capacity in the region at all — so a
+  floored ceiling has no variables to bind on and the working and broken
+  behaviors look identical. SERTP has both `wind-ofs` (340 supply-curve rows) and
+  `pumped-hydro` (128), each investable and each with **zero** baseline builds,
+  so both get the floor. `csp` has 0 rows there too and remains untestable.
+
+  **Why `pumped-hydro` rather than `wind-ofs`.** T9 showed a starved model
+  reaches for **gas**, which is uncapped and far cheaper than offshore wind, so
+  neither variant would ever build `wind-ofs` and the solution could not
+  discriminate. `pumped-hydro` looked more promising because T5(a) showed the
+  model actively substituting PSH for squeezed battery. Setup: ceiling harvested
+  from `runs/v20260825_SERTP_baseline` with **battery squeezed to 4,692 MW** —
+  just above its 4,691.1 MW prescribed floor, a 29% cut — and two cap files
+  differing in exactly one cell:
+
+  | | `pumped-hydro` row |
+  |---|---|
+  | variant A (`t5da`) | `0.001` — the script's floor |
+  | variant B (`t5db`) | `0.000` — the literal zero |
+
+  **Result at the solution level: no difference.** Both built **0 MW** of PSH,
+  both bound battery at exactly 4,692.000, and `cap_new_out` came out
+  **byte-identical**; objectives agree to solver noise. SERTP simply never wants
+  PSH — the squeezed battery went to gas instead (30,759.8 → 40,730.5 MW,
+  +9,970.7). The T5(a) substitution did not reproduce here.
+
+  **Result at the equation level: decisive.** `SINGLE EQUATIONS` from the GAMS
+  listings:
+
+  | solve year | A (`0.001`) | B (`0`) | difference |
+  |---|---:|---:|---:|
+  | 2026 | 26,982 | 26,982 | 0 |
+  | 2029 | 45,233 | 45,232 | **+1** |
+  | 2032 | 60,423 | 60,422 | **+1** |
+
+  Exactly one extra row in A, in exactly the years `pumped-hydro` is investable —
+  `eq_cepm_tg_cap_sys('pumped-hydro')`. 2026 ties because PSH is not yet
+  investable that year, so the row has no variables and is presolved away in both.
+
+  **This is the assertion, proven:** a literal `0` drops the constraint entirely
+  (GAMS stores no record, the `$` guard fails), while `0.001` generates it. In
+  variant B nothing was stopping unlimited PSH — it simply happened not to be
+  economic. That is precisely why the floor exists: **you cannot rely on
+  economics to keep an uncapped group at zero**, and a harvest that writes an
+  honest `0` silently removes the ceiling D4 was chosen to provide.
+
+  Caveat for anyone re-running this: the solution-level half of the test needs a
+  region where the floored group is genuinely competitive. Neither WECC-SW nor
+  SERTP is, for any of the three zero-build groups. The equation-count check is
+  the portable evidence.
 
 **T6 — orchestration, dry run. PASSED 2026-09-02** (batches `v20260902t6`,
 `t6b`, `t6c`). `-m WECC-SW -t`: validation passes, both phases get the right case
@@ -1311,7 +1359,8 @@ All three open items were decided and applied before the first commit.
   column, not derived from `_dcload`), and completed runs under the old name are
   untouched.
 
-Still open, and deliberately not done here: **SERTP has no two-step columns.**
-It keeps the older `_baseline`/`_dcload`/`_dcloco2` shape, so `-m SERTP` will
-fail validation until `SERTP_{limitre,optimized}` are added. That is also the
-region T5(d) needs (§7).
+- **SERTP two-step columns added 2026-09-03**, mirroring WECC-SW:
+  `SERTP_{limitre,optimized}` appended from `SERTP_dcload`'s config, and
+  `SERTP_dcload` then removed for the same duplication reason. Both stems now
+  validate for `-m`. The remaining stems (`NM_*`, `USA_*`) do not have two-step
+  columns, and `-m` refuses with a message naming the missing ones.
