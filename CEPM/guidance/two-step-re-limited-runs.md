@@ -1160,6 +1160,21 @@ Three things to read off this:
 That third row is the answer §1 set out to get, and the factorial is clean enough
 to attribute each half of it separately.
 
+**Caveat added 2026-09-03 — the +33.4% is distorted by the interconnection-queue
+penalty.** Re-running this identical batch with the queue constraint disabled
+(`GSw_CapPenaltyMult=0.000001`, run `v20260903qoff`) gives **+43.4%** instead.
+The penalty falls harder on `_optimized`, which builds 41 GW of PV and so pushes
+further past queue limits, than on `_limitre`, which substitutes gas — so it
+*compresses* the apparent cost of holding RE at the baseline by ~10 percentage
+points. It also reshapes the mix: −14.9% PV, +12.6% onshore wind, +157.6% h2.
+
+Neither number is "the" answer. The penalty represents something physically real,
+but it is applied to a 2026 solve carrying 16 years of prescriptions against one
+year of queue ramp, at an undocumented $10M/MW. Treat +33.4% and +43.4% as
+bounds, and see
+[`interconnection-queue-and-prescribed-builds.md`](interconnection-queue-and-prescribed-builds.md)
+§4.5 for the measurement and §5 for what to do about it.
+
 **T10 — post-rebase.** Re-run T2 and T3 after the 2026.08.03 rebase.
 
 ---

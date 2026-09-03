@@ -2030,6 +2030,34 @@ $offdelim
 $onlisting
 / ;
 
+*---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+* Scales the interconnection-queue exceedance penalty. Default 1 leaves the
+* shipped $10,000,000/MW untouched, so this is inert unless deliberately set.
+*
+* Why it exists: cap_penalty is the ONLY thing giving eq_interconnection_queues
+* any force -- CAP_ABOVE_LIM is a slack with no upper bound that appears in that
+* one equation and in the objective, and nowhere else. So setting this to ~0
+* makes the constraint non-binding and cleanly answers "what does the
+* interconnection queue actually do to this run?".
+*
+* Prefer a small epsilon (e.g. 0.000001 -> $10/MW) over exactly 0. At exactly 0
+* the optimizer has no incentive to minimize CAP_ABOVE_LIM, so it can settle on
+* any value at or above the true violation -- and 5_varfix.gms then fixes that
+* arbitrary value for every later solve year, making cap_above_limit.csv
+* useless as a record of what the exceedance actually was. An epsilon pins it to
+* the true violation while contributing a few parts per million of the
+* objective.
+*
+* Both halves of the penalty's behavioral effect are removed either way: the
+* portion levied on prescribed capacity (a constant, since eq_forceprescription
+* pins INV) and the per-MW surcharge on marginal builds in cells that are
+* already over their limit.
+*
+* See CEPM/guidance/interconnection-queue-and-prescribed-builds.md.
+*---------------------------------------------------------------------------
+cap_penalty(tg) = cap_penalty(tg) * Sw_CapPenaltyMult ;
+
 *=============================================
 * -- Explicit spur-line capacity (if used) --
 *=============================================
