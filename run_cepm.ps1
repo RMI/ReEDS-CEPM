@@ -12,6 +12,9 @@ What this script does:
 8) Starts runreeds.py and forwards any arguments passed to this script.
    Skipped entirely when -o/--compare-only is given (see below) -- along
    with Steps 1-7, since those only matter for an actual ReEDS run.
+   With -m/--multistep <stem> this becomes a two-phase sequence instead
+   (baseline -> harvest a capacity ceiling -> limitre + optimized); see
+   -m below and CEPM/guidance/two-step-re-limited-runs.md.
 9) When -x/--compare-cases is given and runreeds.py succeeds, OR when
    -o/--compare-only is given (regardless of -x), runs
    postprocessing/compare_cases.py against all completed cases in the batch
@@ -33,7 +36,10 @@ What this script does:
     CEPM/scripts/get_batch_info.py (same script as Step 9). Runs even if an
     earlier step throws, so a failed bootstrap or run still leaves a log
     behind; best-effort throughout (a missing run folder, or any other
-    logging failure, is only warned).
+    logging failure, is only warned). Under -m/--multistep the destination is
+    the <stem>_baseline run folder instead, since -s overrides `ignore` and
+    the leftmost non-ignored case may not be one of the three that ran; the
+    per-batch files -m generated are also deleted here, unconditionally.
 
 
 BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.py):
@@ -54,6 +60,45 @@ BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.
         across separate runreeds.py calls) -- if a batch name IS reused, folders left
         over from an earlier call under the same name will be picked up too, since
         this script only scopes by the runs/<BatchName>_* glob, not by run recency.
+    -m, --multistep <stem>   (also --multistep=<stem>)
+        Two-phase baseline-constrained run. Instead of one runreeds.py call,
+        Step 8 becomes: run <stem>_baseline; harvest a capacity ceiling from its
+        outputs with CEPM/scripts/make_tg_cap.py; generate a cases file pointing
+        <stem>_limitre at that ceiling; then run <stem>_limitre and
+        <stem>_optimized. All three share one batch name, so the existing -x
+        comparison picks up all three with no extra flags.
+
+        The cases file must define all three columns, with GSw_CEPM_TgCap=1 for
+        _limitre and 0 for the other two; this is checked up front (in seconds)
+        by CEPM/scripts/multistep_cases.py before phase A starts. Phase A must
+        also produce outputs/outputs.h5 -- runreeds.py returns 0 even when a
+        case's solve aborts, so the exit code alone is not trusted here.
+
+        Cannot be combined with -o/--compare-only, or with your own -s/--single
+        (each phase supplies its own). With -t/--dryrun, both phases' switches
+        are validated and the generated cases file is written and cleaned up,
+        but nothing runs and nothing is harvested.
+
+        The generated cap CSVs and cases file are named after the batch and
+        deleted in a finally, so an interrupted or failed run leaves the working
+        tree clean. See CEPM/guidance/two-step-re-limited-runs.md.
+
+        KEEP cleanup_level=0 IN THE CASES FILE. runreeds.py:959-967 prints an R2X
+        warning and blocks on `input('Proceed? y/[n]: ')` (defaulting to "n", so
+        it quits) whenever ANY case has cleanup_level >= 1 and --skip_checks was
+        not passed. Two things make this bite here specifically: the check runs
+        at launch, before anything starts; and because -m always uses -s, the
+        ignored cases are NOT dropped from df_cases first (runreeds.py:899-905),
+        so the check scans EVERY column in the cases file, including the ten or
+        so this batch isn't running. One stray cleanup_level=2 anywhere in
+        cases_cepm.csv therefore hangs a background/CI -m run that never shows
+        the prompt. Keeping the whole column at 0 is the simple guard; -f/--skip_checks
+        would also bypass it, at the cost of skipping every other pre-flight check.
+    --harvest-args "<args>"   (also --harvest-args=<args>)
+        Multistep only: extra arguments passed verbatim to make_tg_cap.py, e.g.
+        --harvest-args "--scope both --headroom 0.95". The script's own defaults
+        already encode the documented choices (system scope, headroom 1.00,
+        2026-2032, the six-group list), so this is only for deviating from them.
     -o, --compare-only
         Skip Steps 1-8 entirely (the GAMS/Julia/uv/Julia-instantiate checks and
         runreeds.py itself) and go straight to running
@@ -88,7 +133,7 @@ RESERVED OPTIONS (do NOT add a bootstrap-only flag that reuses these):
         -b/--BatchName   -c/--cases_suffix  -s/--single      -r/--simult_runs
         -l/--forcelocal  -f/--skip_checks   -d/--debug       -n/--debugnode
         -p/--cases_per_node                 -t/--dryrun
-    (plus -h/--help from argparse). The bootstrap-only options above (-y, -q, -u, -x, -o)
+    (plus -h/--help from argparse). The bootstrap-only options above (-y, -q, -u, -x, -o, -m)
     were chosen to avoid these; -b/--BatchName and -c/--cases_suffix are
     deliberately intercepted (see above) rather than avoided. If you add a new
     bootstrap-only switch, pick a letter outside that set (and re-check against
@@ -103,6 +148,9 @@ Usage examples:
     .\run_cepm.ps1 -u "Tyler Fitch" -b v20260625_test -c test
     .\run_cepm.ps1 -x -b v20260625_test -c test
     .\run_cepm.ps1 -o -b v20260625_test -c test
+    .\run_cepm.ps1 -y -x -b v20260625_ms -c cepm -m WECC-SW
+    .\run_cepm.ps1 -y -x -b v20260625_ms -c cepm -m WECC-SW --harvest-args "--scope both"
+    .\run_cepm.ps1 -y -q -b v20260625_ms -c cepm -m WECC-SW -t
 #>
 
 # Initializing functions and variables for this script.
@@ -114,6 +162,7 @@ param(
     [string]$u = '', # Username string to include in ntfy messages. -u is free of runreeds options.
     [switch]$x, # Compare-cases mode: run compare_cases.py on the batch after runreeds.py succeeds. -x is free of runreeds options.
     [switch]$o, # Compare-only mode: skip runreeds.py (and its preflight checks) entirely and just run compare_cases.py against the existing batch. -o is free of runreeds options.
+    [string]$m = '', # Multistep mode: case stem for a two-phase baseline -> limitre+optimized run. -m is free of runreeds options.
     [string]$b = '', # BatchName: same short flag as runreeds.py's -b/--BatchName. Intercepted here so
                       # we can resolve it (prompting if needed) and echo it in ntfy messages, then
                       # forwarded back to runreeds.py explicitly (see below).
@@ -154,6 +203,7 @@ if ($ForwardArgs -contains '--compare-only') {
 # long forms of -b and -c) are pulled out the same way, so both are recognized regardless of
 # which form is used.
 $remainingArgs = @()
+$HarvestArgsRaw = ''
 for ($i = 0; $i -lt $ForwardArgs.Count; $i++) {
     $arg = $ForwardArgs[$i]
     if ($arg -eq '--user') {
@@ -180,9 +230,58 @@ for ($i = 0; $i -lt $ForwardArgs.Count; $i++) {
         $c = $arg.Substring('--cases_suffix='.Length)
         continue
     }
+    if ($arg -eq '--multistep') {
+        if ($i + 1 -lt $ForwardArgs.Count) { $m = $ForwardArgs[$i + 1]; $i++ }
+        continue
+    }
+    if ($arg -like '--multistep=*') {
+        $m = $arg.Substring('--multistep='.Length)
+        continue
+    }
+    if ($arg -eq '--harvest-args') {
+        if ($i + 1 -lt $ForwardArgs.Count) { $HarvestArgsRaw = $ForwardArgs[$i + 1]; $i++ }
+        continue
+    }
+    if ($arg -like '--harvest-args=*') {
+        $HarvestArgsRaw = $arg.Substring('--harvest-args='.Length)
+        continue
+    }
     $remainingArgs += $arg
 }
 $ForwardArgs = @($remainingArgs)
+
+# Everything the caller passed that is meant for runreeds.py, before -b/-c are
+# prepended below. Multistep mode (-m) needs this separately, because it makes two
+# runreeds.py calls with a DIFFERENT -c each time (phase B uses a generated cases
+# file), so it cannot reuse the single $ForwardArgs the normal path builds.
+$ExtraArgs = @($ForwardArgs)
+
+# Extra arguments for CEPM/scripts/make_tg_cap.py in multistep mode, e.g.
+# --harvest-args '--scope both --headroom 0.95'. Split on whitespace; the script's
+# own defaults already encode the documented decisions (system scope, headroom 1.00,
+# 2026-2032, the six-group list), so this is only for deviating from them.
+$MultistepHarvestArgs = @()
+if (-not [string]::IsNullOrWhiteSpace($HarvestArgsRaw)) {
+    $MultistepHarvestArgs = @($HarvestArgsRaw -split '\s+' | Where-Object { $_ -ne '' })
+}
+
+# Reject flag combinations -m cannot honor, here rather than inside Step 8m. Two
+# reasons: these are knowable from the arguments alone, so failing before the GAMS/
+# Julia/uv preflight (and before any prompt) is friendlier; and -o skips Step 8
+# entirely, so a guard placed inside it would never run in the one case that needs
+# it most -- `-m` with `-o` would silently ignore the -m.
+if (-not [string]::IsNullOrWhiteSpace($m)) {
+    # -o skips runreeds.py altogether; -m is nothing but two runreeds.py calls.
+    if ($o) {
+        throw '-m/--multistep and -o/--compare-only are mutually exclusive.'
+    }
+    # A caller-supplied -s/--single would fight with the -s each phase supplies for
+    # itself, and silently run the wrong cases. Refuse rather than guess.
+    if (($ExtraArgs -contains '-s') -or ($ExtraArgs -contains '--single') -or
+        [bool]($ExtraArgs | Where-Object { $_ -like '--single=*' })) {
+        throw '-m/--multistep supplies its own -s/--single for each phase; remove the -s you passed.'
+    }
+}
 
 # Optional ntfy username fragment: empty unless -u/--user was given.
 $ntfyUser = if ([string]::IsNullOrWhiteSpace($u)) { '' } else { " by $u" }
@@ -457,19 +556,223 @@ if (-not $q) {
 }
 
 # Step 8: Start ReEDS with any arguments passed to this bootstrap script.
-Write-Host '[run] uv run python runreeds.py ...'
-Set-Location $repoRoot
-Invoke-Native { uv run python runreeds.py @ForwardArgs }
+if ([string]::IsNullOrWhiteSpace($m)) {
 
-# Send a NTFY message on failure and exit if runreeds fails.
-if ($LASTEXITCODE -ne 0) {
+    Write-Host '[run] uv run python runreeds.py ...'
+    Set-Location $repoRoot
+    Invoke-Native { uv run python runreeds.py @ForwardArgs }
+
+    # Send a NTFY message on failure and exit if runreeds fails.
+    if ($LASTEXITCODE -ne 0) {
+        if (-not $q) {
+            try {
+                Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+                    -Body "ReEDS run batch failed to finish on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+            } catch {}
+        }
+        throw 'runreeds.py failed.'
+    }
+
+} else {
+
+    # ---------------------------------------------------------------------------
+    # Step 8m: Multistep (-m/--multistep) -- two-phase baseline-constrained run.
+    # See CEPM/guidance/two-step-re-limited-runs.md.
+    #
+    #   Phase A   <stem>_baseline                      (no load, no ceiling)
+    #   Harvest   make_tg_cap.py reads phase A's outputs -> cap CSVs for this batch
+    #   Generate  a cases file pointing <stem>_limitre at those CSVs
+    #   Phase B   <stem>_limitre, <stem>_optimized     (load; capped / uncapped)
+    #
+    # Both phases share one batch name, so runs/<Batch>_* holds all three cases and
+    # Step 9's existing comparison picks them all up with no changes.
+    # ---------------------------------------------------------------------------
+    $stem = $m.Trim()
+    $caseBaseline  = "${stem}_baseline"
+    $caseLimitre   = "${stem}_limitre"
+    $caseOptimized = "${stem}_optimized"
+
+    # runreeds.py's --dryrun quits right after switch validation, so no run folder,
+    # no outputs.h5 and nothing to harvest. Validate both phases' switches and
+    # exercise the generated-file lifecycle, but skip the parts that need a
+    # completed run. This is what test T6 checks.
+    $isMultistepDryRun = ($ExtraArgs -contains '-t') -or ($ExtraArgs -contains '--dryrun')
+
+    Write-Host ''
+    Write-Host "===== Multistep run for stem '$stem' (batch '$BatchName') ====="
+    if ($isMultistepDryRun) {
+        Write-Host '[note] --dryrun: switches will be validated for both phases; no run, no harvest.'
+    }
+
+    # --- Step 8m.1: refuse to start unless the cases file can support all three cases.
+    # Cheap, and it fires in seconds rather than after phase A has burned an hour.
+    Write-Host "[run] CEPM/scripts/multistep_cases.py --mode validate ($casesFilename, stem $stem)"
+    Set-Location $repoRoot
+    $multistepInfo = @(Invoke-Native {
+        uv run python CEPM/scripts/multistep_cases.py --mode validate `
+            --cases-filename $casesFilename --stem $stem
+    })
+    if ($LASTEXITCODE -ne 0) {
+        if (-not $q) {
+            try {
+                Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+                    -Body "ReEDS multistep batch could not start on $(hostname)$ntfyUser$ntfyBatch$ntfyCases (cases file validation failed) at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+            } catch {}
+        }
+        throw "Multistep validation failed for stem '$stem' in $casesFilename (see output above)."
+    }
+    # stdout line 1 is the baseline case name, line 2 (optional) its start year. Both
+    # are used below instead of get_batch_info.py's leftmost-non-ignored-case rule,
+    # which is wrong here: -s overrides `ignore`, so the leftmost non-ignored case may
+    # not be one of the three that actually ran.
+    if ($multistepInfo.Count -ge 2 -and $multistepInfo[1].Trim() -match '^\d{4}$') {
+        $MultistepStartYear = $multistepInfo[1].Trim()
+    } else {
+        $MultistepStartYear = ''
+    }
+
+    # --- Step 8m.2: Phase A -- the baseline, which the ceiling is harvested from.
+    Write-Host ''
+    Write-Host "[run] PHASE A: $caseBaseline"
     if (-not $q) {
         try {
             Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
-                -Body "ReEDS run batch failed to finish on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+                -Body "ReEDS multistep PHASE A ($caseBaseline) started on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
         } catch {}
     }
-    throw 'runreeds.py failed.'
+    $phaseAArgs = @('-b', $BatchName, '-c', $CasesSuffix, '-s', $caseBaseline) + $ExtraArgs
+    Set-Location $repoRoot
+    Invoke-Native { uv run python runreeds.py @phaseAArgs }
+    $phaseAExit = $LASTEXITCODE
+
+    # runreeds.py returns 0 even when a case's solve aborted (confirmed during test
+    # T0: an infeasible final year left no outputs.h5, yet the batch reported
+    # success). So the exit code is necessary but NOT sufficient -- the real check is
+    # that phase A produced the outputs the harvest reads. A ceiling harvested from a
+    # partial run is worse than no run at all.
+    $baselineRunDir = Join-Path $repoRoot "runs\${BatchName}_${caseBaseline}"
+    $baselineOutputsH5 = Join-Path $baselineRunDir 'outputs\outputs.h5'
+    if ($phaseAExit -ne 0) {
+        if (-not $q) {
+            try {
+                Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+                    -Body "ReEDS multistep PHASE A ($caseBaseline) FAILED on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+            } catch {}
+        }
+        throw "Phase A ($caseBaseline) failed: runreeds.py returned $phaseAExit."
+    }
+    if (-not $isMultistepDryRun) {
+        if (-not (Test-Path $baselineOutputsH5)) {
+            if (-not $q) {
+                try {
+                    Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+                        -Body "ReEDS multistep PHASE A ($caseBaseline) produced no outputs.h5 on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+                } catch {}
+            }
+            throw ("Phase A ($caseBaseline) reported success but produced no outputs.h5 at " +
+                   "$baselineOutputsH5. runreeds.py exits 0 even when a solve aborts, so this " +
+                   "is the check that matters. Not harvesting a ceiling from a partial run.")
+        }
+        Write-Host "[ok] PHASE A complete; found $baselineOutputsH5"
+    }
+
+    # --- Step 8m.3: harvest the ceiling from phase A.
+    # Written to inputs/growth_constraints/cepm_tg_cap_{sys,reg}_<BatchName>.csv, and
+    # removed again in the finally block at the bottom of this script.
+    $MultistepCapToken = $BatchName
+    $capSysPath = Join-Path $repoRoot "inputs\growth_constraints\cepm_tg_cap_sys_${MultistepCapToken}.csv"
+    $capRegPath = Join-Path $repoRoot "inputs\growth_constraints\cepm_tg_cap_reg_${MultistepCapToken}.csv"
+    if ($isMultistepDryRun) {
+        Write-Host "[note] --dryrun: skipping the harvest (no phase A outputs to read)."
+    } else {
+        Write-Host ''
+        Write-Host "[run] CEPM/scripts/make_tg_cap.py (harvesting ceiling from $caseBaseline)"
+        Set-Location $repoRoot
+        Invoke-Native {
+            uv run python CEPM/scripts/make_tg_cap.py `
+                --baseline-case "runs/${BatchName}_${caseBaseline}" `
+                --token $MultistepCapToken @MultistepHarvestArgs
+        }
+        if ($LASTEXITCODE -ne 0) {
+            throw "make_tg_cap.py failed while harvesting the ceiling from $caseBaseline."
+        }
+        if (-not (Test-Path $capSysPath) -or -not (Test-Path $capRegPath)) {
+            throw ("make_tg_cap.py reported success but did not write both cap files " +
+                   "($capSysPath, $capRegPath). Phase B would run silently uncapped.")
+        }
+        Write-Host "[ok] Ceiling harvested to cepm_tg_cap_{sys,reg}_${MultistepCapToken}.csv"
+    }
+
+    # --- Step 8m.4: generate the per-batch cases file pointing _limitre at that ceiling.
+    # A generated file rather than a fixed token, so two batches can run phase B
+    # concurrently from one clone without clobbering each other (guidance doc 5.2b).
+    $MultistepCasesSuffix = if ([string]::IsNullOrEmpty($CasesSuffix)) {
+        "_${BatchName}"
+    } else {
+        "${CasesSuffix}__${BatchName}"
+    }
+    $MultistepCasesPath = Join-Path $repoRoot "cases_${MultistepCasesSuffix}.csv"
+    Write-Host ''
+    Write-Host "[run] CEPM/scripts/multistep_cases.py --mode generate -> cases_${MultistepCasesSuffix}.csv"
+    Set-Location $repoRoot
+    Invoke-Native {
+        uv run python CEPM/scripts/multistep_cases.py --mode generate `
+            --cases-filename $casesFilename --stem $stem `
+            --token $MultistepCapToken --out "cases_${MultistepCasesSuffix}.csv"
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not generate the phase B cases file (cases_${MultistepCasesSuffix}.csv)."
+    }
+
+    # --- Step 8m.5: Phase B -- both load cases, capped and uncapped.
+    Write-Host ''
+    Write-Host "[run] PHASE B: $caseLimitre, $caseOptimized"
+    if (-not $q) {
+        try {
+            Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+                -Body "ReEDS multistep PHASE B ($caseLimitre, $caseOptimized) started on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+        } catch {}
+    }
+    # Phase B runs TWO cases, and runreeds.py prompts interactively for the worker
+    # count whenever len(caseList) > 1 and no --simult_runs was given -- which would
+    # hang a background or CI invocation forever. Phase A never hits this (one case
+    # short-circuits to WORKERS=1). So supply it explicitly, unless the caller already
+    # did. Note this is passed as an element of an array we build ourselves, which is
+    # why it works here: the known wrapper bug with -r/--simult_runs is in PowerShell's
+    # binding of *caller-supplied* args, not in what we hand to runreeds.py directly.
+    $phaseBWorkerArgs = @()
+    $callerSetWorkers = ($ExtraArgs -contains '-r') -or ($ExtraArgs -contains '--simult_runs') -or
+        [bool]($ExtraArgs | Where-Object { $_ -like '--simult_runs=*' })
+    if (-not $callerSetWorkers) {
+        $phaseBWorkerArgs = @('--simult_runs', '2')
+        Write-Host '[note] Phase B: passing --simult_runs 2 (both cases run concurrently). Forward your own --simult_runs 1 to run them one at a time.'
+    }
+    $phaseBArgs = @('-b', $BatchName, '-c', $MultistepCasesSuffix,
+                    '-s', "$caseLimitre,$caseOptimized") + $phaseBWorkerArgs + $ExtraArgs
+    Set-Location $repoRoot
+    Invoke-Native { uv run python runreeds.py @phaseBArgs }
+    if ($LASTEXITCODE -ne 0) {
+        if (-not $q) {
+            try {
+                Invoke-RestMethod -Method Post -Uri "https://ntfy.sh/rmi-cepm-runs" -TimeoutSec 5 `
+                    -Body "ReEDS multistep PHASE B FAILED on $(hostname)$ntfyUser$ntfyBatch$ntfyCases at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-Null
+            } catch {}
+        }
+        throw "Phase B ($caseLimitre, $caseOptimized) failed: runreeds.py returned $LASTEXITCODE."
+    }
+
+    # Same caveat as phase A: exit code 0 does not mean both cases finished. Warn
+    # rather than throw, since by here the runs are done and Step 9's comparison is
+    # still worth attempting on whatever completed.
+    if (-not $isMultistepDryRun) {
+        foreach ($caseName in @($caseLimitre, $caseOptimized)) {
+            $h5 = Join-Path $repoRoot "runs\${BatchName}_${caseName}\outputs\outputs.h5"
+            if (-not (Test-Path $h5)) {
+                Write-Warning "Phase B case '$caseName' produced no outputs.h5 ($h5). It did not finish."
+            }
+        }
+    }
+    Write-Host "[ok] PHASE B complete."
 }
 
 } # end of "if ($o) { ... } else { ... }" (Steps 1-8, skipped in compare-only mode)
@@ -496,7 +799,12 @@ if ($LASTEXITCODE -ne 0) {
 # run to protect the exit code of, but a failure there is the whole point of
 # the invocation, so it's worth a clear warning either way.
 if ($x -or $o) {
-    $isSingleRun = (-not $o) -and (($ForwardArgs -contains '-s') -or ($ForwardArgs -contains '--single') -or `
+    # In multistep mode the -s flags are ours, one per phase, and three cases really
+    # did run -- so the usual "-s means only one case, nothing to compare" shortcut
+    # must not fire. A forwarded -t/--dryrun still skips, since nothing ran.
+    $isMultistep = -not [string]::IsNullOrWhiteSpace($m)
+    $isSingleRun = (-not $o) -and (-not $isMultistep) -and `
+        (($ForwardArgs -contains '-s') -or ($ForwardArgs -contains '--single') -or `
         [bool]($ForwardArgs | Where-Object { $_ -like '--single=*' }))
     $isDryRun = (-not $o) -and (($ForwardArgs -contains '-t') -or ($ForwardArgs -contains '--dryrun'))
     if ($isSingleRun -or $isDryRun) {
@@ -521,13 +829,22 @@ if ($x -or $o) {
             # Stderr (diagnostics/warnings from get_batch_info.py) streams straight to
             # the console; only stdout (case name on line 1, year on line 2 if valid)
             # is captured here.
-            $batchInfo = @(Invoke-Native { uv run python CEPM/scripts/get_batch_info.py $casesFilename })
             $compareStartYearArgs = @()
-            if (($LASTEXITCODE -eq 0) -and ($batchInfo.Count -ge 2) -and ($batchInfo[1].Trim() -match '^\d{4}$')) {
-                $compareStartYearArgs = @('--startyear', $batchInfo[1].Trim())
-                Write-Host "[ok] Using --startyear $($batchInfo[1].Trim()) (from $casesFilename)."
+            if ($isMultistep -and $MultistepStartYear) {
+                # Multistep already resolved this from the _baseline column during
+                # validation, which is the right source here: get_batch_info.py returns
+                # the leftmost NON-IGNORED case, but -m runs its three cases via -s,
+                # which overrides `ignore` -- so that case may not be one that ran.
+                $compareStartYearArgs = @('--startyear', $MultistepStartYear)
+                Write-Host "[ok] Using --startyear $MultistepStartYear (from the ${m}_baseline column of $casesFilename)."
             } else {
-                Write-Warning "Could not determine --startyear from $casesFilename (see output above, if any). Falling back to compare_cases.py's default."
+                $batchInfo = @(Invoke-Native { uv run python CEPM/scripts/get_batch_info.py $casesFilename })
+                if (($LASTEXITCODE -eq 0) -and ($batchInfo.Count -ge 2) -and ($batchInfo[1].Trim() -match '^\d{4}$')) {
+                    $compareStartYearArgs = @('--startyear', $batchInfo[1].Trim())
+                    Write-Host "[ok] Using --startyear $($batchInfo[1].Trim()) (from $casesFilename)."
+                } else {
+                    Write-Warning "Could not determine --startyear from $casesFilename (see output above, if any). Falling back to compare_cases.py's default."
+                }
             }
 
             if (-not $q) {
@@ -582,13 +899,41 @@ if (-not $q) {
     # ran, succeeded, or failed. Runs even if an earlier step threw, so a failed
     # bootstrap/run still leaves a log behind; best-effort throughout so logging
     # itself can never fail the script or mask its real exit code.
+    # Step 11a (multistep only): remove the per-batch files -m generated. Runs before
+    # the transcript is saved so the cleanup is recorded in bootstraplog.txt, and
+    # unconditionally -- a failed phase B must not leave a stale ceiling or a stray
+    # cases file behind for the next batch to pick up (test T8). Best-effort by
+    # design: a cleanup problem is warned, never thrown, so it can't mask the real
+    # failure that got us here.
+    if (-not [string]::IsNullOrWhiteSpace($m)) {
+        foreach ($generated in @($capSysPath, $capRegPath, $MultistepCasesPath)) {
+            if ($generated -and (Test-Path $generated)) {
+                try {
+                    Remove-Item -Path $generated -Force
+                    Write-Host "[ok] Removed generated file $generated"
+                } catch {
+                    Write-Warning "Could not remove generated file ${generated}: $_"
+                }
+            }
+        }
+    }
+
     try { Stop-Transcript | Out-Null } catch {}
 
     try {
         Set-Location $repoRoot
-        $batchInfo = @(Invoke-Native { uv run python CEPM/scripts/get_batch_info.py $casesFilename })
-        $firstCase = if ($batchInfo.Count -ge 1) { $batchInfo[0].Trim() } else { '' }
-        if (($LASTEXITCODE -eq 0) -and $firstCase) {
+        # In multistep mode the log belongs in the baseline's run folder: it is the one
+        # folder guaranteed to exist if anything ran at all, and get_batch_info.py's
+        # leftmost-non-ignored-case rule does not apply here (see Step 9).
+        if ((-not [string]::IsNullOrWhiteSpace($m)) -and $multistepInfo -and $multistepInfo.Count -ge 1) {
+            $firstCase = $multistepInfo[0].Trim()
+            $batchInfoExit = 0
+        } else {
+            $batchInfo = @(Invoke-Native { uv run python CEPM/scripts/get_batch_info.py $casesFilename })
+            $batchInfoExit = $LASTEXITCODE
+            $firstCase = if ($batchInfo.Count -ge 1) { $batchInfo[0].Trim() } else { '' }
+        }
+        if (($batchInfoExit -eq 0) -and $firstCase) {
             $firstCaseDir = Join-Path $repoRoot "runs\${BatchName}_${firstCase}"
             if (Test-Path $firstCaseDir) {
                 Copy-Item -Path $bootstrapLogPath -Destination (Join-Path $firstCaseDir 'bootstraplog.txt') -Force
