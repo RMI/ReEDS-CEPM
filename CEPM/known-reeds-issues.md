@@ -72,6 +72,83 @@ the 45.6.0 release where GAMS itself patched `$loadDCR`. Since this repo alone i
 pinned to 44.4.0, there's no upstream fix to pull — the incompatibility only
 exists on our GAMS version, and the fix has to live in this fork.
 
+## `GSw_GrowthAbsCon=1` makes the **final** solve year infeasible (`eq_growthlimit_absolute`)
+
+**Symptom:** with `GSw_GrowthAbsCon=1`, every solve year runs normally until the
+last modeled year, which fails:
+```
+**** MODEL STATUS      4 Infeasible
+Row 'eq_growthlimit_absolute(PV,2032)' infeasible, all entries at implied bounds.
+*** Error at line 221291: Execution halted: abort 'Model did not solve to optimality'
+```
+followed by `3_solve_oneyear.gms failed with return code 3`. Only fires when
+`GSw_GrowthConLastYear` is ≥ the last modeled year, which is why the repo-default
+`GSw_GrowthConLastYear=2026` never trips it. Note the batch **still exits 0** (see
+Impact below).
+
+**Root cause:** `eq_growthlimit_absolute` (`c_model.gms:1088-1102`) sizes its
+per-year allowance from the gap to the **next** modeled year:
+```gams
+(sum{tt$[tprev(tt,t)], yeart(tt) } - yeart(t)) * growth_limit_absolute(tg) =g= sum{...INV...}
+```
+`tprev(t,tt)` means "tt is the year before t" (`b_inputs.gms:1027`, `1053-1055`),
+so `tprev(tt,t)` selects the year *after* `t`. In the last modeled year no such
+`tt` exists, the sum collapses to 0, and the coefficient becomes `-yeart(t)` — so
+the constraint reads `INV ≤ -yeart(t) × growth_limit_absolute(tg)` against
+`INV ≥ 0`. There is no slack variable, so it's infeasible rather than tight.
+For `tg='pv'` in 2032 that RHS is 2032 × 28,582 = **58,078,624**, which matches
+the observed `5.80786e+07` exactly.
+
+`yearweight` (`b_inputs.gms:5573-5574`) uses the identical expression and then
+explicitly patches the last year; `eq_growthlimit_absolute` never got that patch.
+
+**Impact:** blocks any run that turns on the absolute growth constraint through
+its own final year — which is exactly what
+[tech-limit-options.md](guidance/tech-limit-options.md) used to recommend for
+CEPM (that recommendation has since been withdrawn and corrected). **The failure
+is easy to miss:** `runreeds.py` prints *"…has finished"* and returns exit code
+0 despite the aborted solve, so `run_cepm.ps1` reports success. Check for
+`outputs/outputs.h5` and a `neue_<endyear>i0.csv` rather than trusting the exit
+code — the missing final-year `neue` file is what first flagged this.
+
+**Status:** not fixed; understood, with two ways around it.
+- **Workaround (keeps Option 3):** add a sacrificial final solve year, e.g.
+  `yearset=2026..2035..3` with `endyear=2035`, leaving
+  `GSw_GrowthConLastYear=2032`. The coefficient only needs *some* later modeled
+  year to exist, so 2032's gap goes from −2032 to +3. **Confirmed live** in
+  `runs/v20260901t0b_WECC-SW_t0bsacrificial`: same config as the failing run
+  except for the horizon, and 2032 solves to `MODEL STATUS 1 Optimal`. Both runs
+  generate exactly 3 `eq_growthlimit_absolute` rows in 2032, so the constraint is
+  live rather than silently dropped. Costs one extra solve year and requires
+  truncating all reporting at 2032, since 2035 is unconstrained and meaningless.
+- **What CEPM actually does instead:** the purpose-built cumulative caps
+  (`GSw_CEPM_TgCap`, `eq_cepm_tg_cap_sys`/`_reg`), which are cumulative rather
+  than per-year and so have no final-year arithmetic at all. Option 3 has three
+  further limitations for a ceiling use case (no year index, MW_dc vs MW_ac, no
+  first-year floor) documented in
+  [two-step-re-limited-runs.md](guidance/two-step-re-limited-runs.md).
+
+A genuine fix, if we ever want Option 3 itself to work, is a one-line `tlast`
+fallback in the equation mirroring what `yearweight` already does. Not applied —
+we're not using the mechanism.
+
+**Verified:** 2026-09-01, two independent ways. (1) A ~40-line standalone GAMS
+file replicating `b_inputs.gms:1049-1055` and the equation's LHS over a CEPM
+solve-year set reproduces the infeasibility in 0.3 s. (2) A live run,
+`runs/v20260901t0_WECC-SW_t0growthcon` — `WECC-SW_baseline`'s exact config plus
+`GSw_GrowthAbsCon=1`/`GSw_GrowthConLastYear=2032` — gave 2026 Optimal, 2029
+Optimal, 2032 Infeasible, with CPLEX's conflict refiner naming the single
+offending row.
+
+**Fixed upstream?** No. `reeds/core/setup/c_model.gms` at tag `2026.08.03` has
+the byte-identical expression with no `tlast` guard, and
+`GSw_GrowthAbsCon`/`GSw_GrowthConLastYear` are unchanged in `cases.csv` — same
+latent bug, inherited, not RMI-introduced. It stays latent upstream because
+`GSw_GrowthConLastYear` defaults to 2026 while upstream runs end in 2050, so the
+equation is never generated in the final year. Good candidate to contribute back,
+since the fix pattern (`yearweight`'s `tlast` override) already exists a few
+thousand lines away in the same codebase.
+
 ## Offshore-wind RPS infeasibility for NY/CT (`eq_RPS_OFSWind`) — fix reverted, currently live again
 
 **Symptom:** GAMS solve fails with no feasible/optimal solution; root cause traced
@@ -369,12 +446,27 @@ same defect already fixed for `USA_gas_mvp` in commit `fd6fb46a` ("Corrected
 cases_cepm -- note that startyear has to be 2010 or hydro capacity factor breaks")
 — that fix was never applied to `USA_optimized_mvp`'s own column.
 
-**Open question:** the exact cutoff between "works" (2010, confirmed) and "breaks"
-(2026, confirmed) hasn't been isolated — it depends on how recent the EIA hydro
-generation data bundled in this repo's inputs actually is, which needs to be checked
-directly (e.g. the max year present in the raw hydro generation input file) rather
-than assumed. Until that's pinned down, don't set `startyear` later than 2010
-without first verifying it against the actual historical data range.
+**~~Open question~~ — ANSWERED 2026-09-03: the cutoff is 2022.** The historical
+hydro data bundled in this repo covers **2007-2022**, confirmed directly on both
+files `hydcf.py` reads, as staged into `runs/v20260902t7_WECC-SW_baseline`:
+
+```
+inputs_case/net_gen_existing_hydro.csv   min t 2007, max t 2022
+inputs_case/cap_existing_hydro.csv       min t 2007, max t 2022
+```
+
+So `startyear` **must be ≤ 2022**; at 2023 or later the `t >= startyear` filter
+empties the frame and the `arange` crash above is guaranteed.
+
+Note the practical limit is lower than the hard one: at `startyear = 2022`
+exactly one year of data survives, so hydro capacity factors would be derived
+from a single year rather than sixteen — no crash, but a silent quality loss.
+And `startyear` is not a free knob for other reasons either — it also redraws the
+existing-vs-prescribed capacity boundary in `writecapdat.py`, so two runs with
+different `startyear` values are not comparable on new-capacity metrics. See
+[interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
+§5.3 for the full set of traps, and for why adding an early *solve year* is the
+better lever when the goal is to spread out prescribed builds.
 
 **Status:** not fixed / not fully diagnosed — and, unlike when this entry was first
 written, **now confirmed to actively block the current `USA_optimized_mvp` case**
@@ -611,6 +703,106 @@ from `reeds/reedsplots.py`'s `plot_trans_diff()` (`tran_out[case].pivot(...)[sub
 
 **Fixed upstream?** No. `postprocessing/compare_cases.py` at tag `2026.08.03` has identical hardcoded `2020` literals at all five sites — same bug, inherited, not RMI-introduced. Doesn't surface upstream by default because upstream's own default `--startyear` is also 2020, so it only breaks for a start year other than 2020 — which is what every CEPM case uses.
 
+## `runreeds.py` reports success on a failed case, and hangs on a multi-case `-s`
+
+Two separate behaviors, both of which break unattended/batch automation rather
+than any single run. Grouped because anyone scripting `runreeds.py` hits both.
+
+**Symptom 1 — silent failure.** A case's solve aborts (infeasible year, GAMS
+`abort`, `3_solve_oneyear.gms` returning 3), yet `runreeds.py` prints
+*"…has finished"* and returns **exit code 0**, so `run_cepm.ps1` reports success
+and any wrapper proceeds as if the run were fine. Seen at least twice: the
+`GSw_GrowthAbsCon` final-year infeasibility (entry above,
+`runs/v20260901t0_WECC-SW_t0growthcon`) and the `GSw_CEPM_TgCap` empty-cap-files
+guardrail (`runs/v20260902t5b_WECC-SW_limitre`).
+
+**Symptom 2 — interactive hang on the worker count.** With more than one case
+requested, `runreeds.py` calls
+`WORKERS = int(input('Number of simultaneous runs [positive integer]: '))`
+(`runreeds.py:987`) unless `--simult_runs`/`-r` was given. A single case
+short-circuits to `WORKERS = 1` with no prompt (`runreeds.py:979-981`), so this
+only appears once a batch has two or more — where it blocks forever in a
+background, CI, or non-interactive shell with no visible prompt.
+
+**Symptom 3 — interactive hang on `cleanup_level`.** `runreeds.py:959-967`
+prints an R2X warning and blocks on `input('\nProceed? y/[n]: ')` — defaulting
+to `n`, which `quit()`s — whenever **any** case has `cleanup_level >= 1` and
+`--skip_checks`/`-f` was not passed. Two details make this nastier than it
+looks: it fires at launch, before any run starts; and with `-s/--single` the
+ignored cases are **not** dropped from `df_cases` first
+(`runreeds.py:899-905`), so the check scans *every* column in the cases file,
+not just the ones being run. A single `cleanup_level=2` on an unrelated,
+ignored case therefore kills an otherwise valid batch. Note this is the
+*launch-time* check only — the per-case cleanup that `runreeds.py` schedules at
+the end of a run passes `--force --quiet`, so `cleanup_files.py`'s own
+confirmation prompt never fires.
+
+**Root cause:** neither is a bug exactly — `runreeds.py` was written for
+interactive use, where a failed case is visible in its own console window and a
+prompt is answerable. Both assumptions break under a wrapper.
+
+**Impact:** the first is the dangerous one. A wrapper that trusts the exit code
+will happily consume a partial run's outputs — which is precisely what the
+two-step workflow's harvest step would have done, producing a silently wrong
+capacity ceiling for the constrained case.
+
+**Status:** not fixed upstream-side; worked around in `run_cepm.ps1`.
+- **Check for `outputs/outputs.h5`, not the exit code.** `run_cepm.ps1 -m`
+  gates phase A on that file existing before harvesting anything, and throws with
+  an explicit message if it is missing. A `neue_<endyear>i0.csv` check is a useful
+  second signal — its absence is what first flagged the T0 failure.
+- **Always pass a worker count for multi-case invocations.** `-m` supplies
+  `--simult_runs 2` for its two-case phase B unless the caller gave one. Note the
+  wrapper-specific trap: a *caller-supplied* `-r` is swallowed by PowerShell (it
+  is a unique prefix of `run_cepm.ps1`'s own `$RunbatchArgs` parameter) and
+  `--simult_runs N` fails argparse through the same path — but arguments the
+  script builds into an array itself reach `runreeds.py` intact.
+
+**Fixed upstream?** No. `runreeds.py` at tag `2026.08.03` has the identical
+`start /wait` launch with no per-case return-code check, and the identical
+`input()` prompt at the same branch. Inherited, not RMI-introduced.
+
+## `z_rep` is dominated by the interconnection-queue penalty and does not match `systemcost.csv`
+
+**Symptom:** a CEPM run's early-year objective values look implausibly large and
+cannot be reconciled against reported system cost. For
+`runs/v20260902t7_WECC-SW_baseline`: `z_rep(2026)` is **$295.6bn** while the
+pvf-weighted sum of `systemcost.csv` for 2026 is **$68.9bn**. Nothing in
+`systemcost.csv` accounts for the difference.
+
+**Root cause:** the gap is the interconnection-queue penalty. Exceeding
+`cap_limit` is *allowed* — `CAP_ABOVE_LIM` absorbs it — but costs
+`cap_penalty(tg)`, a flat **$10,000,000/MW** for every tech group, charged in
+every modeled year because the constraint is cumulative. In 2026 that is
+**$226.7bn, or 76.7% of the objective** (65.4% in 2029; zero in 2032, because
+the queue data ends in 2030 and the constraint is not generated). The penalty is
+in `Z` via `d_objective.gms:47` but appears in **no** `systemcost.csv` category —
+`report.gms` introduces it only at line 1745, inside the `error_check('z')`
+reconciliation.
+
+Note `error_check('z')` reconciles only the **final** solve year, where the
+penalty is zero — so a clean `error_check` does not indicate the earlier years
+are penalty-free.
+
+**Impact:** not a run failure, and it does **not** change the physical buildout —
+~94.5% of the penalty falls on prescribed capacity the model had no choice about,
+so it has no gradient. But it makes `z_rep` unusable as a cost figure, and it
+does not cancel between cases with different load (baseline $226.7bn vs
+data-center cases $298.8bn), though it does cancel between two cases that differ
+only in an RE ceiling.
+
+**Status:** understood, not changed. Use `systemcost.csv` for cost reporting and
+treat `z` as an optimization artifact. Full write-up — including the structural
+cause (CEPM's 2026 solve absorbs 16 years of accumulated prescriptions against
+one year of queue headroom), the one *voluntary* violation found, and options for
+2026 — in
+[interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md).
+
+**Fixed upstream?** N/A — not a bug. `cap_penalty.csv`, `eq_interconnection_queues`
+and the `report.gms` reconciliation are byte-identical at `upstream/main`
+(`1f73bd23`). The collision is specific to CEPM's short horizon and wide
+`startyear`→first-solve-year gap, which upstream's 2010-2050 runs do not have.
+
 ## Cosmetic warnings safe to ignore
 
 - **`copy_files.py`** — pandas `DtypeWarning: Columns (N) have mixed types` while
@@ -625,6 +817,18 @@ from `reeds/reedsplots.py`'s `plot_trans_diff()` (`tran_out[case].pivot(...)[sub
 
 - [GAMS_ERROR_579_INVESTIGATION.md](guidance/GAMS_ERROR_579_INVESTIGATION.md) — GAMS 44.4.0
   `$loadDCR`/domain-set compile failure in `autocode/b_load_sets.gms` (fixed).
+- [two-step-re-limited-runs.md](guidance/two-step-re-limited-runs.md) — design for the
+  two-phase `*_baseline` → `*_limitre`/`*_optimized` runs, including the
+  `eq_growthlimit_absolute` final-year infeasibility (finding F1, entry above) and
+  why the interconnection-queue cap can't be repurposed for a policy ceiling.
+- [tech-limit-options.md](guidance/tech-limit-options.md) — the menu of mechanisms for
+  constraining a technology's capacity, and which ones can actually promise a hard
+  ceiling.
+- [interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
+  — how the interconnection-queue ceiling and the prescribed-build floor are
+  sourced, wired and enforced, and why they collide in 2026. Covers the two
+  entries above on the queue penalty and on `startyear`, plus the 2032 blind spot
+  (queue data ends in 2030, so the final CEPM year is interconnection-unconstrained).
 - [SUBNATIONAL_REGION_SUPPORT.md](guidance/SUBNATIONAL_REGION_SUPPORT.md) — audit of
   `GSw_ZoneSet`/`GSw_Region` combinations, covering several zoneset-specific
   failures (`techs_banned.csv` region matching, missing `hierarchy_from134.csv` for

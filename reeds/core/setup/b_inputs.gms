@@ -3761,6 +3761,41 @@ ilr(i)$distpv(i) = ilr_dist ;
 * assign an ILR to hybrid PV+battery technologies based on the ILR for the configurations
 ilr(pvb) = sum{pvb_config$pvb_agg(pvb_config,pvb), ilr_pvb_config(pvb_config) } ;
 
+*---------------------------------------------------------------------------
+* CEPM ADDITION -- guardrail for eq_cepm_tg_cap_sys / eq_cepm_tg_cap_reg
+* (c_model.gms), which divide INV by ilr(i). A division by zero there would
+* corrupt the ceiling silently rather than fail, so check it explicitly.
+*
+* Why this can only fire on a genuine problem, never on a tech where ilr is
+* simply "not applicable":
+*   - GAMS makes no distinction between "assigned 0" and "never assigned"; both
+*     read as 0. So testing ilr(i) = 0 covers both cases.
+*   - ilr is NOT n/a for non-PV techs: every investable tech is explicitly
+*     assigned ilr = 1 a few lines above, before the UPV/distpv/PVB overrides.
+*     Gas, coal, nuclear etc. all read exactly 1.0.
+*   - ilr is 0 only for techs outside valcap_i -- i.e. not buildable in this run
+*     at all -- and those are excluded by the gate below AND never enter the
+*     equations' sums.
+*   - valcap_i (line ~2299) is a superset of what the equations sum over:
+*     valinv is derived from the same valcap state, and valcap is only ever
+*     narrowed afterwards (e.g. the biofeas removal ~line 5599). Erring toward a
+*     superset means the check can never miss a tech the equations actually use.
+*
+* Only enforced when the caps are switched on, so it can never affect an
+* unrelated run.
+*---------------------------------------------------------------------------
+* $onImplicitAssign is required: in a healthy run cepm_ilr_zero ends up with no
+* records, and referencing an all-empty symbol in the abort below is GAMS error
+* 141. Without this the guardrail would abort every run, switch on or off.
+$onImplicitAssign
+parameter cepm_ilr_zero(i) "--unitless-- investable techs with ilr=0 (must always be empty)" ;
+cepm_ilr_zero(i) = 0 ;
+cepm_ilr_zero(i)$[valcap_i(i)$(ilr(i) = 0)] = 1 ;
+abort$[Sw_CEPM_TgCap$sum{i, cepm_ilr_zero(i) }]
+    "CEPM: ilr(i) is zero for one or more investable technologies, but eq_cepm_tg_cap_* divides by ilr(i). See CEPM/guidance/two-step-re-limited-runs.md.",
+    cepm_ilr_zero ;
+$offImplicitAssign
+
 parameter bir_pvb_config(pvb_config) "--unitless-- ratio of the battery capacity to the inverter capacity (MW_battery / MW_inverter) for each hybrid pv+battery configuration"
 /
 $offlisting
@@ -4818,6 +4853,46 @@ $include inputs_case%ds%growth_penalty.csv
 $offdelim
 $onlisting
 / ;
+
+*---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+* Cumulative new-investment ceilings by technology group, consumed by
+* eq_cepm_tg_cap_sys / eq_cepm_tg_cap_reg in c_model.gms. Units are MW_ac, to
+* match reported cap_new_out (the equations divide INV by ilr(i)).
+* Either file may be empty; a 0 value means "no cap", not "no builds".
+* See CEPM/guidance/two-step-re-limited-runs.md.
+*---------------------------------------------------------------------------
+$onempty
+parameter cepm_tg_cap_sys(tg) "--MW_ac-- CEPM cumulative system-wide cap on new investment by technology group"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%cepm_tg_cap_sys.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter cepm_tg_cap_reg(tg,r) "--MW_ac-- CEPM cumulative regional cap on new investment by technology group"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%cepm_tg_cap_reg.csv
+$offdelim
+$onlisting
+/ ;
+$offempty
+
+* Guardrail: because a 0 value means "no cap" (GAMS stores no record for it), a
+* run with the switch on but no data loaded would solve happily and silently
+* uncapped -- which is exactly what a failed/skipped harvest step looks like.
+* Fail loudly instead. $onImplicitAssign is required because whichever of the two
+* files is unused is legitimately empty, and referencing an all-empty symbol is
+* GAMS error 141.
+$onImplicitAssign
+abort$[Sw_CEPM_TgCap$(not [sum{tg, cepm_tg_cap_sys(tg) }
+                           + sum{(tg,r), cepm_tg_cap_reg(tg,r) }])]
+    "CEPM: GSw_CEPM_TgCap=1 but both cepm_tg_cap_sys.csv and cepm_tg_cap_reg.csv are empty, so nothing would be capped. Check cepmtgcapscen and that make_tg_cap.py actually ran." ;
+$offImplicitAssign
 
 * gbin_min is based on the representative plant size for a single plant in that tech group
 parameter gbin_min(tg) "--MW-- minimum size of the first (zero cost) growth bin"
