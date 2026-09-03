@@ -66,8 +66,9 @@ GSw_Nuclear,,,,,,,,,,,,,,
 GSw_OpRes,,,,,,,,,,,,,,
 GSw_StartCost,,0,0,0,0,,,,,,0,0,0,0
 GSw_H2,,0,0,0,0,,,,,,0,0,0,0
+GSw_H2Combustion,0,,,,,,,,,,,,,
+GSw_H2CombinedCycle,0,,,,,,,,,,,,,
 GSw_H2_PTC,,0,0,0,0,,,,,,0,0,0,0
-GSw_H2Combustion,,,,,,,,,,,,,,
 GSw_DRShed,,,,,,,,,,,,,,
 GSw_OffshoreZones,,,,,,,,,,,,,,
 GSw_OffshoreBackbone,,,,,,,,,,,,,,

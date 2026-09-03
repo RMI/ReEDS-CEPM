@@ -819,6 +819,18 @@ which means running it *without* `-m` (i.e. without a harvested ceiling)
 deliberately aborts at the empty-cap-files guardrail rather than solving
 uncapped — that is the safety property, not a misconfiguration.
 
+**`GSw_H2Combustion` and `GSw_H2CombinedCycle` are set to 0** for every CEPM case
+(as this file's "Default Value", 2026-09-03). `tg 'h2'` is `h2_combustion(i)` --
+plants that BURN hydrogen -- and `GSw_H2` (production) being 0 does not disable
+them; they were building H2-CC fuelled at an exogenous price via
+`h2combustionfuelscen` with no hydrogen system modelled. `GSw_H2Combustion=0`
+alone is sufficient: it bans the whole `h2_combustion` subset including upgrade
+techs, so `GSw_H2Combustionupgrade` needs no change. Measured effect on results:
+**none** -- H2-CC converts to gas-CC one-for-one and the two-step headline moves
+0.01 points (see
+[`guidance/interconnection-queue-and-prescribed-builds.md`](guidance/interconnection-queue-and-prescribed-builds.md)
+�4.6). It is an interpretability choice, not a modelling correction.
+
 **`cleanup_level` is deliberately 0 for every case — do not raise it.**
 `runreeds.py:959-967` blocks on `input('Proceed? y/[n]: ')` (defaulting to `n`,
 which quits) whenever **any** case in the file has `cleanup_level >= 1` and
