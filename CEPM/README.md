@@ -21,14 +21,27 @@ similar). Those are catalogued in
   for the rules, then [`preprocessing/README_TEMPLATE.md`](preprocessing/README_TEMPLATE.md)
   to document it.
 - **Wondering what we changed vs. upstream** → [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md).
+- **Wondering what a past batch did — or a run finished but the *results* look
+  wrong** → [`batch-log.md`](batch-log.md). Model-behaviour surprises and
+  scenario-configuration problems are logged against the batch that surfaced
+  them, not in `known-reeds-issues.md`.
+
+**A note on run folders.** Docs throughout `CEPM/` cite runs as
+`runs/<batch>_<case>` — e.g. `runs/v20260902t7_WECC-SW_baseline`. `runs/` is
+gitignored, and completed runs are archived to **VM_Outputs**, a SharePoint
+folder on the run VM. So a cited path that is no longer local will be there under
+the same name. These citations are provenance, not data: the numbers they support
+are transcribed into the docs themselves, so a doc stays readable even when the
+run folder is gone.
 
 ## Top-level
 
 | File | Summary |
 |---|---|
 | [`README.md`](README.md) | This file — an index of everything in `CEPM/`. |
-| [`known-reeds-issues.md`](known-reeds-issues.md) | Running log of every error hit in a CEPM run: symptom, root cause, current status, and a **Fixed upstream?** verdict checked against upstream tag `2026.08.03`. Covers the `Error 579` GAMS compile failure, the `eq_RPS_OFSWind` and DE hydrogen infeasibilities, `z134`/`z90` zoneset gaps, the `startyear` hydro-CF constraint currently blocking `USA_optimized_mvp`, postprocessing and `reeds_to_rev` failures, and a list of cosmetic warnings that are safe to ignore. Deeper investigations get their own doc under `guidance/` and are linked from the relevant entry. |
-| [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) | Change log of how this fork diverges from upstream ReEDS — per change: description, files changed, reference, and what to re-test on each new upstream release. Sectioned into GAMS-compatibility fixes, helper scripts, and custom CEPM inputs. Skeleton is in place; most sections are not yet filled in. |
+| [`known-reeds-issues.md`](known-reeds-issues.md) | Running log of everything **broken, missing or surprising in the model code itself** — ReEDS and this fork's changes to it: symptom, root cause, current status, and a **Fixed upstream?** verdict checked against upstream tag `2026.08.03`. Covers the `Error 579` GAMS compile failure, the `eq_growthlimit_absolute` final-year infeasibility, the `eq_RPS_OFSWind` and DE hydrogen infeasibilities, `z134`/`z90` zoneset gaps, the `startyear` hydro-CF constraint that blocked `USA_optimized_mvp`, `runreeds.py`'s silent-failure and interactive-prompt traps, the `z_rep` interconnection-queue penalty, postprocessing and `reeds_to_rev` failures, and cosmetic warnings that are safe to ignore. The test is whether a fresh clone would hit it — problems with a *result* go in `batch-log.md` instead. Deeper investigations get their own doc under `guidance/` and are linked from the relevant entry. |
+| [`batch-log.md`](batch-log.md) | Log of notable CEPM run batches: what changed, what it showed, and what we decided. One entry per batch (newest first), each linked to its predecessor by a **Built from** field so the chain back through the work is traceable. Records decisions, next steps and unresolved issues alongside results. Since `runs/` is gitignored and archived to VM_Outputs, this is the in-repo record of what was run. |
+| [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) | Change log of how this fork diverges from upstream ReEDS — per change: description, files changed, reference, and what to re-test on each new upstream release. Sectioned into GAMS-compatibility fixes, helper scripts, and custom CEPM inputs. |
 
 ## `guidance/` — how-to and investigation write-ups
 
@@ -39,6 +52,8 @@ investigations at the end.
 |---|---|
 | [`guidance/reeds-data-sources.md`](guidance/reeds-data-sources.md) | How `runfiles.csv` and `copy_files.py` turn a switch value into an input file path, and why bespoke CEPM inputs belong in `inputs/` if we want to keep access to upstream defaults. |
 | [`guidance/tech-limit-options.md`](guidance/tech-limit-options.md) | The mechanisms available for restricting a technology's capacity — `ban`/`bannew`, resource supply curve edits, the interconnection-queue cumulative cap, growth-rate constraints, cost multipliers, and customizing `tg` — with the implications of each. |
+| [`guidance/interconnection-queue-and-prescribed-builds.md`](guidance/interconnection-queue-and-prescribed-builds.md) | How the interconnection-queue ceiling and the prescribed-build floor are sourced, wired and enforced — and why they contradict each other in 2026. Key finding: the queue cap is *soft*, priced at a flat **$10M/MW** recharged every modeled year, and CEPM's 2026 solve must place 33.0 GW of capacity against 11.8 GW of queue headroom because it absorbs **16 years** of accumulated prescriptions at once. The resulting penalty is **77% of the 2026 objective** and is excluded from reported `systemcost`. Measured with the new `GSw_CapPenaltyMult` switch, removing it shifts WECC-SW buildout by -15% PV / +13% onshore wind / +158% h2 and moves the two-step headline result from +33.4% to +43.4%. Also documents the 2032 blind spot (queue data ends in 2030, so the final CEPM year is interconnection-unconstrained) and what to do about 2026. |
+| [`guidance/two-step-re-limited-runs.md`](guidance/two-step-re-limited-runs.md) | Design, decisions and full test record for the two-step `*_baseline` → `*_limitre` + `*_optimized` workflow and the `GSw_CEPM_TgCap` cumulative tech-group caps behind it: why `GSw_GrowthAbsCon` and the interconnection-queue cap could not be reused, the purpose-built equations added instead, `make_tg_cap.py`, `run_cepm.ps1 -m`, and the T0-T10 test plan. |
 | [`guidance/managing-pras.md`](guidance/managing-pras.md) | Which switches actually control whether PRAS runs, how often, and how expensive it is — and which ones people expect to control it but don't. Key finding: `GSw_PRM_CapCredit` does not disable PRAS; only `pras_samples=0` reliably skips its Monte Carlo compute. Includes a "get as close as possible to no PRAS" recipe. |
 | [`guidance/loadsite-mechanism.md`](guidance/loadsite-mechanism.md) | How `GSw_LoadSiteCF`/`GSw_LoadSiteRA`/`GSw_LoadSiteTrajectory` wire into the "optimally sited load" (data-center) feature — Python and GAMS call sites for each, how the trajectory file/hierarchy level is selected, and why a trajectory file's regions don't need to match the run's own `GSw_Region`/`GSw_ZoneSet` (out-of-scope regions are silently dropped, not an error). |
 | [`guidance/UV_MAMBA_GUIDE.md`](guidance/UV_MAMBA_GUIDE.md) | How to keep `environment.yml` (conda/mamba) and `pyproject.toml`/`uv.lock` (uv) in sync by hand, plus the list of known-accepted drift between them. |
@@ -70,4 +85,6 @@ structure.
 | File | Summary |
 |---|---|
 | [`scripts/check_env_sync.py`](scripts/check_env_sync.py) | Stdlib-only script that reports dependency drift between `environment.yml` and `pyproject.toml`, warning only on differences that are not on its known-accepted allowlist. |
-| [`scripts/get_batch_info.py`](scripts/get_batch_info.py) | Prints the name and `yearset`-derived start year of the first non-ignored case (left to right) in a cases file. Used by `run_cepm.ps1` to set `compare_cases.py`'s `--startyear` and to locate the run folder `bootstraplog.txt` is saved into. |
+| [`scripts/get_batch_info.py`](scripts/get_batch_info.py) | Prints the name and `yearset`-derived start year of the first non-ignored case (left to right) in a cases file. Used by `run_cepm.ps1` to set `compare_cases.py`'s `--startyear` and to locate the run folder `bootstraplog.txt` is saved into. Not used in `-m/--multistep` mode, where `-s` overrides `ignore` and the leftmost non-ignored case may not be one that ran — `multistep_cases.py` answers both questions from the `_baseline` column instead. |
+| [`scripts/make_tg_cap.py`](scripts/make_tg_cap.py) | Harvests a cumulative tech-group capacity ceiling (MW_ac) from a completed reference run's `cap_new_out` and writes the `cepm_tg_cap_{sys,reg}_<token>.csv` pair consumed by `GSw_CEPM_TgCap`. Mirrors GAMS `tg_i` membership and upgrade-subset inheritance, applies a nonzero floor to groups with zero reference builds (a literal `0` would read as "no cap"), and warns when a requested ceiling falls below the first-year prescribed-build floor — which would otherwise surface as an infeasibility 25 minutes into a solve. See [`guidance/two-step-re-limited-runs.md`](guidance/two-step-re-limited-runs.md) §5.3. |
+| [`scripts/multistep_cases.py`](scripts/multistep_cases.py) | Validates and generates the cases file for `run_cepm.ps1 -m`. `--mode validate` checks that a stem has all three `_baseline`/`_limitre`/`_optimized` columns with the cap switch on for exactly one of them, and returns the baseline's name and start year; `--mode generate` writes a per-batch copy pointing `_limitre` at that batch's harvested ceiling, differing from the committed file by exactly one cell. |

@@ -180,6 +180,17 @@ state target onto a subset of its zones rather than diluting or erroring.
 Worth checking deliberately if a state you're relying on for load-site
 demand isn't fully contained in your run's region selection.
 
+**Confirmed live, and it was large.** The WECC-SW runs
+(`GSw_Region=nercr/WECC_SW`, `GSw_LoadSiteReg=st`) include exactly one Texas
+zone — `p59`, the El Paso area. Texas is otherwise ERCOT and out of scope, so
+`eq_loadsite_siting` placed **all** of Texas's statewide EPRI trajectory in
+`p59`: 13,047.7 MW in 2032, about 76% of the run's entire load-site demand,
+against El Paso Electric's real peak of roughly 2 GW. That single zone then
+carried 72% of the gas built in response to the RE ceiling (10,121 of
+14,052 MW). Every WECC-SW result before 2026-09-04 is affected — see the
+`v20260903h2qoff` entry in [`../batch-log.md`](../batch-log.md). The fix is to
+scope the trajectory file to the run, not to change the mechanism.
+
 ## `eq_loadsite_siting`: where trajectory and CF meet
 
 ```gams
