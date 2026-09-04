@@ -2,7 +2,7 @@
 ignore,1,0,0,1,1,1,1,1,1,1,1,1,1,1
 GSw_Region,cendiv/Pacific,nercr/WECC_SW,nercr/WECC_SW,transreg/SERTP,transreg/SERTP,st/NM,st/NM,st/NM,country/USA,country/USA,nercr/WECC_SW,nercr/WECC_SW,transreg/SERTP,transreg/SERTP
 GSw_ZoneSet,,z132,z132,z132,z132,,,,z48,z48,z132,z132,z132,z132
-startyear,2010,,,,,,,,,2026,,,,
+startyear,2010,,,,,,,,,,,,,
 endyear,2032,2032,2032,2032,2032,,,,,,2032,2032,2032,2032
 yearset,,2026..2032..3,2026..2032..3,2026..2032..3,2026..2032..3,2026_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032,2026_2029_2032,2026..2032..3,2026..2032..3,2026..2032..3,2026..2032..3
 GSw_SkipRAyear,2020,,,,,,,,,,,,,
