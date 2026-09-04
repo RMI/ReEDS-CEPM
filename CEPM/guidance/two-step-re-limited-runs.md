@@ -207,7 +207,7 @@ limit.
 
 **D1 is therefore closed in favor of §4.** `tech-limit-options.md`'s CEPM
 recommendation section — which recommends exactly the configuration tested here
-— needs correcting, and this warrants an entry in `CEPM/known-issues.md`.
+— needs correcting, and this warrants an entry in `CEPM/known-reeds-issues.md`.
 
 ### F2 — `growth_limit_absolute(tg)` has no year index, and CEPM baselines are extremely lumpy
 
@@ -1359,7 +1359,7 @@ churn is all in the body.
    For a plain (non-`-m`) invocation, the pattern that works is still one case per
    invocation via `-s <single>`, which sets `WORKERS=1` with no prompt.
 6. ~~Docs: correct the CEPM recommendation in `tech-limit-options.md` (F1/F2),
-   add an F1 entry to `CEPM/known-issues.md`, and write the
+   add an F1 entry to `CEPM/known-reeds-issues.md`, and write the
    `CEPM/reeds-to-cepm-log.md` inventory rows + section.~~ **Done** — the first
    two 2026-09-01, the divergence-log entry 2026-09-02 (5 inventory rows and a
    "Cumulative tech-group investment caps" section carrying D8's non-region

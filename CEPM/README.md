@@ -21,13 +21,26 @@ similar). Those are catalogued in
   for the rules, then [`preprocessing/README_TEMPLATE.md`](preprocessing/README_TEMPLATE.md)
   to document it.
 - **Wondering what we changed vs. upstream** → [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md).
+- **Wondering what a past batch did — or a run finished but the *results* look
+  wrong** → [`batch-log.md`](batch-log.md). Model-behaviour surprises and
+  scenario-configuration problems are logged against the batch that surfaced
+  them, not in `known-reeds-issues.md`.
+
+**A note on run folders.** Docs throughout `CEPM/` cite runs as
+`runs/<batch>_<case>` — e.g. `runs/v20260902t7_WECC-SW_baseline`. `runs/` is
+gitignored, and completed runs are archived to **VM_Outputs**, a SharePoint
+folder on the run VM. So a cited path that is no longer local will be there under
+the same name. These citations are provenance, not data: the numbers they support
+are transcribed into the docs themselves, so a doc stays readable even when the
+run folder is gone.
 
 ## Top-level
 
 | File | Summary |
 |---|---|
 | [`README.md`](README.md) | This file — an index of everything in `CEPM/`. |
-| [`known-reeds-issues.md`](known-reeds-issues.md) | Running log of every error hit in a CEPM run: symptom, root cause, current status, and a **Fixed upstream?** verdict checked against upstream tag `2026.08.03`. Covers the `Error 579` GAMS compile failure, the `eq_RPS_OFSWind` and DE hydrogen infeasibilities, `z134`/`z90` zoneset gaps, the `startyear` hydro-CF constraint currently blocking `USA_optimized_mvp`, postprocessing and `reeds_to_rev` failures, and a list of cosmetic warnings that are safe to ignore. Deeper investigations get their own doc under `guidance/` and are linked from the relevant entry. |
+| [`known-reeds-issues.md`](known-reeds-issues.md) | Running log of everything **broken, missing or surprising in the model code itself** — ReEDS and this fork's changes to it: symptom, root cause, current status, and a **Fixed upstream?** verdict checked against upstream tag `2026.08.03`. Covers the `Error 579` GAMS compile failure, the `eq_growthlimit_absolute` final-year infeasibility, the `eq_RPS_OFSWind` and DE hydrogen infeasibilities, `z134`/`z90` zoneset gaps, the `startyear` hydro-CF constraint currently blocking `USA_optimized_mvp`, `runreeds.py`'s silent-failure and interactive-prompt traps, the `z_rep` interconnection-queue penalty, postprocessing and `reeds_to_rev` failures, and cosmetic warnings that are safe to ignore. The test is whether a fresh clone would hit it — problems with a *result* go in `batch-log.md` instead. Deeper investigations get their own doc under `guidance/` and are linked from the relevant entry. |
+| [`batch-log.md`](batch-log.md) | Log of notable CEPM run batches: what changed, what it showed, and what we decided. One entry per batch (newest first), each linked to its predecessor by a **Built from** field so the chain back through the work is traceable. Records decisions, next steps and unresolved issues alongside results. Since `runs/` is gitignored and archived to VM_Outputs, this is the in-repo record of what was run. |
 | [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) | Change log of how this fork diverges from upstream ReEDS — per change: description, files changed, reference, and what to re-test on each new upstream release. Sectioned into GAMS-compatibility fixes, helper scripts, and custom CEPM inputs. |
 
 ## `guidance/` — how-to and investigation write-ups

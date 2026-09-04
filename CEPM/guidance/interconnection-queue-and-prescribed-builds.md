@@ -674,7 +674,7 @@ or later the frame empties, `data_endyear = hydcf.index.max()` returns `NaN`
 (pandas does not raise on an empty numeric index), and
 `np.arange(data_endyear+1, model_endyear+1)` fails with
 `ValueError: arange: cannot compute length`. This is the already-logged failure
-in [`../known-issues.md`](../known-issues.md) that killed `USA_optimized_mvp` at
+in [`../known-reeds-issues.md`](../known-reeds-issues.md) that killed `USA_optimized_mvp` at
 `startyear=2026`, and it happens in input processing — before model compile,
 let alone a solve.
 

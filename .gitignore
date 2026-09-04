@@ -62,6 +62,7 @@ gamslice.txt
 
 # IDE files
 *.vscode
+.markdownlint.json
 
 # HPC files
 slurm*.out

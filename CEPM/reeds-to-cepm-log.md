@@ -37,6 +37,8 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `reeds/report_utils.py` | Modified | parse_caselist TypeError with a prefix-glob caselist |
 | `postprocessing/compare_cases.py` | Modified | compare_cases.py hardcodes 2020 instead of --startyear |
 | `cases_small.csv` | Modified | Minor and cosmetic |
+| `cases_test.csv` | Modified | Minor and cosmetic |
+| `CONTRIBUTING.md` | Modified | CEPM documentation |
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/dollaryear.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/gas-ccgt_CEPM_{all,low,high}.csv` | Added | Updated CAPEX for gas resources |
@@ -276,6 +278,10 @@ Small changes with no effect on model results.
   after upstream relocated the vendored ReEDS2PRAS tree without updating its
   README.
 - `cases_small.csv` — `endyear` 2030 to 2029.
+- `cases_test.csv` — adds a `USA_fasterish` column (a faster national smoke-test
+  case: `country/USA`, `z54`, `2010..2050..10`) and flips `Pacific`'s `ignore`
+  from `0` to `1` so the default `-c test` batch runs `USA_fasterish` instead.
+  Used for `runs/20260821_USA_fasterish`. No effect on any CEPM case.
 
 ### Reference:
 
@@ -283,6 +289,9 @@ n/a
 
 ### What to test in new releases:
 
+- Is `USA_fasterish` still needed, or has upstream added its own fast national
+  test case? If ours is redundant, take upstream's `cases_test.csv` whole and
+  drop the divergence.
 - If upstream fixes its own reeds2pras README paths, drop our version to keep the
   vendored tree byte-identical to upstream. That tree is otherwise nearly
   pristine, which is what keeps future ReEDS2PRAS syncs cheap — see Issue 4 of
@@ -417,7 +426,7 @@ was the obvious candidate and cannot do this job:
 
 - **Cumulative, not per-year**, so there is no year-gap arithmetic — and
   therefore none of the final-year infeasibility documented in
-  [`known-issues.md`](known-issues.md).
+  [`known-reeds-issues.md`](known-reeds-issues.md).
 - **Written in MW_ac** — `INV` is divided by `ilr(i)` inside the sum — so the cap
   CSV, `cap_new_out`, and every comparison plot are in the same units and the
   harvest script does no conversion. `INV` itself is MW_dc for UPV
@@ -503,7 +512,7 @@ at model resolution and belongs on the non-region path.
 [`guidance/two-step-re-limited-runs.md`](guidance/two-step-re-limited-runs.md)
 (design, decisions D1-D8, and the full test record),
 [`guidance/tech-limit-options.md`](guidance/tech-limit-options.md) (why the three
-existing mechanisms don't fit), [`known-issues.md`](known-issues.md) (the
+existing mechanisms don't fit), [`known-reeds-issues.md`](known-reeds-issues.md) (the
 `eq_growthlimit_absolute` final-year infeasibility),
 [`scripts/make_tg_cap.py`](scripts/make_tg_cap.py) (the harvest script)
 
@@ -768,6 +777,17 @@ because that is where readers and tools look for them.
 - [`CEPM/`](README.md) — everything else, indexed by
   [`CEPM/README.md`](README.md).
 
+Two `CEPM/` files worth calling out because they are new or renamed:
+
+- [`batch-log.md`](batch-log.md) (added 2026-09-04) — the in-repo record of what
+  each notable batch ran, changed and showed. `runs/` is gitignored and archived
+  to VM_Outputs, so without this there is no durable account of past runs.
+- [`known-reeds-issues.md`](known-reeds-issues.md) — **renamed from
+  `known-issues.md`, 2026-09-04.** The new name states the scope: issues with the
+  *function of the underlying repo*, not with a scenario or a result. Anything
+  wrong with a result now goes in `batch-log.md`. Old links to
+  `CEPM/known-issues.md` are dead.
+
 ### Reference:
 
 [`CEPM/README.md`](README.md)
@@ -829,7 +849,7 @@ techs, so `GSw_H2Combustionupgrade` needs no change. Measured effect on results:
 **none** -- H2-CC converts to gas-CC one-for-one and the two-step headline moves
 0.01 points (see
 [`guidance/interconnection-queue-and-prescribed-builds.md`](guidance/interconnection-queue-and-prescribed-builds.md)
-�4.6). It is an interpretability choice, not a modelling correction.
+§4.6). It is an interpretability choice, not a modelling correction.
 
 **`cleanup_level` is deliberately 0 for every case — do not raise it.**
 `runreeds.py:959-967` blocks on `input('Proceed? y/[n]: ')` (defaulting to `n`,

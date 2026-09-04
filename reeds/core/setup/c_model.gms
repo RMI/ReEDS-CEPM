@@ -1422,7 +1422,7 @@ eq_interconnection_queues(tg,r,t)
 *      batteries.
 *   1. Cumulative over the whole horizon rather than per-year, so it does not
 *      depend on year-gap arithmetic -- unlike eq_growthlimit_absolute, which is
-*      infeasible in the last modeled year (see known-issues.md).
+*      infeasible in the last modeled year (see known-reeds-issues.md).
 *   2. Divided by ilr(i), so the cap is in MW_ac and directly comparable to the
 *      reported cap_new_out. INV itself is MW_dc for UPV (ilr_utility = 1.34).
 *   3. Gated by Sw_CEPM_TgCapStartYear, so prescribed builds in the first solve
