@@ -420,7 +420,7 @@ same crash if run with `GSw_OfsWind=0`. Good candidate to contribute back, since
 it's the same fix pattern upstream already uses for `GSw_distpv`/`GSw_CSP` a few
 lines below.
 
-## `startyear` must be old enough for historical hydro capacity factor data — currently blocking `USA_optimized_mvp`
+## `startyear` must be old enough for historical hydro capacity factor data
 
 **Symptom:** confirmed live traceback, from `runs/v20260818_USA_optimized_mvp/gamslog.txt`
 and `runs/v20260818_TF_USA_optimized_mvp/gamslog.txt` (both 2026-08-18/19), which
@@ -444,16 +444,15 @@ doesn't raise on `.max()` of an empty numeric index), and
 bound is `NaN` — this `arange` crash is the concrete failure mode of the same
 empty-historical-data condition described generically below.
 
-Confirmed both in `switches.csv` for the failed runs (`startyear=2026`,
-`endyear=2032`, `GSw_Region=country/USA`, `GSw_ZoneSet=z48`) and in
-`cases_cepm.csv` today — the `startyear` row is
-`startyear,2010,,,,,,2026`, meaning **`USA_optimized_mvp` (the last column) still
-has `startyear=2026` set explicitly right now.** `hydcf.py` hasn't changed since
-those runs (`diff` against the run's own copied `hydcf.py` is empty), so re-running
-`USA_optimized_mvp` as currently configured will fail the same way. This is the
-same defect already fixed for `USA_gas_mvp` in commit `fd6fb46a` ("Corrected
-cases_cepm -- note that startyear has to be 2010 or hydro capacity factor breaks")
-— that fix was never applied to `USA_optimized_mvp`'s own column.
+Confirmed in `switches.csv` for the failed runs (`startyear=2026`,
+`endyear=2032`, `GSw_Region=country/USA`, `GSw_ZoneSet=z48`), and at the time in
+`cases_cepm.csv`, whose `startyear` row carried an explicit `2026` in the
+`USA_optimized_mvp` column. `hydcf.py` has not changed since those runs (`diff`
+against the run's own copied `hydcf.py` is empty), so the case would have failed
+the same way on any re-run. This was the same defect already fixed for
+`USA_gas_mvp` in commit `fd6fb46a` ("Corrected cases_cepm -- note that startyear
+has to be 2010 or hydro capacity factor breaks"); that fix had never been applied
+to `USA_optimized_mvp`'s own column.
 
 **~~Open question~~ — ANSWERED 2026-09-03: the cutoff is 2022.** The historical
 hydro data bundled in this repo covers **2007-2022**, confirmed directly on both
@@ -477,14 +476,16 @@ different `startyear` values are not comparable on new-capacity metrics. See
 §5.3 for the full set of traps, and for why adding an early *solve year* is the
 better lever when the goal is to spread out prescribed builds.
 
-**Status:** not fixed / not fully diagnosed — and, unlike when this entry was first
-written, **now confirmed to actively block the current `USA_optimized_mvp` case**
-before it can reach `a_createmodel.gms`, let alone solve any year. Fix: change
-`cases_cepm.csv`'s `startyear` value for `USA_optimized_mvp` from `2026` to blank
-(inherits the repo default of `2010`), the same fix already applied to
-`USA_gas_mvp`. Until that's done, `USA_optimized_mvp` cannot be used to test
-anything downstream of input processing — including whether the offshore-wind RPS
-and DE/H2 issues below still reproduce.
+**Status: worked around, 2026-09-04.** `cases_cepm.csv`'s `startyear` value for
+`USA_optimized_mvp` is now blank, so the case inherits the repo default of `2010`
+— the same fix already applied to `USA_gas_mvp`. That unblocks input processing;
+it does not fix the underlying script, which still empties the frame silently and
+then dies at an unrelated `arange` rather than saying what went wrong. Keep this
+entry: the trap is live for any new case that sets `startyear` past 2022.
+
+`USA_optimized_mvp` has not been re-run since the change, so whether the
+offshore-wind RPS and DE/H2 issues below still reproduce remains untested — the
+`startyear` failure had been masking both.
 
 **Fixed upstream?** No — same latent bug. `reeds/input_processing/hydcf.py` at tag
 `2026.08.03` has the identical `t >= startyear` filter and the identical
