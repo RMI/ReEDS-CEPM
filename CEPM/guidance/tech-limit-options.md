@@ -203,7 +203,7 @@ Number of equations in conflict: 1
 5.80786e+07 = 2032 × 28,582, i.e. the year number times the shipped `pv`
 MW/year limit. Full writeup in
 [`two-step-re-limited-runs.md`](two-step-re-limited-runs.md) (finding F1) and
-[`../known-issues.md`](../known-issues.md).
+[`../known-reeds-issues.md`](../known-reeds-issues.md).
 
 **The workaround: a sacrificial final solve year.** Because the coefficient only
 needs *some* later modeled year to exist, extending the run one solve period past

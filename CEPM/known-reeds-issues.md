@@ -1,10 +1,19 @@
-# Known issues log
+# Known ReEDS issues
 
-A running index of issues seen in ReEDS-CEPM runs. If your run hits an error, check
-here first — it may already be understood, non-fatal, or have a documented fix.
-Deeper investigations get their own doc (linked from the relevant entry, and listed
-under [Related documents](#related-documents)); this file is the quick-reference
-index of symptom → cause → status.
+A running index of things that are **broken, missing, or surprising in the model
+code itself** — ReEDS and this fork's changes to it. If your run errors, crashes,
+silently drops an output, or fails a check, look here first: it may already be
+understood, non-fatal, or have a documented fix. Deeper investigations get their
+own doc (linked from the relevant entry, and listed under
+[Related documents](#related-documents)); this file is the quick-reference index of
+symptom → cause → status.
+
+**Scope.** This file is about the *machinery*: a script that raises, a GAMS
+equation that goes infeasible, a missing input file, a plot that can't handle our
+region set. Issues with a *result* — a scenario configured wrong, an input we
+don't trust, a modelling choice we want to revisit — belong in
+[`batch-log.md`](batch-log.md) against the batch that surfaced them. The dividing
+question is whether a fresh clone of the repo would hit it.
 
 Entries are generalized from whatever run first surfaced them — treat script names
 and error text as the pattern to match, not a one-off.
@@ -356,9 +365,9 @@ well clear of a cendiv boundary.
 
 **Status:** fixed, in `reeds/input_processing/fuelcostprep.py`'s `smear()` call
 site — `dfgroups` is now restricted to `val_cendiv` (the run's own `cendiv` set)
-before computing weights. As of this writing the fix is a local, uncommitted change
-on `mvp-fix/tech-reset` — confirm it's committed/merged before assuming a fresh
-checkout of another branch has it. Full writeup as Issue 5 in
+before computing weights. Committed in `4e943cdc` and present on `dev` and the
+`mvp/*` branches, but **not yet on `main`** — a checkout of `main` still has the
+bug. Full writeup as Issue 5 in
 [SUBNATIONAL_REGION_SUPPORT.md](guidance/SUBNATIONAL_REGION_SUPPORT.md).
 
 **Files changed:**
@@ -822,6 +831,9 @@ and the `report.gms` reconciliation are byte-identical at `upstream/main`
 
 ## Related documents
 
+- [batch-log.md](batch-log.md) — the other half of the pair. Where this file
+  records defects in the machinery, that one records what each batch ran and
+  showed, including issues with *results* rather than with the code.
 - [GAMS_ERROR_579_INVESTIGATION.md](guidance/GAMS_ERROR_579_INVESTIGATION.md) — GAMS 44.4.0
   `$loadDCR`/domain-set compile failure in `autocode/b_load_sets.gms` (fixed).
 - [two-step-re-limited-runs.md](guidance/two-step-re-limited-runs.md) — design for the
