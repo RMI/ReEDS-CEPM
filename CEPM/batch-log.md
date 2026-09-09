@@ -49,9 +49,9 @@ Summary: What'd we change, why, what'd we find, what's next
 
 ### Checklist
 
-- [ ] I updated known-reeds-issues.md with any run-breaking issues I encountered
-- [ ] I updated reeds-to-cepm-log.md with any changes to ReEDS files
-- [ ] I updated CEPM/README with any relevant new documents
+- [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
+- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
+- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
 - [ ] I moved batch results to the VM-Outputs folder
 - [ ] I added any issues we found to the JIRA issues epic
 - [ ] I edited LLM-generated text to keep this entry short and to the point
@@ -146,9 +146,9 @@ is priced the same as gas), and the two don't interact.
 
 ### Checklist
 
-- [x] I updated known-reeds-issues.md with any run-breaking issues I encountered
-- [x] I updated reeds-to-cepm-log.md with any changes to ReEDS files
-- [x] I updated CEPM/README with any relevant new documents
+- [X] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
+- [X] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
+- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
 - [X] I moved batch results to the VM-Outputs folder
 - [X] I added any issues we found to the JIRA issues epic
 - [X] I edited LLM-generated text to keep this entry short and to the point
@@ -238,9 +238,9 @@ the cap file, `cap_new_out` and every plot share units.
 
 ### Checklist
 
-- [x] I updated known-reeds-issues.md with any run-breaking issues I encountered
-- [x] I updated reeds-to-cepm-log.md with any changes to ReEDS files
-- [x] I updated CEPM/README with any relevant new documents
+- [X] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
+- [X] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
+- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
 - [X] I moved batch results to the VM-Outputs folder
 - [X] I added any issues we found to the JIRA issues epic (we sort of already addressed these?)
 - [X] I edited LLM-generated text to keep this entry short and to the point
@@ -307,9 +307,9 @@ of. Establishes the pair that `limitre` was later inserted between: a no-load
 
 ### Checklist
 
-- [X] I updated known-reeds-issues.md with any run-breaking issues I encountered
-- [X] I updated reeds-to-cepm-log.md with any changes to ReEDS files
-- [X] I updated CEPM/README with any relevant new documents
+- [X] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
+- [X] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
+- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
 - [X] I moved batch results to the VM-Outputs folder
 - [X] I added any issues we found to the JIRA issues epic
 - [X] I edited LLM-generated text to keep this entry short and to the point

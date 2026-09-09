@@ -83,8 +83,17 @@ structure.
 ## `scripts/`
 
 | File | Summary |
-|---|---|
+| --- | --- |
 | [`scripts/check_env_sync.py`](scripts/check_env_sync.py) | Stdlib-only script that reports dependency drift between `environment.yml` and `pyproject.toml`, warning only on differences that are not on its known-accepted allowlist. |
 | [`scripts/get_batch_info.py`](scripts/get_batch_info.py) | Prints the name and `yearset`-derived start year of the first non-ignored case (left to right) in a cases file. Used by `run_cepm.ps1` to set `compare_cases.py`'s `--startyear` and to locate the run folder `bootstraplog.txt` is saved into. Not used in `-m/--multistep` mode, where `-s` overrides `ignore` and the leftmost non-ignored case may not be one that ran — `multistep_cases.py` answers both questions from the `_baseline` column instead. |
 | [`scripts/make_tg_cap.py`](scripts/make_tg_cap.py) | Harvests a cumulative tech-group capacity ceiling (MW_ac) from a completed reference run's `cap_new_out` and writes the `cepm_tg_cap_{sys,reg}_<token>.csv` pair consumed by `GSw_CEPM_TgCap`. Mirrors GAMS `tg_i` membership and upgrade-subset inheritance, applies a nonzero floor to groups with zero reference builds (a literal `0` would read as "no cap"), and warns when a requested ceiling falls below the first-year prescribed-build floor — which would otherwise surface as an infeasibility 25 minutes into a solve. See [`guidance/two-step-re-limited-runs.md`](guidance/two-step-re-limited-runs.md) §5.3. |
 | [`scripts/multistep_cases.py`](scripts/multistep_cases.py) | Validates and generates the cases file for `run_cepm.ps1 -m`. `--mode validate` checks that a stem has all three `_baseline`/`_limitre`/`_optimized` columns with the cap switch on for exactly one of them, and returns the baseline's name and start year; `--mode generate` writes a per-batch copy pointing `_limitre` at that batch's harvested ceiling, differing from the committed file by exactly one cell. |
+
+## `decisions/` - Logs of the model decisions we've made and why.
+
+| File | Summary |
+| --- | --- |
+| [`decisions/202XXXXX-decisions_template.md`](decisions/202XXXXX-decisions_template.md) | Template for when we make decisions |
+| [`decisions/README.md`](decisions/README.md) | Guidance for writing decisions |
+
+We don't actually have any decisions yet!
