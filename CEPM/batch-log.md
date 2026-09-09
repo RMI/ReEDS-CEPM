@@ -20,7 +20,7 @@ Loosely inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 **## Batch name: TEMPLATE `{Batch name here, e.g., v20260903}`**
 
-Optional summary: What'd we change, why, what'd we find, what's next
+Summary: What'd we change, why, what'd we find, what's next
 
 ### Batch details
 
@@ -150,7 +150,7 @@ is priced the same as gas), and the two don't interact.
 - [x] I updated reeds-to-cepm-log.md with any changes to ReEDS files
 - [x] I updated CEPM/README with any relevant new documents
 - [X] I moved batch results to the VM-Outputs folder
-- [ ] I added any issues we found to the JIRA issues epic
+- [X] I added any issues we found to the JIRA issues epic
 - [X] I edited LLM-generated text to keep this entry short and to the point
 
 ---
@@ -242,7 +242,7 @@ the cap file, `cap_new_out` and every plot share units.
 - [x] I updated reeds-to-cepm-log.md with any changes to ReEDS files
 - [x] I updated CEPM/README with any relevant new documents
 - [X] I moved batch results to the VM-Outputs folder
-- [ ] I added any issues we found to the JIRA issues epic
+- [X] I added any issues we found to the JIRA issues epic (we sort of already addressed these?)
 - [X] I edited LLM-generated text to keep this entry short and to the point
 
 ---
@@ -311,5 +311,5 @@ of. Establishes the pair that `limitre` was later inserted between: a no-load
 - [X] I updated reeds-to-cepm-log.md with any changes to ReEDS files
 - [X] I updated CEPM/README with any relevant new documents
 - [X] I moved batch results to the VM-Outputs folder
-- [ ] I added any issues we found to the JIRA issues epic
+- [X] I added any issues we found to the JIRA issues epic
 - [X] I edited LLM-generated text to keep this entry short and to the point
