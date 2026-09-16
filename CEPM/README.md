@@ -21,6 +21,9 @@ similar). Those are catalogued in
   for the rules, then [`preprocessing/README_TEMPLATE.md`](preprocessing/README_TEMPLATE.md)
   to document it.
 - **Wondering what we changed vs. upstream** → [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md).
+- **Doing an upstream sync** → [`sync-log.md`](sync-log.md) for a worked example
+  of the last one (branches, what broke, how it was fixed, and a lessons-learned
+  list) before you start.
 
 ## Top-level
 
@@ -29,6 +32,7 @@ similar). Those are catalogued in
 | [`README.md`](README.md) | This file — an index of everything in `CEPM/`. |
 | [`known-issues.md`](known-issues.md) | Running log of every error hit in a CEPM run: symptom, root cause, current status, and a **Fixed upstream?** verdict checked against upstream tag `2026.08.03`. Covers the `Error 579` GAMS compile failure, the `eq_RPS_OFSWind` and DE hydrogen infeasibilities, `z134`/`z90` zoneset gaps, the `startyear` hydro-CF constraint currently blocking `USA_optimized_mvp`, postprocessing and `reeds_to_rev` failures, and a list of cosmetic warnings that are safe to ignore. Deeper investigations get their own doc under `guidance/` and are linked from the relevant entry. |
 | [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) | Change log of how this fork diverges from upstream ReEDS — per change: description, files changed, reference, and what to re-test on each new upstream release. Sectioned into GAMS-compatibility fixes, helper scripts, and custom CEPM inputs. Skeleton is in place; most sections are not yet filled in. |
+| [`sync-log.md`](sync-log.md) | Append-only history of each upstream sync *event* itself (as opposed to `reeds-to-cepm-log.md`'s standing description of current divergence): branches and commits involved, what broke and why, how it was fixed, validation performed, and a per-patch "still needed / altered by this sync" verdict against `reeds-to-cepm-log.md`'s "what to test" lists. One dated entry per sync. |
 
 ## `guidance/` — how-to and investigation write-ups
 
