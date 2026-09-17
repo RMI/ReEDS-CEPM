@@ -9,7 +9,7 @@ upstream release.
 `62f6381e` (2026-06-23) — the merge base of this fork and `upstream/main`.
 
 Most bug-fix entries below have a matching symptom-level entry in
-[`known-issues.md`](known-issues.md); that file is the "my run failed, what is
+[`known-reeds-issues.md`](known-reeds-issues.md); that file is the "my run failed, what is
 this" index, while this file is the "what did we change, and what breaks on
 rebase" index.
 
@@ -54,7 +54,7 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 
 In some cases, we change base ReEDS files to fix bugs, ensure compatibility,
 or adjust ReEDS functionality for CEPM's needs. Most of these are captured in
-[`known-issues.md`](known-issues.md).
+[`known-reeds-issues.md`](known-reeds-issues.md).
 
 ## GAMS compatibility
 
@@ -83,7 +83,7 @@ see this on its own toolchain.
 ### Reference:
 
 [`guidance/GAMS_ERROR_579_INVESTIGATION.md`](guidance/GAMS_ERROR_579_INVESTIGATION.md),
-[`known-issues.md`](known-issues.md)
+[`known-reeds-issues.md`](known-reeds-issues.md)
 
 ### What to test in new releases:
 
@@ -114,7 +114,7 @@ Reproduced on both `transreg/WestConnect` and `interconnect/western` runs.
 - `reeds/input_processing/fuelcostprep.py` — restricts `dfmap['cendiv']` to
   `val_cendiv` (the divisions actually in this run's region set) before smearing.
 
-### Reference: [`known-issues.md`](known-issues.md)
+### Reference: [`known-reeds-issues.md`](known-reeds-issues.md)
 
 ### What to test in new releases:
 
@@ -144,7 +144,7 @@ input file.
 
 ### Reference:
 
-[`known-issues.md`](known-issues.md)
+[`known-reeds-issues.md`](known-reeds-issues.md)
 
 ### What to test in new releases:
 
@@ -152,7 +152,7 @@ input file.
   further unconditional references to `df_windofs`?
 - Run one case with `GSw_OfsWind = 0` through `recf.py`. Upstream's default is
   `GSw_OfsWind = 1`, so upstream CI does not exercise this path.
-- Note the related trap in [`known-issues.md`](known-issues.md): disabling
+- Note the related trap in [`known-reeds-issues.md`](known-reeds-issues.md): disabling
   offshore wind via `techs_banned` instead of `GSw_OfsWind = 0` leaves the
   `eq_RPS_OFSWind` state mandate active and the model infeasible.
 
@@ -209,7 +209,7 @@ instead of `_caselist[0]`, the single string it expects.
 
 ### Reference:
 
-[`known-issues.md`](known-issues.md)
+[`known-reeds-issues.md`](known-reeds-issues.md)
 
 ### What to test in new releases:
 
@@ -245,7 +245,7 @@ started actually varying per batch (see `run_cepm.ps1`'s new
 
 ### Reference:
 
-[`known-issues.md`](known-issues.md)
+[`known-reeds-issues.md`](known-reeds-issues.md)
 
 ### What to test in new releases:
 
@@ -563,7 +563,7 @@ because that is where readers and tools look for them.
 - Do the quick-start steps still work end to end on a clean clone — particularly
   the install commands, the Julia version, and the large-input-file instructions?
 - Do the CEPM docs still describe reality? On a rebase, re-check
-  [`known-issues.md`](known-issues.md)'s "Fixed upstream?" verdicts, which are
+  [`known-reeds-issues.md`](known-reeds-issues.md)'s "Fixed upstream?" verdicts, which are
   pinned to a specific upstream tag.
 - Is the `CONTRIBUTING.md` guidance still up-to-date?
 

@@ -14,7 +14,7 @@ similar). Those are catalogued in
 
 ## Start here
 
-- **A run just failed** → [`known-issues.md`](known-issues.md). Symptom → cause →
+- **A run just failed** → [`known-reeds-issues.md`](known-reeds-issues.md). Symptom → cause →
   status for every error seen in a CEPM run so far, including whether it is fixed
   upstream. Check it before debugging anything.
 - **Adding a new custom input** → [`preprocessing/input-requirements.md`](preprocessing/input-requirements.md)
@@ -27,7 +27,7 @@ similar). Those are catalogued in
 | File | Summary |
 |---|---|
 | [`README.md`](README.md) | This file — an index of everything in `CEPM/`. |
-| [`known-issues.md`](known-issues.md) | Running log of every error hit in a CEPM run: symptom, root cause, current status, and a **Fixed upstream?** verdict checked against upstream tag `2026.08.03`. Covers the `Error 579` GAMS compile failure, the `eq_RPS_OFSWind` and DE hydrogen infeasibilities, `z134`/`z90` zoneset gaps, the `startyear` hydro-CF constraint currently blocking `USA_optimized_mvp`, postprocessing and `reeds_to_rev` failures, and a list of cosmetic warnings that are safe to ignore. Deeper investigations get their own doc under `guidance/` and are linked from the relevant entry. |
+| [`known-reeds-issues.md`](known-reeds-issues.md) | Running log of every error hit in a CEPM run: symptom, root cause, current status, and a **Fixed upstream?** verdict checked against upstream tag `2026.08.03`. Covers the `Error 579` GAMS compile failure, the `eq_RPS_OFSWind` and DE hydrogen infeasibilities, `z134`/`z90` zoneset gaps, the `startyear` hydro-CF constraint currently blocking `USA_optimized_mvp`, postprocessing and `reeds_to_rev` failures, and a list of cosmetic warnings that are safe to ignore. Deeper investigations get their own doc under `guidance/` and are linked from the relevant entry. |
 | [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) | Change log of how this fork diverges from upstream ReEDS — per change: description, files changed, reference, and what to re-test on each new upstream release. Sectioned into GAMS-compatibility fixes, helper scripts, and custom CEPM inputs. Skeleton is in place; most sections are not yet filled in. |
 
 ## `guidance/` — how-to and investigation write-ups
