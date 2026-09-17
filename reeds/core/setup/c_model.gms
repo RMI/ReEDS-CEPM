@@ -175,6 +175,10 @@ EQUATION
 
 eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit based on interconnection queues"  
 
+* CEPM: cumulative new-investment caps by tech group (see CEPM/guidance/two-step-re-limited-runs.md)
+ eq_cepm_tg_cap_sys(tg)                   "--MW_ac-- CEPM: cumulative system-wide cap on new investment by tech group"
+ eq_cepm_tg_cap_reg(tg,r)                 "--MW_ac-- CEPM: cumulative regional cap on new investment by tech group"
+
 * storage capacity credit supply curves
  eq_cap_sdbin_balance(i,v,r,ccseason,t)             "--MW-- total binned storage power capacity must be greater than total storage capacity"
  eq_cap_sdbin_energy_balance(i,v,r,ccseason,t)      "--MWh-- total binned storage energy capacity must be greater than total storage capacity"
@@ -1400,6 +1404,82 @@ eq_interconnection_queues(tg,r,t)
                                     $(yeart(tt)>=interconnection_start)
                                     $(tmodel(tt) or tfix(tt))],
         INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb] }
+;
+
+* ---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream. See CEPM/guidance/two-step-re-limited-runs.md.
+*
+* Cumulative ceilings on new investment by technology group, used to cap a
+* scenario at a reference run's own buildout. Modeled on eq_interconnection_queues
+* above (same cumulative-over-tt shape, same tmodel/tfix guard so it behaves
+* correctly in ReEDS' sequential solve), with four deliberate differences:
+*   0. Counts capacity arriving by UPGRADES as well as INV/INV_REFURB, so the
+*      constraint measures exactly what report.gms's cap_new_out reports (which a
+*      harvested ceiling is derived from). This matters because upgrade techs
+*      inherit tg membership from the tech they upgrade to (b_inputs.gms:412-413),
+*      so e.g. hydED->pumped-hydro lands in tg 'pumped-hydro'; without this term a
+*      storage ceiling could be evaded by upgrading hydro instead of building
+*      batteries.
+*   1. Cumulative over the whole horizon rather than per-year, so it does not
+*      depend on year-gap arithmetic -- unlike eq_growthlimit_absolute, which is
+*      infeasible in the last modeled year (see known-reeds-issues.md).
+*   2. Divided by ilr(i), so the cap is in MW_ac and directly comparable to the
+*      reported cap_new_out. INV itself is MW_dc for UPV (ilr_utility = 1.34).
+*   3. Gated by Sw_CEPM_TgCapStartYear, so prescribed builds in the first solve
+*      year can be excluded if desired.
+*
+* Two scopes, either of which may be left empty: system-wide (tg) and per-region
+* (tg,r). If both are populated, both bind.
+*
+* NOTE: a cap of 0 means "no cap" (the equation is dropped by the $ guard), NOT
+* "no builds" -- GAMS does not store zero-valued records, so an explicit 0 is
+* indistinguishable from an absent row. CEPM/scripts/make_tg_cap.py writes a small
+* nonzero floor instead. For a genuine permanent zero, use bannew(i).
+* ---------------------------------------------------------------------------
+
+eq_cepm_tg_cap_sys(tg)$[cepm_tg_cap_sys(tg)$Sw_CEPM_TgCap$(not Sw_PCM)]..
+
+* the system-wide cumulative capacity ceiling for this tech group
+    cepm_tg_cap_sys(tg)
+
+    =g=
+
+* must be greater than all new investment in the group, in MW_ac, since the start year
+    sum{(i,newv,r,tt)$[valinv(i,newv,r,tt)$tg_i(tg,i)
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(tmodel(tt) or tfix(tt))],
+        [INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+* [plus] capacity arriving by upgrade rather than new build, matching cap_new_out
+    + sum{(i,v,r,tt)$[valcap(i,v,r,tt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(tmodel(tt) or tfix(tt))],
+        (1 - upgrade_derate(i,v,r,tt))
+        * [UPGRADES(i,v,r,tt) - UPGRADES_RETIRE(i,v,r,tt)]
+        / ilr(i) }
+;
+
+eq_cepm_tg_cap_reg(tg,r)$[cepm_tg_cap_reg(tg,r)$Sw_CEPM_TgCap$(not Sw_PCM)]..
+
+* the regional cumulative capacity ceiling for this tech group
+    cepm_tg_cap_reg(tg,r)
+
+    =g=
+
+    sum{(i,newv,tt)$[valinv(i,newv,r,tt)$tg_i(tg,i)
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(tmodel(tt) or tfix(tt))],
+        [INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+* [plus] capacity arriving by upgrade rather than new build, matching cap_new_out
+    + sum{(i,v,tt)$[valcap(i,v,r,tt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(tmodel(tt) or tfix(tt))],
+        (1 - upgrade_derate(i,v,r,tt))
+        * [UPGRADES(i,v,r,tt) - UPGRADES_RETIRE(i,v,r,tt)]
+        / ilr(i) }
 ;
 
 *===============================
