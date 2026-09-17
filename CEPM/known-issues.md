@@ -619,6 +619,25 @@ from `reeds/reedsplots.py`'s `plot_trans_diff()` (`tran_out[case].pivot(...)[sub
 
 **Fixed upstream?** No. `postprocessing/compare_cases.py` at tag `2026.08.03` has identical hardcoded `2020` literals at all five sites — same bug, inherited, not RMI-introduced. Doesn't surface upstream by default because upstream's own default `--startyear` is also 2020, so it only breaks for a start year other than 2020 — which is what every CEPM case uses.
 
+## `reeds2pras` `BoundsError` for `hydud`/`hydund` hydro capacity — no monthly profile data
+
+**Symptom:** caught, non-fatal Julia errors during a solve year's `ReEDS2PRAS` step (visible in `gamslog.txt`, not `report.log`):
+```
+┌ Error: <timestamp> | p1,hydud,BoundsError(Float64[], (1,))
+└ @ Main.ReEDS2PRAS .../reeds2pras/src/utils/reeds_data_parsing.jl:582
+```
+repeated once per month for every affected (zone, tech) pair — e.g. 72 lines total (6 pairs × 12 months) on a `cendiv/Pacific`/`z132` run: `p1,hydud`; `p1,hydund`; `p2,hydud`; `p5,hydund`; `p6,hydund`; `p9,hydund`.
+
+**Root cause:** `process_hydro()` (`reeds/resource_adequacy/reeds2pras/src/utils/reeds_data_parsing.jl:485`) only runs this code path when `pras_hydro_energylim=1` — `cases.csv`'s own default, so this is the normal path for essentially every case, not an edge case. For each dispatchable-hydro (zone, tech) pair it has exogenous capacity for, it filters `hydcf.csv` (monthly hydro capacity factor) and `hydcapadj.csv` (monthly capacity adjustment) by month and indexes the first match with `[1]`. `hydud`/`hydund` (hydro-upgrade capacity categories, tied to `GSw_HydroCapEnerUpgradeType`/`hyd_add_upg_cap.csv`) have exogenous MW capacity in the run but **zero rows in `hydcf.csv`/`hydcapadj.csv` for any region** — confirmed directly against `inputs_case/hydcf.csv` and `inputs_case/hydcapadj.csv` in an affected run. The filter comes back empty, and indexing `[1]` throws `BoundsError`.
+
+Non-fatal by design, not by accident: `git blame` traces a small RMI patch to this exact function (`43bac52c`, "reeds_data_parsing.jl: more informative error"). Upstream's own original code already special-cased `BoundsError` here as an expected, tolerated failure (catch it and `@error`-log, but re-raise anything else) — RMI's patch just made every exception log the same way instead of singling out `BoundsError`. So this failure mode was anticipated by ReEDS's own maintainers before RMI ever touched the file; RMI's patch changed how it's logged, not whether it's tolerated.
+
+**Impact:** confined to the resource-adequacy diagnostic layer, not the GAMS capacity-expansion solve. All 12 months fail for each affected pair, so `monthly_energy`/`dispatch_limit`/`energy_cap`/`inflow`/`grid_inj_cap` for that hydro-upgrade unit stay at their pre-allocated `zeros()` for the entire year in PRAS's Monte Carlo simulation, instead of a real profile — a conservative understatement, not an overstatement, of that unit's reliability contribution. Doesn't touch investment, generation, system cost, or prices, which come from the GAMS LP and solve independently of this post-solve PRAS step. Confined to whichever zones actually carry `hydud`/`hydund` exogenous capacity (`p1`, `p2`, `p5`, `p6`, `p9` on the `cendiv/Pacific` case tested) — a case with no hydro-upgrade capacity never reaches this filter at all, which is presumably why it wasn't caught sooner.
+
+**Status:** not fixed — confirmed pre-existing, not sync-introduced: reproduces identically (same 6 pairs, same 72-line count) on the pre-`2026.08.03`-sync baseline (`ad0f56b0`). Undocumented until now. No known upstream issue or PR tracking it. Candidate fix: populate `hydcf.csv`/`hydcapadj.csv` for `hydud`/`hydund` from whatever process derives their exogenous capacity in the first place, or give `process_hydro()` an explicit fallback profile for hydro-upgrade categories instead of relying on the catch to zero them out silently.
+
+**Fixed upstream?** No. `reeds/resource_adequacy/reeds2pras/src/utils/reeds_data_parsing.jl` at tag `2026.08.03` has the same empty-filter code path (upstream's own version, pre-`43bac52c`, still narrows the catch to `BoundsError` specifically — meaning upstream already knows to expect exactly this failure). Not RMI-introduced.
+
 ## Cosmetic warnings safe to ignore
 
 - **`copy_files.py`** — pandas `DtypeWarning: Columns (N) have mixed types` while
