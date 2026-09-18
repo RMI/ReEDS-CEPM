@@ -108,19 +108,72 @@ redundant by this sync.
 - **Gas CAPEX schema** — did not re-verify `gas_ATB_2024_moderate.csv`'s
   columns/units against the new upstream release this cycle; do so before
   trusting the CEPM gas-cost files are still shape-compatible.
-- **`mvp/two-step-runs` is still unmerged** and diverged from this same
-  pre-sync commit (`ad0f56b0`). A `git merge-tree` dry run confirms it merges
-  cleanly with `temp-august` with no textual conflicts, and every load-bearing
-  assumption behind its own "what to test" items (`eq_interconnection_queues`,
-  `cap_new_out`, `ilr(i)`, `CAP_ABOVE_LIM`, the `runfiles.csv` region-column
-  split) still holds against `temp-august`'s actual code. One cleanup item for
-  whoever does that merge: `cases_test.csv`'s `USA_fasterish` column ends up
-  documented twice in the merged `reeds-to-cepm-log.md` (a terse bullet under
-  "Minor and cosmetic" from `mvp`, and the full reconciliation section from
-  this sync) — fold them into one before merging.
-- **`known-issues.md` vs. `known-reeds-issues.md`** — `mvp/two-step-runs`
-  renamed this file (2026-09-04); `temp-august` still uses the old name. Pick
-  one before merging the branches.
+- **`mvp/two-step-runs` merged to `dev` first** (PR #49, `db39de07`), before
+  `temp-august` did. `dev` and `temp-august` diverged independently from the
+  same commit (`ad0f56b0`) the whole time this sync was in progress — see
+  "Landing this sync into dev" below for how the two were reconciled.
+- **`known-issues.md` vs. `known-reeds-issues.md`** — resolved as part of that
+  same reconciliation: `dev`'s rename (via `mvp/two-step-runs`) was kept,
+  `temp-august`'s two content additions were folded into the renamed file by
+  hand.
+
+### Landing this sync into dev
+
+By the time `temp-august` was ready to merge, `dev` had already merged
+`mvp/two-step-runs` (PR #49) and moved 13 commits further, all from the same
+`ad0f56b0` starting point — so this was really two independent efforts
+reconciling, not a simple fast-forward. A `git merge-tree` dry run against
+`dev`'s actual tip found exactly 2 conflicts, both documentation
+(`CEPM/README.md`, `CEPM/known-reeds-issues.md`) and both purely additive on
+each side — no redundant or contradicting content, confirmed by mapping every
+new section on both sides against the shared base before touching anything.
+Zero conflicts in any code or data file (`cases.csv`, `b_inputs.gms`,
+`c_model.gms`, `runfiles.csv`, `run_cepm.ps1`) — `dev`'s and `temp-august`'s
+changes never touched the same lines.
+
+**Process used:**
+
+1. **Tag both sides before merging**, so "what did this look like right
+   before" never requires reconstructing it from a merge commit's parents:
+   - `pre-sync-2026-08` on `dev`'s tip immediately before merging (`db39de07`)
+   - `sync-2026-08-temp-august` on `temp-august`'s tip as actually validated
+     by the `Pacific`/`WECC-SW_baseline` test runs (`f90dea37`) — tagged
+     *before* merging `dev` in, so the tag reflects exactly what was tested,
+     not a later state that also includes `dev`'s independent work.
+   - Both are annotated tags, pushed immediately (a local-only tag is
+     invisible to everyone else and easy to lose).
+2. **Open the PR (base `dev`, compare `temp-august`) before resolving
+   anything.** GitHub allows a PR to be opened with conflicts present — it
+   just shows "Can't automatically merge" until they're resolved, and
+   pushing a resolution to `temp-august` afterward updates the same PR
+   automatically. Considered doing the resolution on a separate branch cut
+   from `dev` instead (to keep `temp-august` itself from moving past what
+   was tagged), but that turned out to be unnecessary complexity: the tag
+   already captures the exact validated state permanently, so `temp-august`
+   drifting forward afterward loses nothing.
+3. **Resolve locally (`git checkout temp-august && git merge origin/dev`),
+   not through GitHub's web conflict editor** — `known-reeds-issues.md` is
+   850+ lines with two separate insertion points; editing that in a browser
+   textarea is far more error-prone than a real local editor, even though
+   GitHub's web editor can technically handle simple text conflicts.
+4. **Write an explicit commit message for the resolution**, not git's default
+   auto-generated one — state which files were resolved and confirm the
+   reasoning (additive, no redundancy) directly in the commit, so `git log`
+   carries the "why" without anyone needing to re-derive it from the diff.
+5. **Push the resolution to `temp-august`**, which updates the already-open
+   PR in place — no need to touch the PR itself.
+6. **Merge with "Create a merge commit," never squash or rebase.** This is
+   the one step that actually determines whether any of the above survives:
+   squash would flatten the resolution commit (and every commit from both
+   sides of this sync) into one opaque commit, erasing the exact record
+   steps 1-4 exist to create.
+7. **Delete `temp-august` after merging.** Every commit on it stays
+   permanently reachable through `dev`'s ancestry once merged via a real
+   merge commit, so nothing is lost — the tag just keeps a convenient, named
+   pointer to the exact validated state, matching the same branch-cleanup
+   convention already used for `temp-dev`.
+
+*(PR number and final merge commit hash to be added here once merged.)*
 
 ### Lessons for the next sync
 
