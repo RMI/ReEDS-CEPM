@@ -7,10 +7,19 @@ what each implies for existing capacity, solvability, and reporting.
 
 **Short version:** ReEDS already contains four distinct mechanisms that cover
 most of this design space (`ban`/`bannew`, growth-rate constraints, the
-interconnection-queue cumulative cap, and cost-multiplier penalties). Which one
-is right depends on a question that is easy to skip past: do you want to
-guarantee a hard limit, or discourage the technology and let the model decide?
-Only some of the options below can actually promise the former.
+interconnection-queue cumulative cap, and cost-multiplier penalties), and this
+fork adds a fifth (a purpose-built cumulative cap by tech group — see the CEPM
+recommendation section). Which one is right depends on a question that is easy
+to skip past: do you want to guarantee a hard limit, or discourage the
+technology and let the model decide? Only some of the options below can actually
+promise the former.
+
+> **Correction, 2026-09-01.** An earlier version of this doc recommended
+> `GSw_GrowthAbsCon` with `GSw_GrowthConLastYear` set to the case's `endyear` as
+> the CEPM answer for non-RSC techs. That configuration makes the final solve
+> year **infeasible** — confirmed both in a standalone GAMS replication and in a
+> live `WECC-SW_baseline` run. See the ⚠️ block in Option 3 and the withdrawn
+> recommendation below. If you acted on the old advice, that's the cause.
 
 ## The core distinction: `ban(i)` vs `bannew(i)`
 
@@ -160,19 +169,126 @@ transition-pace realism, not permanent limits. Don't reach for this if the ask
 is "never exceed X GW"; reach for it if the ask is "don't let X grow faster
 than Y per year."
 
-**CEPM-specific exception: short horizons turn this into a de facto ceiling.**
-`eq_growthlimit_absolute` is national-only in its indexing (no `r` term, just
-`tg,t`) — but for a subnational case that's harmless, since the sum only ever
-runs over whatever regions are actually in the model, so it naturally becomes
-your run's total. More importantly: because CEPM cases typically run a short
-horizon (e.g. `endyear=2032`, build years `2026/2029/2032`), setting
-`GSw_GrowthConLastYear` to cover the *entire* run means there are no
-later years left for the model to "catch up" in — the pace limiter and the
-cumulative cap become numerically equivalent for the run's duration. This
-turns Option 3 into the practical answer for a deployment cap on non-RSC techs
-(gas, coal, nuclear, battery, h2, biomass, hydro) in CEPM specifically, even
-though it's explicitly the wrong tool for a full 2050-horizon ReEDS run. See
-the recommendation section below for the concrete switch/data values.
+**⚠️ CEPM-specific trap: setting `GSw_GrowthConLastYear` to the run's `endyear`
+makes the final solve year infeasible.** This section previously recommended
+exactly that; it is wrong, and the correction is important enough to state
+before anything else about Option 3.
+
+The equation's allowance is the gap to the **next** modeled year. `tprev(t,tt)`
+means "tt is the year before t" (`b_inputs.gms:1027`, `1053-1055`), so
+`tprev(tt,t)` in the equation selects the year *after* `t`. For the last
+modeled year no such `tt` exists, the sum collapses to 0, and the coefficient
+becomes `-yeart(t)` — a large negative number required to be `=g=` a
+non-negative sum of `INV`. There is no slack variable, so the solve is
+infeasible, not merely tight.
+
+`yearweight` uses the identical expression and then explicitly patches the last
+year (`b_inputs.gms:5573-5574`); `eq_growthlimit_absolute` never got that patch.
+The bug is latent upstream (confirmed still present at tag `2026.08.03`) only
+because `GSw_GrowthConLastYear` defaults to 2026 while runs end in 2050, so the
+equation is never generated in the final year.
+
+**Confirmed empirically, 2026-09-01**, on `WECC-SW_baseline`'s exact
+configuration plus `GSw_GrowthAbsCon=1`/`GSw_GrowthConLastYear=2032`
+(`runs/v20260901t0_WECC-SW_t0growthcon`): 2026 and 2029 solve to
+`MODEL STATUS 1 Optimal`, 2032 returns `MODEL STATUS 4 Infeasible`, and CPLEX's
+conflict refiner isolates it to a single row —
+
+```
+Row 'eq_growthlimit_absolute(PV,2032)' infeasible, all entries at implied bounds.
+Number of equations in conflict: 1
+  lower: eq_growthlimit_absolute(PV,2032) > 5.80786e+07
+```
+
+5.80786e+07 = 2032 × 28,582, i.e. the year number times the shipped `pv`
+MW/year limit. Full writeup in
+[`two-step-re-limited-runs.md`](two-step-re-limited-runs.md) (finding F1) and
+[`../known-reeds-issues.md`](../known-reeds-issues.md).
+
+**The workaround: a sacrificial final solve year.** Because the coefficient only
+needs *some* later modeled year to exist, extending the run one solve period past
+the last year you care about restores a positive gap:
+
+| solve years | 2010 | 2026 | 2029 | 2032 |
+|---|---:|---:|---:|---:|
+| `2010,2026,2029,2032` (`endyear=2032`) | 16 | 3 | 3 | **−2032** |
+| `2010,2026,2029,2032,2035` (`endyear=2035`) | 16 | 3 | 3 | **3** |
+
+Concretely: set `yearset=2026..2035..3` and `endyear=2035`, leave
+`GSw_GrowthConLastYear=2032`, and truncate reporting at 2032. Costs one extra
+solve year (plus its Augur/PRAS pass — roughly a third more solve time on a
+3-build-year CEPM case).
+
+**⚠️ The sacrificial year is not a free no-op on the years you do report.**
+Adding a later solve year changes the *last reported* year's investment
+decisions, because that year is no longer the model's terminal year and loses
+its end-of-horizon effects. Measured directly — two runs at the same commit,
+identical except for the horizon (`runs/v20260901t2_WECC-SW_baseline` at
+`endyear=2032` vs `runs/v20260901t0b_WECC-SW_t0bsacrificial` at `endyear=2035`),
+with the growth constraint slack in both so it isn't the cause:
+
+| gross new builds (MW_ac) | 2026 | 2029 | 2032 |
+|---|---:|---:|---:|
+| pv | 0.0% | +0.1% | +0.2% |
+| wind-ons | 0.0% | 0.0% | **−4.6%** (9,531 → 9,089) |
+| battery | 0.0% | 0.0% | **−5.4%** (530 → 502) |
+
+Earlier years are untouched; the final reported year moves by several percent.
+So "add a throwaway year" is really "accept a perturbed final year" — fine for a
+sensitivity, not fine if 2032 capacity is the headline number, and definitely
+not fine if you are comparing a sacrificial-year run against a non-sacrificial-year
+one. If you use this workaround, use it for *every* case in the comparison.
+
+**Confirmed live, 2026-09-01** (`runs/v20260901t0b_WECC-SW_t0bsacrificial`): the
+same `WECC-SW_baseline` configuration that failed above, changed only by
+`yearset=2026..2035..3`/`endyear=2035`, solves **2032 to `MODEL STATUS 1
+Optimal`**. The constraint is genuinely live rather than silently dropped — both
+runs generate exactly 3 `eq_growthlimit_absolute` rows in their 2032 solve (one
+each for `pv`, `wind-ons`, `battery`, the three groups with nonzero limits in
+`growth_limit_absolute.csv`):
+
+```
+t0  (endyear 2032):  Equation eq_growthlimit_absolute  ...  3   -> 2032 Infeasible
+t0b (endyear 2035):  Equation eq_growthlimit_absolute  ...  3   -> 2032 Optimal
+```
+
+Same equation, same row count, only the year-gap coefficient differs. At the
+shipped MW/year limits the constraint is non-binding for WECC-SW (2032 onshore
+wind builds 9,531 MW against a 3 × 8,854 = 26,562 MW allowance), so the
+sacrificial-year run reproduces the ordinary baseline through 2032.
+
+**But the workaround only fixes the infeasibility, not the fitness for purpose.**
+Three limitations remain, and together they are why CEPM's baseline-constrained
+work did *not* end up using Option 3:
+
+1. **No year index.** `growth_limit_absolute(tg)` is a single MW/year number per
+   tech group (`b_inputs.gms:4804`) — the constraint is necessarily a *constant
+   annual pace*. Real CEPM baselines are extremely lumpy: the WECC-SW baseline
+   builds 200 MW of onshore wind in 2029 and 9,531 MW in 2032. A flat rate sized
+   to that total allows 4,866 MW per solve year, which would cap a scenario
+   *below the very baseline it was derived from*. No amount of tuning fixes this;
+   the parameter cannot express a lumpy target.
+2. **Unit mismatch.** The constraint bounds `INV`, which for UPV is MW_dc, while
+   every reported capacity output is MW_ac (`cap_new_out = INV / ilr(i)`,
+   `report.gms:820-825`; `ilr_utility = 1.34`). A limit derived from reported
+   capacity and applied without conversion under-caps solar by 34%.
+3. **No first-year floor.** The constraint's lower year bound is
+   `model_builds_start_yr`, with no switch to raise it, so it also applies to the
+   first build year — where CEPM cases carry large *prescribed* builds the model
+   has no choice about. With no slack variable, a limit tight enough to be
+   interesting risks making that year infeasible too.
+
+Also note the equation is national-only in its indexing (no `r` term, just
+`tg,t`). For a subnational case that's harmless — the sum only runs over
+whatever regions are in the model, so it naturally becomes the run's total — but
+it means Option 3 cannot express a per-region ceiling at all.
+
+**When Option 3 is still the right tool:** when you genuinely want a pace limit
+("don't let X grow faster than Y MW/year"), on a run whose horizon extends past
+`GSw_GrowthConLastYear` so the final-year trap never fires. That is what it was
+built for. It is not a cumulative ceiling, and the short-horizon equivalence
+argument this section used to make does not survive contact with the final-year
+bug or with lumpy build profiles.
 
 ## Option 4 — CAPEX/cost multiplier (discourage, don't cap)
 
@@ -329,35 +445,36 @@ real physical ceiling — `m_rscfeas` simply won't allow more capacity than what
 the bins contain.
 
 **Everything else (`gas`, `coal`, `nuclear`, `battery`, `h2`, `biomass`,
-`hydro`):** use `GSw_GrowthAbsCon` + `GSw_GrowthConLastYear`, leaning on the
-short-horizon exception called out above. Concretely, to cap `tg='gas'` at
-5 GW cumulative for a case whose build years are 2026/2029/2032:
+`hydro`):** ~~use `GSw_GrowthAbsCon` + `GSw_GrowthConLastYear`~~ — **this
+recommendation has been withdrawn.** It said to set
+`GSw_GrowthConLastYear` to the case's `endyear`, which is precisely the
+configuration that makes the final solve year infeasible (see the ⚠️ block in
+Option 3 above, and the live confirmation on `WECC-SW_baseline`). Even with the
+sacrificial-final-year workaround, the flat MW/year parameter can't follow a
+lumpy build profile, bounds MW_dc while outputs report MW_ac, and has no way to
+exempt the first year's prescribed builds.
 
-1. Add a `gas,<MW/year>` row to `inputs/growth_constraints/growth_limit_absolute.csv`,
-   sized so `MW/year * (number of build-year intervals)` ≈ your GW target
-   (e.g. `5000 / 2` if there are two 3-year intervals between 2026→2029→2032).
-2. In `cases_cepm.csv`, add rows (mirroring the existing `GSw_GrowthPenalties`
-   row at line 23) for that case's column:
-   - `GSw_GrowthAbsCon,1`
-   - `GSw_GrowthConLastYear,2032` (the case's `endyear`)
+**Use instead:** the purpose-built cumulative caps
+(`eq_cepm_tg_cap_sys` / `eq_cepm_tg_cap_reg`) added for CEPM's
+baseline-constrained runs, driven by `GSw_CEPM_TgCap` and
+`inputs/growth_constraints/cepm_tg_cap_{sys,reg}_{cepmtgcapscen}.csv`. They are
+genuinely cumulative (so the final year is fine), available at both system-wide
+and per-region scope, and expressed in MW_ac so the numbers match
+`cap_new_out` and every plot. Design rationale, units, and the zero-value trap
+are documented in
+[`two-step-re-limited-runs.md`](two-step-re-limited-runs.md) §4.
 
-This is cheap because both switches already exist in `cases.csv:153-154`, and
-the data file already uses the default `tg` groups (`wind-ons`, `pv`,
-`battery` are populated today; add a row for whatever `tg` you're targeting).
-
-**Caveat to carry forward:** this is not a true infinite-horizon hard cap —
-it's "hard for the length of this run." If a case's `endyear` is later
-extended past what `GSw_GrowthConLastYear` was set to, the constraint stops
-binding with no warning, and the model can build past the intended ceiling
-silently. Re-check `GSw_GrowthConLastYear` any time a capped case's horizon
-changes.
-
-**If the ask ever outgrows this** — a true cumulative ceiling that holds
-regardless of horizon length, or one that needs to vary by region rather than
-apply to the whole modeled area — that requires the interconnection-queue
-mechanism (Option 2), which in turn requires adding the scenario-switch/
-`runfiles.csv` plumbing described in that section's caveat above. Not
-currently implemented; flag as follow-up work if it comes up.
+**Why not Option 2 for this** — worth recording, since the queue mechanism looks
+like the obvious fit. `cap_limit`/`eq_interconnection_queues` is already active
+*and already violated* in CEPM baselines: `cap_above_limit.csv` from
+`runs/v20260824-2_WECC-SW_baseline` has 20 non-zero rows (PV in `z28` ~5.0 GW
+over its limit in 2026, wind in `p31` ~5.2 GW over, gas in `p59` ~2.0 GW over),
+absorbed by the penalized `CAP_ABOVE_LIM` slack. Repurposing it for a policy
+ceiling would perturb a constraint that is already doing work in the baseline,
+which breaks any controlled baseline-vs-scenario comparison. Separately worth
+knowing: the shipped queue data stops at 2030, so
+`sum{(tgg,rr), cap_limit(tgg,rr,'2032')}` is zero and the queue constraint
+**switches itself off entirely in 2032** in every CEPM run today.
 
 ## Recommendation
 
@@ -366,12 +483,13 @@ currently implemented; flag as follow-up work if it comes up.
 | Remove a tech entirely, including existing capacity | `ban(i)`, following the `GSw_Biopower`/`GSw_OfsWind` pattern |
 | Stop new builds, keep existing capacity operating | `bannew(i)`, following the `GSw_OnsWind6to10` pattern |
 | Cap physical buildable potential for an RSC tech (solar/wind/geo/PSH) | Edit the resource supply curve `cap` bins |
-| Impose a real cumulative GW ceiling on new investment, by tech group and region | Repurpose `cap_limit.csv`/`cap_penalty.csv` (`eq_interconnection_queues`); fix `CAP_ABOVE_LIM.up = 0` if it must be hard rather than soft |
-| Slow the pace of new builds without capping the eventual total | `GSw_GrowthAbsCon`/`GSw_GrowthPenalties` |
+| Impose a real cumulative MW ceiling on new investment, by tech group (CEPM) | `GSw_CEPM_TgCap` + `cepm_tg_cap_{sys,reg}_*.csv` (`eq_cepm_tg_cap_sys`/`_reg`) — cumulative, MW_ac, system-wide or per-region |
+| Same, but you're upstream / can't add an equation | Repurpose `cap_limit.csv`/`cap_penalty.csv` (`eq_interconnection_queues`); fix `CAP_ABOVE_LIM.up = 0` if it must be hard rather than soft — but see the CEPM caveat above about perturbing an already-binding constraint |
+| Slow the pace of new builds without capping the eventual total | `GSw_GrowthAbsCon`/`GSw_GrowthPenalties` — **and keep `GSw_GrowthConLastYear` strictly below the last modeled year** |
 | Discourage a tech economically without guaranteeing a limit | A cost multiplier on `cost_cap_fin_mult(i,r,t)`, by analogy to `GSw_NukeStateBan` mode 2 |
 
-The two mistakes to avoid: reaching for `ban(i)` when you meant `bannew(i)`
-(you'll retire capacity you meant to keep), and reaching for a cost multiplier
-or growth-rate constraint when you actually need a guaranteed ceiling (neither
-can promise one — only the interconnection-queue mechanism, made hard via
-`CAP_ABOVE_LIM.up = 0`, or a purpose-built cumulative-cap equation, can).
+The three mistakes to avoid: reaching for `ban(i)` when you meant `bannew(i)`
+(you'll retire capacity you meant to keep); reaching for a cost multiplier or
+growth-rate constraint when you actually need a guaranteed ceiling (neither can
+promise one); and setting `GSw_GrowthConLastYear` to the run's `endyear`, which
+makes the final solve year infeasible outright (Option 3's ⚠️ block above).
