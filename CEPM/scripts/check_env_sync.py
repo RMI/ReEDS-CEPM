@@ -28,18 +28,26 @@ import tomllib
 # --- Known-accepted exceptions (see CEPM/guidance/UV_MAMBA_GUIDE.md) ---------
 
 # Packages expected to live ONLY in environment.yml -- no uv/pip equivalent by
-# nature (non-Python packages, conda bootstrap tooling, the interpreter itself).
-CONDA_ONLY_OK = {"git-lfs", "mscorefonts", "pip", "python"}
+# nature (non-Python packages, conda bootstrap tooling, the interpreter itself),
+# or dropped from pyproject.toml on purpose (the docs-building packages: the
+# real docs build bypasses uv/pyproject.toml entirely -- see
+# CEPM/reeds-to-cepm-log.md's "Using uv instead of mamba" section).
+CONDA_ONLY_OK = {
+    "git-lfs", "mscorefonts", "pip", "python", "python-abi",
+    "myst-parser", "sphinx", "sphinx-design", "sphinx-rtd-theme",
+    "sphinxcontrib-bibtex",
+}
 
 # Packages expected to live ONLY in pyproject.toml (e.g. git-sourced deps that
-# have no conda-channel equivalent line yet).
-UV_ONLY_OK = {"rmi-etoolbox"}
+# have no conda-channel equivalent line yet, or RMI-only tooling upstream
+# doesn't need).
+UV_ONLY_OK = {"pyproj", "networkx", "pillow"}
 
 # Currently-accepted drift, documented in CEPM/guidance/UV_MAMBA_GUIDE.md.
 # Trim as fixed.
-KNOWN_DRIFT_CONDA_ONLY = {"proj"}          # in environment.yml, not in pyproject
-KNOWN_DRIFT_UV_ONLY = {"pyyaml"}           # in pyproject, not in environment.yml
-KNOWN_VERSION_MISMATCH = {"tables"}        # pytables 3.8 (conda) vs tables 3.11.1 (uv)
+KNOWN_DRIFT_CONDA_ONLY = set()             # in environment.yml, not in pyproject
+KNOWN_DRIFT_UV_ONLY = set()                # in pyproject, not in environment.yml
+KNOWN_VERSION_MISMATCH = set()             # version pinned differently on each side
 
 # conda package name -> pip/import name, so the same package matches across files.
 NAME_ALIASES = {"pytables": "tables"}
@@ -47,8 +55,11 @@ NAME_ALIASES = {"pytables": "tables"}
 
 def normalize(name):
     """PEP 503-style normalization (collapse runs of . _ - to a single -) plus
-    conda->pip aliasing."""
-    n = re.sub(r"[-_.]+", "-", name.strip().lower())
+    conda->pip aliasing. Also strips a trailing PEP 508 extras marker
+    (e.g. 'gamsapi[transfer]' -> 'gamsapi') so a package requested with an
+    extra on one side still matches its plain name on the other."""
+    name = re.sub(r"\[.*\]\s*$", "", name.strip())
+    n = re.sub(r"[-_.]+", "-", name.lower())
     return NAME_ALIASES.get(n, n)
 
 
@@ -59,11 +70,17 @@ def _clean_version(ver):
 
 
 def split_conda_spec(item):
-    """Parse a conda/pip dependency line ('bokeh=3.2', 'pulp==2.7.0', 'python')."""
-    for sep in ("==", "="):
+    """Parse a conda/pip dependency line ('bokeh=3.2', 'pulp==2.7.0', 'python',
+    'sphinx<9'). Range constraints (<, <=, >, >=) have no single version to
+    compare, so the name is still extracted but the version comes back None --
+    versions_align() treats a None version as "nothing to compare" rather than
+    a mismatch."""
+    for sep in ("==", ">=", "<=", "=", "<", ">"):
         if sep in item:
             name, _, ver = item.partition(sep)
-            return name.strip(), _clean_version(ver)
+            if sep in ("==", "="):
+                return name.strip(), _clean_version(ver)
+            return name.strip(), None
     return item.strip(), None
 
 

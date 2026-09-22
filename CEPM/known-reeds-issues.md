@@ -336,6 +336,14 @@ anywhere in the tag's source for that filename) — it assembles the hierarchy v
 not yet done; doing it would close this gap (and Issue 3/z134 above) at the root
 instead of patching each symptom.
 
+**Also affects `MultiMetricRA`** (the test case restored into `cases_test.csv` from
+upstream's `2026.08.03` release as part of the August 2026 sync — see
+`reeds-to-cepm-log.md`'s "Custom test-case reconciliation" entry): its `GSw_ZoneSet`
+cell is blank in upstream's own file too, which falls through to `cases.csv`'s
+file-level default — `z90`. So `MultiMetricRA` will hit this exact gap and fail to
+launch until this is fixed, the same as it would on a fresh upstream checkout. Not
+something introduced by the sync; flagging so it isn't mistaken for a new bug.
+
 ## `cendivweights.csv` domain violation near census-division borders (FIXED)
 
 **Symptom:**
@@ -819,6 +827,25 @@ one year of queue headroom), the one *voluntary* violation found, and options fo
 and the `report.gms` reconciliation are byte-identical at `upstream/main`
 (`1f73bd23`). The collision is specific to CEPM's short horizon and wide
 `startyear`→first-solve-year gap, which upstream's 2010-2050 runs do not have.
+
+## `reeds2pras` `BoundsError` for `hydud`/`hydund` hydro capacity — no monthly profile data
+
+**Symptom:** caught, non-fatal Julia errors during a solve year's `ReEDS2PRAS` step (visible in `gamslog.txt`, not `report.log`):
+```
+┌ Error: <timestamp> | p1,hydud,BoundsError(Float64[], (1,))
+└ @ Main.ReEDS2PRAS .../reeds2pras/src/utils/reeds_data_parsing.jl:582
+```
+repeated once per month for every affected (zone, tech) pair — e.g. 72 lines total (6 pairs × 12 months) on a `cendiv/Pacific`/`z132` run: `p1,hydud`; `p1,hydund`; `p2,hydud`; `p5,hydund`; `p6,hydund`; `p9,hydund`.
+
+**Root cause:** `process_hydro()` (`reeds/resource_adequacy/reeds2pras/src/utils/reeds_data_parsing.jl:485`) only runs this code path when `pras_hydro_energylim=1` — `cases.csv`'s own default, so this is the normal path for essentially every case, not an edge case. For each dispatchable-hydro (zone, tech) pair it has exogenous capacity for, it filters `hydcf.csv` (monthly hydro capacity factor) and `hydcapadj.csv` (monthly capacity adjustment) by month and indexes the first match with `[1]`. `hydud`/`hydund` (hydro-upgrade capacity categories, tied to `GSw_HydroCapEnerUpgradeType`/`hyd_add_upg_cap.csv`) have exogenous MW capacity in the run but **zero rows in `hydcf.csv`/`hydcapadj.csv` for any region** — confirmed directly against `inputs_case/hydcf.csv` and `inputs_case/hydcapadj.csv` in an affected run. The filter comes back empty, and indexing `[1]` throws `BoundsError`.
+
+Non-fatal by design, not by accident: `git blame` traces a small RMI patch to this exact function (`43bac52c`, "reeds_data_parsing.jl: more informative error"). Upstream's own original code already special-cased `BoundsError` here as an expected, tolerated failure (catch it and `@error`-log, but re-raise anything else) — RMI's patch just made every exception log the same way instead of singling out `BoundsError`. So this failure mode was anticipated by ReEDS's own maintainers before RMI ever touched the file; RMI's patch changed how it's logged, not whether it's tolerated.
+
+**Impact:** confined to the resource-adequacy diagnostic layer, not the GAMS capacity-expansion solve. All 12 months fail for each affected pair, so `monthly_energy`/`dispatch_limit`/`energy_cap`/`inflow`/`grid_inj_cap` for that hydro-upgrade unit stay at their pre-allocated `zeros()` for the entire year in PRAS's Monte Carlo simulation, instead of a real profile — a conservative understatement, not an overstatement, of that unit's reliability contribution. Doesn't touch investment, generation, system cost, or prices, which come from the GAMS LP and solve independently of this post-solve PRAS step. Confined to whichever zones actually carry `hydud`/`hydund` exogenous capacity (`p1`, `p2`, `p5`, `p6`, `p9` on the `cendiv/Pacific` case tested) — a case with no hydro-upgrade capacity never reaches this filter at all, which is presumably why it wasn't caught sooner.
+
+**Status:** not fixed — confirmed pre-existing, not sync-introduced: reproduces identically (same 6 pairs, same 72-line count) on the pre-`2026.08.03`-sync baseline (`ad0f56b0`). Undocumented until now. No known upstream issue or PR tracking it. Candidate fix: populate `hydcf.csv`/`hydcapadj.csv` for `hydud`/`hydund` from whatever process derives their exogenous capacity in the first place, or give `process_hydro()` an explicit fallback profile for hydro-upgrade categories instead of relying on the catch to zero them out silently.
+
+**Fixed upstream?** No. `reeds/resource_adequacy/reeds2pras/src/utils/reeds_data_parsing.jl` at tag `2026.08.03` has the same empty-filter code path (upstream's own version, pre-`43bac52c`, still narrows the catch to `BoundsError` specifically — meaning upstream already knows to expect exactly this failure). Not RMI-introduced.
 
 ## Cosmetic warnings safe to ignore
 

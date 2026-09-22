@@ -5,7 +5,7 @@ What this script does:
 1) Verifies GAMS is on PATH, checks GAMS license status, and prints a detected version string.
 2) Verifies Julia is on PATH and exactly version 1.12.1.
 3) Sets ReEDS-required CONDA-style environment variables in the current PowerShell session.
-4) Checks the project Python pin and runs `uv python pin 3.11` when not pinned to 3.11.
+4) Checks the project Python pin against pyproject.toml's requires-python and runs `uv python pin` to match when they disagree.
 5) Runs `uv sync --extra dev` to ensure the Python environment matches project dependencies (unless bypass mode is enabled).
 6) Instantiates Julia dependencies only when needed: a fast offline instantiate checks/heals the environment, falling back to the full `julia --project=. instantiate.jl` (which updates the registry) only if that can't satisfy the project (unless bypass mode is enabled).
 7) Checks environment.yml against pyproject.toml and warns (non-fatal) on dependency drift beyond the known-accepted allowlist in CEPM/scripts/check_env_sync.py.
@@ -470,35 +470,48 @@ Write-Host "[ok] Julia detected on PATH. Version: $juliaVersion"
 # Use the expected top-level virtual environment path.
 # On a fresh clone this folder may not exist yet; `uv sync` below will create it.
 $venvPath = Join-Path $repoRoot '.venv'
-$env:CONDA_DEFAULT_ENV = 'reeds2'
+$env:CONDA_DEFAULT_ENV = 'reeds'
 $env:CONDA_PREFIX = $venvPath
 Write-Host "[ok] Set CONDA_DEFAULT_ENV=$($env:CONDA_DEFAULT_ENV)"
 Write-Host "[ok] Set CONDA_PREFIX=$($env:CONDA_PREFIX)"
 
-# Step 4: Check whether this repo is pinned to Python 3.11 via .python-version.
+# Step 4: Check whether this repo is pinned to the Python version pyproject.toml
+# requires. Read the required version FROM pyproject.toml rather than hard-coding
+# it here -- a hard-coded literal is exactly what broke during the August 2026
+# Python 3.14 sync (this script kept forcing a re-pin back to the old version,
+# fighting pyproject.toml's requires-python). See CEPM/reeds-to-cepm-log.md's
+# "Python 3.14 / August 2026 environment sync" entry for the history.
+$pyprojectPath = Join-Path $repoRoot 'pyproject.toml'
+$pyprojectContent = Get-Content $pyprojectPath -Raw
+$requiredPythonMatch = [regex]::Match($pyprojectContent, 'requires-python\s*=\s*"==(\d+\.\d+)\.\*"')
+if (-not $requiredPythonMatch.Success) {
+    throw "Could not parse requires-python from pyproject.toml -- expected a pattern like ""==3.14.*""."
+}
+$requiredPython = $requiredPythonMatch.Groups[1].Value
+
 $pythonVersionFile = Join-Path $repoRoot '.python-version'
-$hasPinned311 = $false
+$hasPinnedRequired = $false
 $pinnedPython = $null
 if (Test-Path $pythonVersionFile) {
     $pinnedPython = (Get-Content $pythonVersionFile -TotalCount 1).Trim()
-    if ($pinnedPython -match '^3\.11(\.|$)') {
-        $hasPinned311 = $true
+    if ($pinnedPython -match ('^' + [regex]::Escape($requiredPython) + '(\.|$)')) {
+        $hasPinnedRequired = $true
     }
 }
 
-# If not already pinned to 3.11, pin it now.
-if (-not $hasPinned311) {
+# If not already pinned to the required version, pin it now.
+if (-not $hasPinnedRequired) {
     if ([string]::IsNullOrWhiteSpace($pinnedPython)) {
-        Write-Warning 'Python was not already pinned to 3.11 (no .python-version pin found). Pinning now.'
+        Write-Warning "Python was not already pinned to $requiredPython (no .python-version pin found). Pinning now."
     } else {
-        Write-Warning "Python was pinned to '$pinnedPython' instead of 3.11. Re-pinning now."
+        Write-Warning "Python was pinned to '$pinnedPython' instead of $requiredPython. Re-pinning now."
     }
-    Invoke-Step -Description 'uv python pin 3.11' -Action {
+    Invoke-Step -Description "uv python pin $requiredPython" -Action {
         Set-Location $repoRoot
-        uv python pin 3.11
+        uv python pin $requiredPython
     }
 } else {
-    Write-Host '[ok] Python is already pinned to 3.11 in .python-version.'
+    Write-Host "[ok] Python is already pinned to $requiredPython in .python-version."
 }
 
 # Step 5: Run uv sync unless bypass mode is enabled.

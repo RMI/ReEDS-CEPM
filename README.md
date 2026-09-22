@@ -8,8 +8,7 @@ The below are links and buttons that were created by the NLR team for their ReED
 [![Documentation](https://img.shields.io/badge/Documentation-view%20online-0a7f5e?logo=readthedocs&logoColor=white&labelColor=555)](https://reeds-model.github.io/ReEDS)
 ![Static Badge](https://img.shields.io/badge/python-3.11-blue)
 ![GitHub License](https://img.shields.io/github/license/ReEDS-Model/ReEDS)
-[![DOI](https://zenodo.org/badge/189060033.svg)](https://doi.org/10.5281/zenodo.16943302)
--->
+[![DOI](https://zenodo.org/badge/189060033.svg)](https://doi.org/10.5281/zenodo.20314874)
 
 This GitHub repository contains the source code for a modified version of the National Laboratory of the Rockies' Regional Energy Deployment (ReEDS) model, customized for use for RMI's Clean Energy Portfolio Model (CEPM).
 
@@ -164,7 +163,7 @@ New-Item -ItemType Junction -Path ".\inputs\remote" -Target "C:\Users\Public\Doc
 ReEDS currently expects Conda-style environment variables in order to sun successfully. When using UV, each instance of powershell will need to set these variables before running ReEDS. You can enter the below commands into the terminal before running ReEDS, set personal or VS Code workspace-level .env files, or use the below helper script to set these variables.
 
 ```bash
-export CONDA_DEFAULT_ENV=reeds2
+export CONDA_DEFAULT_ENV=reeds
 export CONDA_PREFIX="$PWD/.venv"
 ```
 
@@ -204,7 +203,7 @@ More bootstrap-only options: `-q` (or `--quiet`) disables the ntfy.sh notificati
 ReEDS currently expects Conda-style environment variables. When using UV, set these variables before running ReEDS or ideally in your dotenv file, like so
 
 ```bash
-echo 'export CONDA_DEFAULT_ENV=reeds2' >> ~/.bashrc
+echo 'export CONDA_DEFAULT_ENV=reeds' >> ~/.bashrc
 echo 'export CONDA_PREFIX="$PWD/.venv"' >> ~/.bashrc
 source ~/.bashrc
 ```
@@ -266,7 +265,7 @@ uv sync --extra dev
 When running with UV, set:
 
 ```bash
-export CONDA_DEFAULT_ENV=reeds2
+export CONDA_DEFAULT_ENV=reeds
 export CONDA_PREFIX="$PWD/.venv"
 ```
 

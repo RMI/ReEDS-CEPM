@@ -121,7 +121,7 @@ PowerShell setup used by local agents on Windows:
 ```powershell
 uv sync --extra dev
 julia --project=. instantiate.jl
-$env:CONDA_DEFAULT_ENV = "reeds2"
+$env:CONDA_DEFAULT_ENV = "reeds"
 $env:CONDA_PREFIX = (Resolve-Path .venv).Path
 ```
 
