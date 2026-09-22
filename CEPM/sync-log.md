@@ -18,9 +18,9 @@ except to fix an error.
 
 ## Sync 1: June 2026 → August 2026 (`2026.06.18` → `2026.08.03`)
 
-**Status:** Merged and validated on `temp-august`; not yet merged to `dev`/`main`.
-Also not yet reconciled with `mvp/two-step-runs`, which branched from the same
-pre-sync commit and has its own unmerged feature work (see "Open items" below).
+**Status:** Merged to `dev` via PR #52 (2026-09-22), reconciling with
+`mvp/two-step-runs` (already merged to `dev` via PR #49) along the way.
+Not yet merged to `main`.
 
 ### Timeline
 
@@ -173,7 +173,10 @@ changes never touched the same lines.
    pointer to the exact validated state, matching the same branch-cleanup
    convention already used for `temp-dev`.
 
-*(PR number and final merge commit hash to be added here once merged.)*
+**Landed:** [PR #52](https://github.com/RMI/ReEDS-CEPM/pull/52), merge commit
+`eeecc479` (2026-09-22) — joining `dev`'s pre-merge tip `db39de07` (tagged
+`pre-sync-2026-08`) with `temp-august`'s final tip `11efac87`, itself built on
+top of the validated state tagged `sync-2026-08-temp-august` (`f90dea37`).
 
 ### Lessons for the next sync
 
