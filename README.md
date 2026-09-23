@@ -6,7 +6,7 @@
 The below are links and buttons that were created by the NLR team for their ReEDS repo -- we should re-design these before including them in our Readme.
 [![CI](https://github.com/ReEDS-Model/ReEDS/actions/workflows/python-app.yaml/badge.svg?branch=main)](https://github.com/ReEDS-Model/ReEDS/actions/workflows/python-app.yaml)
 [![Documentation](https://img.shields.io/badge/Documentation-view%20online-0a7f5e?logo=readthedocs&logoColor=white&labelColor=555)](https://reeds-model.github.io/ReEDS)
-![Static Badge](https://img.shields.io/badge/python-3.11-blue)
+![Static Badge](https://img.shields.io/badge/python-3.14-blue)
 ![GitHub License](https://img.shields.io/github/license/ReEDS-Model/ReEDS)
 [![DOI](https://zenodo.org/badge/189060033.svg)](https://doi.org/10.5281/zenodo.20314874)
 
@@ -69,10 +69,10 @@ For Windows users, use:
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-Restart your terminal, then install Python 3.11:
+Restart your terminal, then install Python 3.14:
 
 ```bash
-uv python install 3.11
+uv python install 3.14
 ```
 
 ### 2. Set up GAMS
@@ -128,10 +128,10 @@ git clone https://github.com/RMI/ReEDS-CEPM.git
 cd ReEDS
 ```
 
-Pin Python 3.11 for the project:
+Pin Python 3.14 for the project:
 
 ```bash
-uv python pin 3.11
+uv python pin 3.14
 ```
 
 Create the UV-managed Python environment:
@@ -180,7 +180,8 @@ This script performs the following steps in order:
 1. Verifies GAMS is on PATH, checks GAMS license status, and prints a detected version string.
 2. Verifies Julia is on PATH and checks that the version is `1.12.1`.
 3. Sets ReEDS environment variables for the current PowerShell session.
-4. Checks that Python is pinned to 3.11 and runs `uv python pin 3.11` if needed.
+4. Checks the Python version required by `pyproject.toml`'s `requires-python`
+   and runs `uv python pin` to match if `.python-version` disagrees.
 5. Runs `uv sync --extra dev`.
 6. Instantiates Julia dependencies only when needed: a fast offline check (`Pkg.instantiate` without a registry update) skips the work when the environment is already current, and only falls back to the full `julia --project=. instantiate.jl` (which updates the registry) if dependencies changed or are missing.
 7. Checks `environment.yml` against `pyproject.toml` and prints a non-fatal warning if they have drifted beyond the known-accepted allowlist (see `CEPM/guidance/UV_MAMBA_GUIDE.md`).
