@@ -1,0 +1,33 @@
+Plant / Unit Name,State,BA Code,Announcement Date,Planned / Operating Year,Technology Type,Capacity (MW),Cost ($/kW),CapEx ($M),Actual vs. Estimated Cost,Dollar Year,Latitude,Longitude,EIA Status,EIA Plant ID,Dollar Year Used,"Cost ($/kW, 2022$)"
+Nikiski Combined Cycle (NCC) Repower Project,AK,-,-,2028,Combined-Cycle Gas Turbine,8,9625,77,Estimated,2026,60.67608362,-151.3801804,-,-,2026,8544.04
+Independence Gas Plant Units 3-6 (IGP 3-6),AR,MISO,"Nov 3, 2025",2030,Combined-Cycle Gas Turbine,1499,1741.16,2610,Estimated,-,35.67906281,-91.40757611,-,-,2025,1584.26
+Jefferson Power Station,AR,MISO,"Aug 1, 2025",2029,Combined-Cycle Gas Turbine,754,2149,1574,-,-,34.420068,-92.159813,Regulatory approvals pending. Not under construction,69185,2025,1955.34
+Sunridge Power Plant,AZ,AZPS,"Mar 18, 2026",2034,Combined-Cycle Gas Turbine,1360,2941,4000,Estimated,2026,-,-,-,-,2026,2610.7
+Undesignated CTs P3 - P4,FL,-,-,2034,Combined-Cycle Gas Turbine,400,3279,1311.6,Estimated,2026,-,-,-,-,2026,2910.74
+St. Johns River Power Park Unit 3,FL,-,"Jun 4, 2026",2031,Combined-Cycle Gas Turbine,678,2315.63,1570,Estimated,2026,30.43169561,-81.55103378,-,-,2026,2055.57
+Muscatine Combined Heat and Power Project,IA,MISO,"Sep 11, 2024",2028,Combined-Cycle Gas Turbine,45,2165,97,Estimated,2025,41.3917,-91.0569,Regulatory approvals pending. Not under construction,1167,2025,1969.9
+Lincoln Land Energy Center,IL,MISO,"Apr 25, 2025",2030,Combined-Cycle Gas Turbine,1100,1363.64,1500,-,-,39.5788,-89.57984,"Planned for installation, but regulatory approvals not initiated",62022,2025,1240.76
+Cayuga CC Project,IN,MISO,"Feb 13, 2025",2029,Combined-Cycle Gas Turbine,1040,2256,3330,Estimated,2025,39.9242,-87.4244,-,-,2025,2052.7
+McNew Generating Station,KS,SWPP,"Sep 3, 2024",2030,Combined-Cycle Gas Turbine,710,2254.93,1601,-,-,38.00595,-97.92166,Regulatory approvals pending. Not under construction,68295,2024,2105.07
+Viola Generating Station,KS,SWPP,"Sep 3, 2024",2029,Combined-Cycle Gas Turbine,710,2221.83,1578,-,-,37.331481,-97.67,Regulatory approvals pending. Not under construction,68294,2024,2074.17
+Mill Creek 5,KY,LGEE,"Jan 6, 2023",2027,Combined-Cycle Gas Turbine,640,1427.19,913,Actual,2022,38.0525,-85.9103,"Under construction, more than 50 percent complete",1364,2022,1427.19
+Mill Creek 6,KY,LGEE,"Feb 28, 2025",2031,Combined-Cycle Gas Turbine,645,2193.8,1415,Estimated,2025,38.0525,-85.9103,"Under construction, more than 50 percent complete",1364,2025,1996.11
+Brown 12,KY,LGEE,"Feb 28, 2025",2030,Combined-Cycle Gas Turbine,645,2144.19,1383,Estimated,2025,37.78831,-84.71257,Regulatory approvals received. Not under construction,1355,2025,1950.97
+Cooper CCGT,KY,PJM,"Nov 21, 2024",2030,Combined-Cycle Gas Turbine,745,1767.79,1317,Estimated,2025,36.9981,-84.5919,-,-,2025,1608.49
+Waterford 6,LA,MISO,"Feb 11, 2026",2031,Combined-Cycle Gas Turbine,820,2292,2072.2,Estimated,-,29.988583,-90.48565,"Planned for installation, but regulatory approvals not initiated",69445,2026,2034.59
+Pointe Coupee Power Station,LA,MISO,"Mar 25, 2026",2031,Combined-Cycle Gas Turbine,2340,2446,5724,Estimated,2026,30.739,-91.377,"Planned for installation, but regulatory approvals not initiated",69944,2026,2171.3
+Franklin Farms Power Station,LA,MISO,"Dec 4, 2024",2028,Combined-Cycle Gas Turbine,1508,1488.06,2244,Estimated,2026,32.468339,-91.68038,Regulatory approvals pending. Not under construction,68214,2026,1320.94
+Richland Parish Power Station,LA,MISO,"Mar 25, 2026",2030,Combined-Cycle Gas Turbine,3121.2,2446,7634,Estimated,2026,32.496716,-91.69867,"Planned for installation, but regulatory approvals not initiated",69649,2026,2171.3
+Waterford 5,LA,MISO,"Mar 25, 2026",-,Combined-Cycle Gas Turbine,820,2140.24,1755,Estimated,2026,29.988583,-90.48565,Regulatory approvals received. Not under construction,69184,2026,1899.88
+Traceview Advanced Power Station,MS,MISO,"Sep 30, 2025",2029,Combined-Cycle Gas Turbine,754,1856.76,1400,Estimated,2025,32.41,-90.145,-,-,2025,1689.44
+Delta Blues Advanced Power Station,MS,MISO,"Sep 1, 2024",2028,Combined-Cycle Gas Turbine,754,1591.51,1200,Estimated,2025,33.330476,-91.13058,Regulatory approvals pending. Not under construction,67914,2025,1448.09
+Bison Generation Station,ND,SWPP,"Mar 5, 2025",2030,Combined-Cycle Gas Turbine,1490,2469.8,3680,Estimated,2025,48.3558,-103.5013,Regulatory approvals pending. Not under construction,69071,2025,2247.23
+Trumbull Energy Center,OH,PJM,"Mar 18, 2022",2026,Combined-Cycle Gas Turbine,940,1063.83,1000,-,-,31.38203,-80.8525,Operating,66918,2022,1063.83
+Homer City Generating Station,PA,PJM,"Apr 2, 2025",2028,Combined-Cycle Gas Turbine,4500,2222.22,10000,Estimated,2025,40.512825,-79.19611,"Planned for installation, but regulatory approvals not initiated",3122,2025,2021.96
+Anderson County CC,SC,-,"Oct 30, 2025",2031,Combined-Cycle Gas Turbine,1365,2357.51,3218,Estimated,-,-,-,-,-,2025,2145.06
+Canadys Station,SC,SCEG,"Jun 16, 2025",2033,Combined-Cycle Gas Turbine,2180,2338,5096,Estimated,-,-,-,-,-,2025,2127.31
+Legend Power Station,TX,ERCO,"Jun 4, 2024",2028,Combined-Cycle Gas Turbine,754,2124.67,1602,Estimated,2024,29.880219,-93.99573,Regulatory approvals pending. Not under construction,68053,2024,1983.47
+Orange County Advanced Power Station,TX,MISO,"Sep 16, 2021",2026,Combined-Cycle Gas Turbine,1215,1300.41,1580,Estimated,2023,30.025251,-93.87134,"Under construction, more than 50 percent complete",66621,2023,1249.19
+Chesterfield Energy Reliability Center,VA,PJM,"Mar 3, 2025",2030,Combined-Cycle Gas Turbine,944,1562,1470,Estimated,2025,37.3822,-77.3833,Regulatory approvals pending. Not under construction,3797,2025,1421.24
+Nemadji Trail Energy Center,WI,MISO,"Jan 22, 2019",2027,Combined-Cycle Gas Turbine,550,1116,700,Estimated,2020,46.68926643,-92.04897692,-,-,2020,1261.93
+Fort Martin Power Station,WV,PJM,-,2031,Combined-Cycle Gas Turbine,1200,2066.67,2480,Estimated,2026,39.710833,-79.9275,-,-,2026,1834.57
