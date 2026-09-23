@@ -105,7 +105,7 @@ Use this file as the first stop for agent orientation. Deeper references:
 
 ## Environment
 
-- Python is pinned to `3.11` via `.python-version` and `pyproject.toml`.
+- Python is pinned to `3.14` via `.python-version` and `pyproject.toml`.
 - Python dependencies are managed with `uv` and locked in `uv.lock`.
   `environment.yml` is kept as an upstream-compatible conda/mamba fallback; see
   @CEPM/guidance/UV_MAMBA_GUIDE.md for keeping the two in sync.
