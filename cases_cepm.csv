@@ -1,6 +1,6 @@
-,Default Value,WECC-SW_baseline,WECC-SW_dcloco2,SERTP_baseline,SERTP_dcloco2,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas_mvp_NOTE-DEPRECATED,USA_optimized_mvp,WECC-SW_limitre,WECC-SW_optimized,SERTP_limitre,SERTP_optimized
+,Default Value,st-AZNM_baseline,WECC-SW_dcloco2,SERTP_baseline,SERTP_dcloco2,NM_optimized_2yrs,NM_optimized_3yrs,NM_optimized_LLtest,USA_gas_mvp_NOTE-DEPRECATED,USA_optimized_mvp,st-AZNM_limitre,st-AZNM_optimized,SERTP_limitre,SERTP_optimized
 ignore,1,0,0,1,1,1,1,1,1,1,1,1,1,1
-GSw_Region,cendiv/Pacific,nercr/WECC_SW,nercr/WECC_SW,transreg/SERTP,transreg/SERTP,st/NM,st/NM,st/NM,country/USA,country/USA,nercr/WECC_SW,nercr/WECC_SW,transreg/SERTP,transreg/SERTP
+GSw_Region,cendiv/Pacific,st/AZ.NM,nercr/WECC_SW,transreg/SERTP,transreg/SERTP,st/NM,st/NM,st/NM,country/USA,country/USA,st/AZ.NM,st/AZ.NM,transreg/SERTP,transreg/SERTP
 GSw_ZoneSet,,z132,z132,z132,z132,,,,z48,z48,z132,z132,z132,z132
 startyear,2010,,,,,,,,,,,,,
 endyear,2032,2032,2032,2032,2032,,,,,,2032,2032,2032,2032
