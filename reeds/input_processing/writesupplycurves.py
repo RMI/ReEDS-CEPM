@@ -102,7 +102,11 @@ def agg_supplycurve(
 
     ### Assign bins
     if dfin.empty:
-        dfin['bin'] = []
+        ### Type the empty 'bin' column to match reeds.inputs.get_bin's int64 output.
+        ### A bare [] gives float64, which pandas >=3.0 propagates through pd.concat
+        ### (empty frames now participate in dtype resolution), silently turning
+        ### downstream 'wsc{bin}' labels into 'wsc1.0' and dropping the supply curve.
+        dfin['bin'] = pd.Series([], dtype='int64')
     else: 
         dfin = (
             dfin
