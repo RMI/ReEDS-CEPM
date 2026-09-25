@@ -201,18 +201,24 @@ un-pin pandas.
   matching the int64 `reeds.inputs.get_bin` produces in the non-empty branch, so the
   `bin` level never upcasts through `pd.concat`. Fixed at the dtype source rather than
   at the `.astype(str)` call: the same trap sits one line below on `class`, and
-  `agg_supplycurve()` is shared by CSP, geohydro and EGS.
+  `agg_supplycurve()` also feeds the geothermal `pd.concat(geo, axis=0)`, which is one
+  switch change away from failing the same way. (UPV and CSP cannot hit it — they call
+  `agg_supplycurve()` standalone, with no populated sibling for an empty frame to
+  corrupt.)
 
 ### Reference: [`known-reeds-issues.md`](known-reeds-issues.md)
 
 ### What to test in new releases:
 
 - Does upstream still assign a bare `dfin['bin'] = []` in `agg_supplycurve()`'s empty
-  branch? It does at tag `2026.08.03` (line 105) and on `upstream/main` (line 121). If
-  upstream adopts pandas 3 they will hit this themselves and may fix it — at which point
-  this patch becomes redundant and should be dropped rather than merged. Worth
-  contributing back in the meantime; it is a one-line dtype correction with no
-  behavioural change on pandas 2.
+  branch? It does at tag `2026.08.03` (line 105) and on `upstream/main` (line 121).
+  Note that upstream has pinned `pandas=3.0` since 2026-05-08 (`2ff493b5`) — four months
+  before this fork did — so **the bug is live upstream, not latent**. They have not hit
+  it only because their default and test cases (`cendiv/Pacific`, `country/USA`) are
+  coastal or national and always have a populated offshore curve. Not raised on their
+  issue tracker as of 2026-09-25 (all 86 issues searched). Worth reporting and
+  contributing back; it is a one-line dtype correction that is a no-op under pandas 2.
+  If they fix it themselves, drop this patch rather than merging it.
 - Has upstream changed how `windall` is assembled, or how the `wsc{bin}` -> `bin{bin}`
   rename is applied? Both sit within a few lines of the fix and either would change what
   the patch needs to guarantee.

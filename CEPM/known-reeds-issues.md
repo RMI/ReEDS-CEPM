@@ -479,16 +479,63 @@ being assigned a bare `[]`.
 **Trigger:** the repo's pandas pin moved to `pandas==3.0.*` on 2026-09-10 (`129ecdbc`,
 "Bump Python to 3.14, realign packages with environment.yml"), and the local venv was
 rebuilt to pandas 3.0.5 on 2026-09-24 at 20:24 — 21 minutes before the first affected
-run started. Runs on pandas 2.x were unaffected with identical inputs and switches.
-This is a latent upstream bug that the pandas upgrade activated, not a regression
-introduced by the pin. Do not "fix" it by pinning pandas back.
+run started. `uv.lock` carried `pandas 2.0.3` from 2026-05-05 until that bump, so every
+run before 2026-09-24 was unaffected with identical inputs and switches. This is a
+pre-existing upstream bug that the pandas upgrade activated, not a regression introduced
+by the pin — and note upstream pinned `pandas=3.0` four months before we did (see
+**Fixed upstream?** below). Do not "fix" it by pinning pandas back.
 
-**Scope:** any run where a supply curve passed to `agg_supplycurve()` is empty while its
-technology is enabled. In practice that means a landlocked region with `GSw_OfsWind=1`.
-Coastal runs are unaffected — `v20260925_SERTP_*` and `v20260925_VA_*` both post-date the
-pandas upgrade but have non-empty offshore curves (1208 and 150 rows), so their `bin`
-never upcasts and their wind `cap` rows are intact. A sweep of every run under `runs/`
-found only the three `v20260924fix_st-AZNM_*` cases affected.
+**Scope — all four conditions must hold at once:**
+
+1. **pandas >= 3.0.** The concat dtype-resolution change is what makes the latent bug
+   live. Confirmed on 3.0.5: concatenating a populated int64-`bin` frame with an empty
+   float64-`bin` one yields `['wsc1.0', 'wsc2.0', ...]`; the populated frame alone yields
+   `['wsc1', 'wsc2', ...]`.
+2. **The code path stacks sub-techs with `pd.concat(dict, axis=0)` and then does
+   `.astype(str)` on the `bin` level.** Only two sites qualify: wind
+   (`pd.concat(wind, axis=0)` over `ons`/`ofs`, then `"wsc" + bin.astype(str)`) and
+   geothermal (`pd.concat(geo, axis=0)` over `geohydro`/`egs`, then
+   `"geosc" + bin.astype(str)`). **UPV and CSP cannot hit this** — they call
+   `agg_supplycurve()` standalone, so an empty result just stays empty with no populated
+   sibling to corrupt.
+3. **One member of that dict is empty and the other is not.** Both populated, no upcast;
+   both empty, nothing to lose. Only the *mixed* case does damage, because the empty
+   frame's float64 silently rewrites the populated frame's bin labels.
+4. **The empty member is still being processed** — its switch is on, so it reaches the
+   concat even though it has no resource.
+
+For wind that reduces to: **offshore wind enabled in a region with no offshore
+resource.** Verified against the unfixed code on the same `st-AZNM` inputs —
+`GSw_OfsWind=1` gives 0 `cap`/0 `cost` wind rows, `GSw_OfsWind=0` gives 1640/1640. It is
+leaving the switch *on* over an empty curve that bites; turning it *off* is safe.
+
+`GSw_OfsWind` defaults to **1** in `cases.csv`, so every case satisfies condition 4
+unless it explicitly opts out. Which regions satisfy condition 3, measured by offshore
+supply curve rows in existing runs:
+
+| Region | offshore rows | exposed? |
+|---|---|---|
+| `st/AZ.NM` | 0 | **yes** — what this entry was raised for |
+| `nercr/WECC_SW` | 0 | **yes** |
+| `st/VA` | 149 | no |
+| `st/MS.AL.GA` | 1207 | no |
+| `transreg/SERTP` | 2848 | no |
+| `country/USA` | 16191 | no |
+
+**`nercr/WECC_SW` is exposed and had not been re-run since the pandas upgrade** — its
+existing runs predate it and are clean, but the next WECC-SW run on unfixed code would
+have lost its wind the same way. A sweep of every run under `runs/` found only the three
+`v20260924fix_st-AZNM_*` cases actually affected; `v20260925_SERTP_*` and
+`v20260925_VA_*` also post-date the upgrade but have non-empty offshore curves, so their
+wind `cap` rows are intact.
+
+**The geothermal site is latent, not live.** `geoall = pd.concat(geo, axis=0)` followed by
+`"geosc" + geoall["bin"].astype(str)` is the same construct, and fails condition 3 only by
+accident: `rev_geo_types` is built from whichever of `geohydrosupplycurve` /
+`egssupplycurve` equals `reV`, and current switches set `egssupplycurve=reV` with
+`geohydrosupplycurve=ATB_2023`, leaving a single-element dict with nothing to concat
+against. Set both to `reV` in a region where one is empty and it would bite identically.
+The fix covers it, being at the shared source.
 
 **Impact:** severe and silent — this is the dangerous kind. The run completes, every
 output file is written, and the results look plausible; wind is simply absent from the
@@ -501,8 +548,9 @@ rather than a crash, affected runs must be identified by inspecting
 assigns `pd.Series([], dtype='int64')` instead of `[]`, matching the int64 that
 `reeds.inputs.get_bin` produces in the non-empty branch, so the `bin` level never
 upcasts. Fixed at the dtype source rather than at the `.astype(str)` call, because the
-same trap sits one line below on `class` and `agg_supplycurve()` is shared by CSP,
-geohydro and EGS.
+same trap sits one line below on `class` and because `agg_supplycurve()` also feeds the
+geothermal `pd.concat(geo, axis=0)`, which is one switch change away from the same
+failure (condition 3 above).
 
 Verified against the real `v20260924fix_st-AZNM_baseline` inputs: restores 377 `cap` and
 377 `cost` rows for `wind-ons` and 920.3 GW of buildable resource, with the `cap` rows
@@ -516,11 +564,24 @@ results are not usable.
   of `dfin['bin'] = []`, with a comment recording the pandas-3 concat behaviour. No
   other files touched.
 
-**Fixed upstream?** No. `reeds/input_processing/writesupplycurves.py` has the identical
-bare `dfin['bin'] = []` at line 105 at tag `2026.08.03` and at line 121 on the current
-`upstream/main`. Upstream does not see it because it runs pandas 2.x; the bug is latent
-there and will surface whenever upstream adopts pandas 3. Good candidate to contribute
-back — it is a one-line dtype correction with no behavioural change on pandas 2.
+**Fixed upstream?** No — and, unlike most entries here, **the bug is live upstream right
+now, not latent.** `reeds/input_processing/writesupplycurves.py` has the identical bare
+`dfin['bin'] = []` at line 105 at tag `2026.08.03` and at line 121 on the current
+`upstream/main`, and upstream's `environment.yml` has pinned `pandas=3.0` since
+2026-05-08 (`2ff493b5`, "update all python packages and use conda-forge for everything")
+— four months before this fork moved to it. So upstream satisfies conditions 1 and 2
+already; they simply have not hit conditions 3-4, because their default and test cases
+(`cendiv/Pacific`, `country/USA`) are coastal or national and always have a populated
+offshore curve. Any upstream user running a landlocked region with `GSw_OfsWind=1` on a
+current checkout gets silently zeroed wind.
+
+Not raised upstream as of 2026-09-25. Searched the `ReEDS-Model/ReEDS` issue tracker
+(all 86 issues, open and closed) plus the PR history for `writesupplycurves`,
+`agg_supplycurve`, `rsc_combined`, `rscbin`/`wsc`, pandas/dtype, and offshore/landlocked
+supply-curve terms. The nearest hits are unrelated: #27 ("Offshore wind zones
+incompatible with custom regions") is about prescribed offshore builds under
+`GSw_OffshoreZones=1`, and #28 is an offshore-zone TODO list. Strong candidate to report
+and contribute back — it is a one-line dtype correction that is a no-op under pandas 2.
 
 **Worth knowing:** the reason this cost a week of runs is that
 `[c for c in alloutcap.columns if c.startswith("bin")]` drops non-matching columns
