@@ -85,16 +85,16 @@ A good fix:
 3. **Propose a solution to the problem.**
    1. First check whether upstream has already fixed it. If so, take their
       version rather than writing our own. That keeps our changes from upstream
-      small.
+      small. Look at recently approved pull requests and issues in addition to release notes.
    2. Keep the fix as small as it can be. Put CEPM-only additions in `CEPM/` where
       possible. If you have to change an upstream file, add a comment saying *why*
       the code looks the way it does. For example, `runreeds.py` explains that
       the Windows run script is always run by `cmd.exe`, where a trailing `&`
       doesn't background anything.
    3. Show that the fix works: reproduce the problem, apply the fix, and show it's
-      gone. Keep a note of exactly what you ran. A Python syntax check or unit
-      test is not a GAMS solve, so if your change could affect model behavior,
-      say whether you ran a real case.
+      gone. Keep a note of exactly what you ran. Save relevant run results to VM-Outputs.
+      A Python syntax check or unit test is not a GAMS solve, so if your change could
+      affect model behavior, say whether you ran a real case.
    4. If the fix changes model results, talk to the team before finalizing it,
       and record the results in [`batch-log.md`](../batch-log.md).
 
