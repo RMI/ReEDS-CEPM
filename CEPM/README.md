@@ -99,7 +99,5 @@ structure.
 
 | File | Summary |
 | --- | --- |
-| [`decisions/202XXXXX-decisions_template.md`](decisions/202XXXXX-decisions_template.md) | Template for when we make decisions |
+| [`decisions/202XXXXX-decision_template.md`](decisions/202XXXXX-decision_template.md) | Template for when we make decisions |
 | [`decisions/README.md`](decisions/README.md) | Guidance for writing decisions |
-
-We don't actually have any decisions yet!
