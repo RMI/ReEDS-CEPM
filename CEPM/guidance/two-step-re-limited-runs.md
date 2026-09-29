@@ -4,7 +4,7 @@
 command now produces the three-case factorial and its comparison deck:
 
 ```powershell
-.\run_cepm.ps1 -y -x -b <batch> -c cepm -m WECC-SW
+.\run_cepm.ps1 -y -x -b <batch> -c cepm -m st-AZNM
 ```
 
 Working branch `mvp/two-step-runs`, everything still in the working tree
@@ -12,7 +12,7 @@ Working branch `mvp/two-step-runs`, everything still in the working tree
 
 - Done: the GAMS equations, parameters and guardrails (§4); the `cases.csv` /
   `runfiles.csv` plumbing (§5.1); `make_tg_cap.py` (§5.3); the three
-  `cases_cepm.csv` case columns for **both `WECC-SW` and `SERTP`**;
+  `cases_cepm.csv` case columns for **both `st-AZNM` and `st-MSALGA`**;
   `run_cepm.ps1 -m` plus `CEPM/scripts/multistep_cases.py` (§5.4); and tests
   **T0 through T9, all of them**.
 - The headline result (T9): holding wind/solar/storage at the no-data-center
