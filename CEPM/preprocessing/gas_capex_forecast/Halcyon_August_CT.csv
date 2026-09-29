@@ -1,0 +1,40 @@
+Plant / Unit Name,State,BA Code,Announcement Date,Planned / Operating Year,Technology Type,Capacity (MW),Cost ($/kW),CapEx ($M),Actual vs. Estimated Cost,Dollar Year,Latitude,Longitude,EIA Status,EIA Plant ID,Dollar Year Used,"Cost ($/kW, 2022$)"
+Thomas Fitzhugh,AR,SWPP,"Feb 26, 2024",-,Simple-Cycle Gas Turbine,140.5,978.9473684,93,Estimated,-,35.462382,-93.80493,"Construction complete, but not yet in commercial operation",201,2024,913.89
+Ironwood Power Station,AR,MISO,"Nov 1, 2024",2028,Simple-Cycle Gas Turbine,446,1753,782,Estimated,-,34.433826,-92.9042,Regulatory approvals pending. Not under construction,69750,2024,1636.5
+Apache Generating Station GT5 and GT6,AZ,WALC,"Oct 1, 2024",2025,Simple-Cycle Gas Turbine,84,920.37,77,Actual,2025,32.0603,-109.8931,Operating,160,2025,837.43
+Redhawk Plant Expansion,AZ,SRP,"Jul 8, 2024",2028,Simple-Cycle Gas Turbine,397,1115.87,443,Estimated,2024,33.334562,-112.8406,"Under construction, less than or equal to 50 percent complete",55455,2024,1041.71
+Black Mountain Expansion Project,AZ,TEPC,"Mar 8, 2024",2027,Simple-Cycle Gas Turbine,200,1090,218,Estimated,-,35.03550381,-114.1595616,-,-,2024,1017.56
+Fort Saint Vrain 7 & 8,CO,-,"Jul 28, 2025",2028,Simple-Cycle Gas Turbine,400,1374,-,Estimated,-,40.24453431,-104.8738102,"Under construction, less than or equal to 50 percent complete",6112,2025,1250.18
+Plant Yates,GA,SOCO,"Jan 31, 2024",2026,Simple-Cycle Gas Turbine,1389,1154,1500,-,-,33.4622,-84.8986,"Planned for installation, but regulatory approvals not initiated",728,2024,1077.31
+Waiau repower project,HI,-,"Mar 28, 2025",2033,Simple-Cycle Gas Turbine,253,4565.217391,1155,-,-,21.38815654,-157.9605038,-,-,2025,4153.82
+Orient Energy Center,IA,MISO,"Feb 17, 2025",2028,Simple-Cycle Gas Turbine,777,1153.85,600,Estimated,2025,41.31386538,-94.46429445,-,-,2025,1049.87
+R. M. Schahfer Generating Station Peaker,IN,MISO,"Aug 11, 2023",2028,Simple-Cycle Gas Turbine,400,1600,644,Estimated,2024,41.2164,-87.0261,Regulatory approvals received. Not under construction,6085,2024,1493.67
+A.B. Brown,IN,MISO,"Jun 28, 2022",2025,Simple-Cycle Gas Turbine,460,727.72,335,Actual,2025,37.9053,-87.715,Operating,6137,2025,662.14
+Riverton Generating Station,KS,SWPP,"Oct 12, 2022",2026,Simple-Cycle Gas Turbine,27,1962,53,Estimated,2024,37.072616,-94.6987,"Under construction, more than 50 percent complete",1239,2024,1831.61
+Bonin 4 Redevelopment Project,LA,MISO,"Mar 27, 2024",2029,Simple-Cycle Gas Turbine,240,1666.67,400,Estimated,2024,30.23805615,-92.0464138,-,-,2024,1555.91
+Castle Bluff Energy Center,MO,MISO,"Jun 7, 2024",2027,Simple-Cycle Gas Turbine,800,1125,900,Estimated,2024,38.4017,-90.3358,"Planned for installation, but regulatory approvals not initiated",67576,2024,1050.23
+New Caledonia,MS,TVA,"Jul 1, 2024",2028,Simple-Cycle Gas Turbine,504,1096,548,Estimated,2024,33.649272,-88.3146,"Planned for installation, but regulatory approvals not initiated",69147,2024,1023.16
+Marshall Energy Center (NC),NC,DUK,"Nov 1, 2023",2029,Simple-Cycle Gas Turbine,850,1695,1440.4,-,-,35.5975,-80.9658,-,-,2023,1628.24
+North Valmy New Peakers,NV,NEVP,"May 31, 2024",2028,Simple-Cycle Gas Turbine,400,1433.25,573,Estimated,2024,40.881317,-117.1516,-,-,2024,1338.0
+Fort Churchill Addition 1,NV,-,"May 6, 2026",2030,Simple-Cycle Gas Turbine,401,5004.99,2007,Estimated,2030,39.1280433,-119.1321157,-,-,2030,4025.04
+Fort Churchill Addition 2,NV,-,"May 6, 2026",2031,Simple-Cycle Gas Turbine,401,5107.23,2048,Estimated,2031,39.1280433,-119.1321157,-,-,2031,4007.09
+Fort Churchill Addition 3,NV,-,"May 6, 2026",2032,Simple-Cycle Gas Turbine,421,2323.04,978,Estimated,2032,39.1280433,-119.1321157,-,-,2032,1778.18
+Fairfield Energy Center,OH,-,"Mar 5, 2026",2029,Simple-Cycle Gas Turbine,1350,1555.56,2100,Estimated,2026,-,-,-,-,2026,1380.86
+Horseshoe Lake Units 11/12,OK,SWPP,"May 31, 2023",2026,Simple-Cycle Gas Turbine,448,737.72,331,Actual,2023,35.50866,-97.17969,"Under construction, more than 50 percent complete",2951,2023,708.66
+Horseshoe Lake Units 13/14,OK,SWPP,"Jul 25, 2025",2029,Simple-Cycle Gas Turbine,448,1038,507,Actual,-,35.50866,-97.17969,Regulatory approvals received. Not under construction,2951,2025,944.46
+Tinker Air Force Base CTs,OK,SWPP,"May 19, 2025",2026,Simple-Cycle Gas Turbine,96,1062.5,102,Estimated,2025,35.414719,-97.37345,"Construction complete, but not yet in commercial operation",63628,2025,966.75
+Northeastern 5 & 6,OK,SWPP,"Sep 12, 2025",2029,Simple-Cycle Gas Turbine,450,1199.56,540,-,-,36.42641955,-95.70024743,-,-,2025,1091.46
+Urquhart Replacement Unit (CT #7),SC,SCEG,"Mar 10, 2021",2028,Simple-Cycle Gas Turbine,200,1965,393,Estimated,2024,33.435,-81.9111,-,-,2024,1834.41
+Parr Replacement Units (GT5 and GT6),SC,SCEG,"Mar 10, 2021",2025,Simple-Cycle Gas Turbine,114,1543.86,176,Estimated,2023,34.2642,-81.3308,Operating,3291,2023,1483.05
+Winyah Generating Station,SC,-,"Aug 28, 2025",2027,Simple-Cycle Gas Turbine,107,2622.43,281,-,-,-,-,-,-,2025,2386.11
+Aberdeen CT,SD,SWPP,"Jan 1, 2024",2026,Simple-Cycle Gas Turbine,30,1969,-,-,-,45.429884,-98.49396,"Under construction, more than 50 percent complete",3338,2024,1838.14
+Aberdeen Natural Gas Energy Conversion Facility,SD,-,"Oct 31, 2025",2030,Simple-Cycle Gas Turbine,131.2,2107,276,-,-,45.43419972,-98.48914388,-,-,2025,1917.13
+Gaines County CTG Project,TX,SWPP,"Sep 25, 2025",2029,Simple-Cycle Gas Turbine,1160,2069,2514.495,Estimated,2025,32.74,-102.64,-,-,2025,1882.55
+Hallsville Natural Gas Plant,TX,SWPP,"Dec 17, 2024",2027,Simple-Cycle Gas Turbine,450,991.11,446,Estimated,2025,32.4607,-94.4852,"Planned for installation, but regulatory approvals not initiated",68417,2025,901.8
+Tolk Station CTG Project,TX,SWPP,"Sep 25, 2025",2029,Simple-Cycle Gas Turbine,1325,2025.9,1880,Estimated,2026,32.23737,-98.2238,-,-,2026,1798.38
+Naples PGS,TX,SWPP,"Oct 17, 2024",2028,Simple-Cycle Gas Turbine,900,888.89,800,Estimated,2025,33.21964,-94.70564,"Planned for installation, but regulatory approvals not initiated",68273,2025,808.79
+Lone Star Power Station,TX,MISO,"Jun 4, 2024",2028,Simple-Cycle Gas Turbine,453,1698.9,771.5,Estimated,2024,30.41,-95.02,Regulatory approvals pending. Not under construction,69077,2024,1585.99
+Red Oak Energy Center,WI,MISO,"Jul 25, 2025",2030,Simple-Cycle Gas Turbine,1125,1573,1770,-,-,42.63048039,-87.95648909,-,-,2025,1431.25
+South Oak Creek Combustion Turbine Project,WI,MISO,"Jun 13, 2024",2028,Simple-Cycle Gas Turbine,1100,1095.45,1205,Actual,2025,42.8457,-87.8294,Regulatory approvals pending. Not under construction,4041,2025,996.73
+Riverside Energy Center Combustion Turbine Upgrade,WI,-,"Mar 26, 2026",2028,Simple-Cycle Gas Turbine,394,536.2944162,211.3,Estimated,2026,42.58276582,-89.03573273,-,-,2026,476.06
+Foundry Ridge Energy Center,WI,MISO,"Jul 29, 2025",2028,Simple-Cycle Gas Turbine,324,2089,564.2,Estimated,-,42.61802785,-88.76321535,-,-,2025,1900.75

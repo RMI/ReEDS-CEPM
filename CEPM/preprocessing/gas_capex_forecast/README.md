@@ -1,60 +1,46 @@
 # Gas Capex Forecast
-## Last Updated: 2026-08-19
+## Last Updated: 2026-09-04
 
 ## Summary
 
-Regression-based 2026-2032 capex forecast for CCGT and CT gas plants, built from
-the Halcyon Gas Power Plant Tracker, and used to update the ATB gas cost input
-for ReEDS. It gives CEPM gas build costs drawn from the current project pipeline
+Regression-based 2026-2032 capex forecast for CCGT and CT gas plants, built from the Halcyon Gas Power Plant Tracker, and used to update the ATB gas cost input for ReEDS. It gives CEPM gas build costs drawn from the current project pipeline
 rather than ATB's trajectory.
 
 ## Key Info
 | | |
 |---|---|
-| **Source data** | Halcyon Gas Power Plant Tracker (17 July 2026). Both raw exports live in this folder: `Halcyon_July_CCGT.csv`, filtered to Combined-Cycle Gas Turbine (CCGT) projects, and `Halcyon_July_CT.csv`, the same tracker filtered to Simple-Cycle Gas Turbine (CT) projects. Both are the tracker's raw export columns (`Planned / Operating Year`, `Cost ($/kW)`, etc.) — no pre-cleaning applied; each notebook does its own cleaning. |
-| **Produces** | `inputs/plant_characteristics/gas-ccgt_CEPM_{low,high,all}.csv` — new files; the original `gas_ATB_2024_moderate.csv` is left unmodified. `capcost` is replaced for `Gas-CC` and `Gas-CT` in 2026-2032 only (other gas technologies and years are left untouched). `low` = CCGT low-cost scenario, `high` = CCGT high-cost scenario, `all` = CCGT all-data (mid/reference) scenario; Gas-CT = the CT forecast in all three. |
-| **Related switch(es)** | `plantchar_gas = gas-ccgt_CEPM_(low\|high\|all)` |
-| **ReEDS files touched** | These names must match the `plantchar_gas` switch values allowed by the `Choices` column in `cases.csv`, and be registered in `inputs/plant_characteristics/dollaryear.csv` (currently `2022`); renaming them requires updating both. `runfiles.csv` needs no change — its `inputs/plant_characteristics/{plantchar_gas}.csv` template already resolves these by name. |
+| **Source data** | Halcyon Gas Power Plant Tracker (24 Aug 2026), `Halcyon Gas Power Plant Tracker - 24 Aug 2026 .xlsx` (sheet `Gas Plants`), 473 rows across all gas technologies and all US states. |
+| **Produces** | `inputs/plant_characteristics/gas-ccgt_CEPM_all.csv` — a new file; the original `gas_ATB_2024_moderate.csv` is left unmodified. `capcost` is replaced for `Gas-CC` and `Gas-CT` in 2026-2032 only (other gas technologies and years are left untouched). A single scenario — see "Why no clustering" below. |
+| **Related switch(es)** | `plantchar_gas = gas-ccgt_CEPM_all` |
+| **ReEDS files touched** | The output name must match a `plantchar_gas` switch value allowed by the `Choices` column in `cases.csv`, and be registered in `inputs/plant_characteristics/dollaryear.csv` (currently `2022`, which matches the 2022$ normalization done here); renaming it requires updating both. `runfiles.csv` needs no change — its `inputs/plant_characteristics/{plantchar_gas}.csv` template already resolves this by name. `cases_cepm.csv` already points `plantchar_gas` at `gas-ccgt_CEPM_all`. |
 | **Confirmed run?** | Not yet. |
 
 ## Files and run order
 
 | File | Description |
 |---|---|
-| 1. **`CCGT_gas_capex.ipynb`** | Cleans the CCGT data, clusters it with DBSCAN into a low-cost and a high-cost group (DBSCAN was chosen after testing several methods, see `CCGT_clustering_methods.ipynb`), then fits a regression per cluster plus one on all the data combined. Exports `ccgt_regression_forecast.csv`. |
-| 2. **`CT_gas_capex.ipynb`** | Same cleaning approach for CT, but fits a single regression on all the data (no clustering). Exports `ct_regression_forecast.csv`. |
-| 3. **`gas_CAPEX_update.ipynb`** | Reads `ccgt_regression_forecast.csv` and `ct_regression_forecast.csv` and builds 3 new versions of the ATB gas cost input, replacing `capcost` for `Gas-CC` and `Gas-CT` in 2026-2032 only (other gas technologies and years are left untouched). |
-| — **`CCGT_clustering_methods.ipynb`** | Side notebook comparing clustering methods (K-Means, hierarchical with ward/complete/average/single linkage, DBSCAN) on the CCGT data, to justify why DBSCAN is the one used in `CCGT_gas_capex.ipynb`. Not part of the main pipeline — exploratory only. |
-| — `Halcyon_July_CCGT.csv`, `Halcyon_July_CT.csv` | Raw tracker exports; inputs to steps 1 and 2. |
-| — `ccgt_regression_forecast.csv` | CCGT forecast 2026-2032: low-cost cluster, high-cost cluster, and all-data. Output of step 1, input to step 3. |
-| — `ct_regression_forecast.csv` | CT forecast 2026-2032 (single scenario). Output of step 2, input to step 3. |
+| 1. **`data_cleaning_gas.ipynb`** | Loads the raw Halcyon Excel export, keeps only rows with a reported `Cost ($/kW)`, normalizes cost to **2022$** (see "Dollar-year normalization" below), and splits into `Halcyon_August_CCGT.csv` / `Halcyon_August_CT.csv` (Technology Type = Combined-Cycle / Simple-Cycle Gas Turbine). |
+| 2. **`CCGT_gas_capex.ipynb`** | Cleans the CCGT data (drop year > 2032 or cost > $3000/kW) and fits a **single regression on all 27 plants**, using the normalized cost. No clustering — see `CCGT_clustering_methods.ipynb` for why. Exports `ccgt_regression_forecast.csv`. |
+| 3. **`CT_gas_capex.ipynb`** | Same approach for CT: single regression on all 35 plants, normalized cost. Exports `ct_regression_forecast.csv`. |
+| 4. **`gas_CAPEX_update.ipynb`** | Reads `ccgt_regression_forecast.csv` and `ct_regression_forecast.csv` and builds `gas-ccgt_CEPM_all.csv`, replacing `capcost` for `Gas-CC` and `Gas-CT` in 2026-2032 only. |
+| — **`CCGT_clustering_methods.ipynb`** | Side notebook comparing clustering methods (K-Means, hierarchical with ward/complete/average/single linkage, DBSCAN) on the CCGT data. **Conclusion: none gives a robust, meaningful low/high cost-tier split** — the split is confounded with operating year, the "high" cluster isn't homogeneous, the "low" cluster's regression isn't significant, and the whole result flips (11/16 → 21/6) when a single plant's cost is revised between tracker updates. Not part of the main pipeline — exploratory only, informs the "no clustering" decision in step 2. |
+| — `Halcyon Gas Power Plant Tracker - 24 Aug 2026 .xlsx` | Raw tracker export. Input to step 1. |
+| — `Halcyon_August_CCGT.csv`, `Halcyon_August_CT.csv` | Cleaned, cost-normalized tracker exports. Output of step 1, input to steps 2-3. |
+| — `ccgt_regression_forecast.csv` | CCGT forecast 2026-2032 (single scenario). Output of step 2, input to step 4. |
+| — `ct_regression_forecast.csv` | CT forecast 2026-2032 (single scenario). Output of step 3, input to step 4. |
 
 All paths in these notebooks resolve from a `REPO_ROOT` walk, so they can be run
 from any working directory.
 
-## Issues
+## Dollar-year normalization
 
-- **The two Halcyon exports don't have matching columns.** `Halcyon_July_CCGT.csv`
-  has 15 columns; `Halcyon_July_CT.csv` has 16, the extra one being an unnamed,
-  always-empty trailing field created by a trailing comma on every line. In *both*
-  files the last two headers also disagree with their contents: `EIA Status` holds
-  what look like EIA plant IDs (`66918`, `201`) and `EIA Plant ID` holds owner
-  names (`Clean Energy Future - Trumbull, LLC.`, `Arkansas Electric Coop Corp`),
-  so the trailing fields are shifted one place relative to their labels. This does
-  **not** currently affect the forecast — the notebooks read only
-  `Planned / Operating Year` and `Cost ($/kW)`, both of which sit ahead of the
-  shift — but the headers would need fixing before anyone used the location,
-  status, or ID fields, and the two files can't be concatenated as-is.
+Halcyon `Cost ($/kW)` values aren't all in the same dollar year (per the tracker's own `Methodology` sheet, `Dollar Year` is *"the reference year of reported capital cost values, if explicitly stated. If not provided, the dollar year defaults to the publication date of the filing."*). `data_cleaning_gas.ipynb` normalizes every cost to **2022$**, to match `inputs/plant_characteristics/dollaryear.csv`'s existing `2022` entry for `gas-ccgt_CEPM_all` (inherited from `gas_ATB_2024_moderate`).
 
-- **Costs are never resolved to a common dollar year.** The tracker rows carry
-  mixed `Dollar Year` values — mostly 2025/2026, some 2020-2024, and blank (`-`)
-  for 12 of 33 CCGT and 14 of 38 CT rows — and no notebook in the pipeline reads
-  that column or applies a deflator. Raw `Cost ($/kW)` values pass straight
-  through the regression into `capcost`. Meanwhile `dollaryear.csv` registers all
-  three outputs as `2022`, a label inherited from the `gas_ATB_2024_moderate` file
-  they are copied from, so ReEDS deflates them as if they were already 2022
-  dollars. Normalizing to **2022** before fitting is probably the easiest fix: it
-  matches both the ATB base file and the existing `dollaryear.csv` entry, so the
-  CEPM variants stay directly comparable to the upstream ATB input. Worth noting
-  separately that fitting cost against *operating year* also folds some nominal
-  escalation into the slope, which normalizing the inputs would not remove.
+Method: chain annual rates from `inputs/financials/inflation_default.csv` (1914-2200, flat 2.5%/yr from 2026 on — the same source `reeds/financials.py` uses elsewhere in the model; `inputs/financials/deflator.csv` isn't used here since it stops at 2025). Dollar year is taken from, in order: (1) the tracker's explicit `Dollar Year`, (2) the `Announcement Date`'s year as fallback, (3) if both are missing, the row is dropped (2 CCGT rows: *Smarr Combined Cycle Energy Facility*, *Westlake Power Station CA1/CT1*).
+
+Normalizing dollar year only fixes the *reported cost basis* — it doesn't remove the real cost escalation the regression is trying to estimate by fitting cost against operating year; those are different things.
+
+## Resolved issues (from the July tracker version)
+
+- **Column mismatch between exports** — the old `Halcyon_July_CCGT.csv` / `Halcyon_July_CT.csv` had different column counts and shifted trailing headers. Fixed by `data_cleaning_gas.ipynb`, which reads directly from the source Excel and selects columns by name, rather than concatenating pre-exported CSVs.
+- **Mixed dollar years** — fixed by the normalization step above.
