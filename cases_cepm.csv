@@ -1,4 +1,4 @@
-,Default Value,st-AZNM_baseline,st-AZNM_limitre,st-AZNM_optimized,SERTP_baseline,SERTP_limitre,SERTP_optimized,VA_baseline,VA_limitre,VA_optimized
+,Default Value,st-AZNM_baseline,st-AZNM_limitre,st-AZNM_optimized,st-MSALGA_baseline,st-MSALGA_limitre,st-MSALGA_optimized,VA_baseline,VA_limitre,VA_optimized
 ignore,1,0,1,1,1,1,1,1,1,1
 GSw_Region,cendiv/Pacific,st/AZ.NM,st/AZ.NM,st/AZ.NM,st/MS.AL.GA,st/MS.AL.GA,st/MS.AL.GA,st/VA,st/VA,st/VA
 GSw_ZoneSet,,z132,z132,z132,z132,z132,z132,z132,z132,z132
