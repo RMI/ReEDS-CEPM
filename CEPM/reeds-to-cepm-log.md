@@ -907,7 +907,7 @@ upstream's `cases.csv`. `runreeds.py` already supports this through its
 `--cases_suffix cepm` and needs **no upstream code change** — `cases.csv` stays
 as the untouched switch-defaults reference.
 
-Current cases: `WECC-SW_{baseline,limitre,optimized,dcloco2}`,
+Current cases: `st-AZNM_{baseline,limitre,optimized,dcloco2}`,
 `SERTP_{baseline,limitre,optimized,dcloco2}`,
 `NM_optimized_{2yrs,3yrs,LLtest}`, `USA_gas_mvp_NOTE-DEPRECATED`, and
 `USA_optimized_mvp`. Set a case's `ignore` row to `1` to skip it.
@@ -918,14 +918,14 @@ scenario under two names, because the `_optimized` convention postdates
 `_dcload`. `_optimized` is the surviving name. The `_dcloco2` columns are
 independent and unaffected; completed runs under the old names are untouched.
 
-Both `WECC-SW` and `SERTP` therefore support `run_cepm.ps1 -m <stem>` as of
+Both `st-AZNM` and `SERTP` therefore support `run_cepm.ps1 -m <stem>` as of
 2026-09-03. The remaining stems (`NM_*`, `USA_*`) do not, and `-m` will refuse
 with a clear message naming the missing columns.
 
 Two things to know about the two-step columns. They are reached through
 `run_cepm.ps1 -m`, which uses `-s` and therefore overrides `ignore`, so they are
 marked `ignore=1` and never picked up by an ordinary `-c cepm` batch.
-`WECC-SW_limitre` also ships with `GSw_CEPM_TgCap=1` and `cepmtgcapscen=none`,
+`st-AZNM_limitre` also ships with `GSw_CEPM_TgCap=1` and `cepmtgcapscen=none`,
 which means running it *without* `-m` (i.e. without a harvested ceiling)
 deliberately aborts at the empty-cap-files guardrail rather than solving
 uncapped — that is the safety property, not a misconfiguration.
