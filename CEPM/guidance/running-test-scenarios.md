@@ -36,7 +36,7 @@ A good test scenario:
 2. Make a new cases file by copying `cases_cepm.csv`. Give it a descriptive suffix like `cases_coalretirement.csv`. Keep it in the root folder for now. By default, let's run our tests on the whole two-step scenario run, so you'll want to keep at least one geography with _baseline, _limitre, and _optimized.
    1. Each two-step scenario needs all three columns. `_limitre` must have `GSw_CEPM_TgCap` set to `1`, and `_baseline` and `_optimized` must have it at `0` or blank. `run_cepm.ps1 -m` checks this before it starts anything.
    2. **Keep `cleanup_level` at `0` in every column**, including columns you aren't running. With any other value, `runreeds.py` stops and waits for a yes/no answer at launch. A `-m` run runs in the background, so you never see the prompt and the batch just hangs.
-3. Add new rows to your cases file with the switches you'd like to test. It makes sense to keep one two-step scenario, then include one or more changed two-step scenarios. Change the run names to reflect the settings, but note that for each two-step scenario the name should remain the same, with the _baseline, _limitre, and _optimized suffixes intact.
+3. Add new rows to your cases file with the switches you'd like to test. It makes sense to keep one two-step scenario as-is as a counterfactual, then include one or more changed two-step scenarios. Change the run names to reflect the settings, but note that for each two-step scenario the stem should remain the same, with the _baseline, _limitre, and _optimized suffixes intact.
 
    For example, a file that keeps the core AZ/NM runs and adds one changed version might have these columns. `GSw_YourSwitch` stands in for whatever you're testing:
 

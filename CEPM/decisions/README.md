@@ -19,7 +19,7 @@ Use numeric prefixes so records stay in chronological order:
 
 1. Copy `202XXXXX-decision-template.md` to a new file with date and title.
 2. Fill in all relevant sections.
-3. Link the deicision in the batch-log entry.
+3. Link the decision in the batch-log entry.
 4. If the decision changes later, add a new decision record instead of rewriting history.
 
 ## Status values

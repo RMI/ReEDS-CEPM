@@ -1,6 +1,6 @@
 # Decision Record 202XXXXX: Decision Title
 
-**Status: `Pick from APPROVED, ACCEPTED, or DEPRECATED`**
+**Status: `Pick from PROPOSED, ACCEPTED, or DEPRECATED`**
 
 ## Context and Problem Statement
 
