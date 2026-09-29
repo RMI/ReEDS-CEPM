@@ -1,8 +1,6 @@
 # Decision Record 202XXXXX: Decision Title
 
-## Basic Details:
-
- - STATUS: Not active, Under investigation, In progress, Complete
+**Status: `Pick from APPROVED, ACCEPTED, or DEPRECATED`**
 
 ## Context and Problem Statement
 
@@ -14,7 +12,7 @@ Summarize, in bullets, what we did to look into this issue.
 
 If you consulted sources, link them.
 
-If you did supporting analysis, ID where it is -- or include it in a sub-folder.
+If you did supporting analysis, say where it can be found.
 
 ## Decision Outcome
 
