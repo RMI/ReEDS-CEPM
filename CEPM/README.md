@@ -54,6 +54,7 @@ investigations at the end.
 
 | File | Summary |
 |---|---|
+| [`guidance/running-test-scenarios.md`](guidance/running-test-scenarios.md) | Step-by-step process for testing switch changes against the core CEPM runs: branch, copy `cases_cepm.csv` to a `cases_{suffix}.csv`, run the two-step scenario with `run_cepm.ps1 -m ... -x`, share results via SharePoint and `batch-log.md`, then archive the cases file and open a pull request. |
 | [`guidance/fixing-reeds-issues.md`](guidance/fixing-reeds-issues.md) | Step-by-step process for fixing a bug in the ReEDS model code: branch from the working branch, record the issue in `known-reeds-issues.md`, fix and verify it, log any upstream-file changes in `reeds-to-cepm-log.md`, and open a pull request. Uses `fix/ra-plot-logging` as a worked example. |
 | [`guidance/reeds-data-sources.md`](guidance/reeds-data-sources.md) | How `runfiles.csv` and `copy_files.py` turn a switch value into an input file path, and why bespoke CEPM inputs belong in `inputs/` if we want to keep access to upstream defaults. |
 | [`guidance/tech-limit-options.md`](guidance/tech-limit-options.md) | The mechanisms available for restricting a technology's capacity — `ban`/`bannew`, resource supply curve edits, the interconnection-queue cumulative cap, growth-rate constraints, cost multipliers, and customizing `tg` — with the implications of each. |
