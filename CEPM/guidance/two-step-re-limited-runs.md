@@ -388,7 +388,7 @@ explicit `0` in the CSV is indistinguishable from an absent row.
 
 That is harmless for `pv`/`wind-ons`/`battery`, which always have baseline
 builds. It is a live trap for `wind-ofs`, `csp`, and `pumped-hydro`, which
-have **zero** baseline builds in WECC-SW and st-MSALGA today: harvesting them
+have **zero** baseline builds in WECC-SW and SERTP today: harvesting them
 honestly yields `0`, which switches their ceiling off and leaves exactly the
 leak D4 was chosen to close.
 
