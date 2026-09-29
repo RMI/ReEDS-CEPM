@@ -148,9 +148,9 @@ Usage examples:
     .\run_cepm.ps1 -u "Tyler Fitch" -b v20260625_test -c test
     .\run_cepm.ps1 -x -b v20260625_test -c test
     .\run_cepm.ps1 -o -b v20260625_test -c test
-    .\run_cepm.ps1 -y -x -b v20260625_ms -c cepm -m WECC-SW
-    .\run_cepm.ps1 -y -x -b v20260625_ms -c cepm -m WECC-SW --harvest-args "--scope both"
-    .\run_cepm.ps1 -y -q -b v20260625_ms -c cepm -m WECC-SW -t
+    .\run_cepm.ps1 -y -x -b v20260625_ms -c cepm -m st-AZNM
+    .\run_cepm.ps1 -y -x -b v20260625_ms -c cepm -m st-AZNM --harvest-args "--scope both"
+    .\run_cepm.ps1 -y -q -b v20260625_ms -c cepm -m st-AZNM -t
 #>
 
 # Initializing functions and variables for this script.
