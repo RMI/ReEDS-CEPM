@@ -310,10 +310,11 @@ neither is CEPM-specific — good candidates to contribute back.
 
 ### Reference:
 
-Branch `fix/ra-plot-logging`. Upstream issue text drafted separately; note that
-both files have drifted upstream since our `2026.06.18` base (135 and 140 lines
-respectively), so an upstream PR must be re-authored against their tree rather
-than cherry-picked.
+Branch `fix/ra-plot-logging`. Upstream issue text drafted separately. Before
+this patch, both files were byte-identical to upstream tag `2026.08.03`, so it
+applies to that tag as-is; check it against the tip of upstream `main` before
+opening an upstream PR, since both files may have moved since the tag.
+Symptom-level entry in [`known-reeds-issues.md`](known-reeds-issues.md).
 
 ### What to test in new releases:
 
@@ -1005,10 +1006,11 @@ techs, so `GSw_H2Combustionupgrade` needs no change. Measured effect on results:
 §4.6). It is an interpretability choice, not a modelling correction.
 
 **`cleanup_level` is deliberately 0 for every case — do not raise it.**
-`runreeds.py:959-967` blocks on `input('Proceed? y/[n]: ')` (defaulting to `n`,
-which quits) whenever **any** case in the file has `cleanup_level >= 1` and
-`--skip_checks` was not passed. The check runs at launch, and because `-s`
-leaves ignored cases in `df_cases` (`runreeds.py:899-905`) it scans *every*
+`runreeds.py`'s `#%% User warnings` block blocks on `input('Proceed? y/[n]: ')`
+(defaulting to `n`, which quits) whenever **any** case in the file has
+`cleanup_level >= 1` and `--skip_checks` was not passed. The check runs at
+launch, and because `-s` leaves ignored cases in `df_cases` (see the
+`# If no --single/-s, drop the ignored cases` block) it scans *every*
 column — not just the ones being run. So a single `cleanup_level=2` anywhere in
 this file hangs a background or CI run, including any `-m` batch, on a prompt
 that is never displayed.
