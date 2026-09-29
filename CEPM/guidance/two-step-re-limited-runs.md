@@ -4,7 +4,7 @@
 command now produces the three-case factorial and its comparison deck:
 
 ```powershell
-.\run_cepm.ps1 -y -x -b <batch> -c cepm -m WECC-SW
+.\run_cepm.ps1 -y -x -b <batch> -c cepm -m st-AZNM
 ```
 
 Working branch `mvp/two-step-runs`, everything still in the working tree
