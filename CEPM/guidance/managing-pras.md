@@ -119,6 +119,6 @@ invoked on a normally-solving case. The closest achievable combination:
 
 ## Related
 
-See [SUBNATIONAL_REGION_SUPPORT.md](SUBNATIONAL_REGION_SUPPORT.md) Issue 4
-for a separate, unrelated PRAS bug (crashes on genuinely single-zone
+See the "PRAS crashes on single-zone regions" entry in
+[known-reeds-issues.md](../known-reeds-issues.md) for a separate, unrelated PRAS bug (crashes on genuinely single-zone
 regions) — not a switch issue, a vendored-Julia-code gap.
