@@ -15,7 +15,7 @@ rather than ATB's trajectory.
 | **Produces** | `inputs/plant_characteristics/gas-ccgt_CEPM_{low,high,all}.csv` — new files; the original `gas_ATB_2024_moderate.csv` is left unmodified. `capcost` is replaced for `Gas-CC` and `Gas-CT` in 2026-2032 only (other gas technologies and years are left untouched). `low` = CCGT low-cost scenario, `high` = CCGT high-cost scenario, `all` = CCGT all-data (mid/reference) scenario; Gas-CT = the CT forecast in all three. |
 | **Related switch(es)** | `plantchar_gas = gas-ccgt_CEPM_(low\|high\|all)` |
 | **ReEDS files touched** | These names must match the `plantchar_gas` switch values allowed by the `Choices` column in `cases.csv`, and be registered in `inputs/plant_characteristics/dollaryear.csv` (currently `2022`); renaming them requires updating both. `runfiles.csv` needs no change — its `inputs/plant_characteristics/{plantchar_gas}.csv` template already resolves these by name. |
-| **Confirmed run?** | Not yet. |
+| **Confirmed run?** | Yes: `v20260917_synccheck_WECC-SW_baseline` ran `gas-ccgt_CEPM_all` through 2032. |
 
 ## Files and run order
 

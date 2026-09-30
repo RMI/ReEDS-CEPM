@@ -17,20 +17,20 @@ Use numeric prefixes so records stay in chronological order:
 
 ## Process
 
-1. Copy `0000-decision-template.md` to a new file with the next number.
+1. Copy `202XXXXX-decision-template.md` to `YYYYMMDD-short-title.md`.
 2. Fill in all relevant sections.
 3. Where appropriate Open a pull request with the ADR and any related implementation changes.
 4. If the decision changes later, add a new ADR instead of rewriting history.
 
 ## Status values
 
-Common status values:
+Use one of the values on the template's STATUS line:
 
-- Proposed
-- Accepted
-- Superseded
-- Deprecated
+- Not active
+- Under investigation
+- In progress
+- Complete
 
 ## Relationship to changelog
 
-Almost all decisions should show up, linked, in  [`CEPM/batch-log.md`](CEPM/batch-log.md).
+Almost all decisions should show up, linked, in  [`CEPM/batch-log.md`](../batch-log.md).

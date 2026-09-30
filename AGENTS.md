@@ -90,18 +90,9 @@ Use this file as the first stop for agent orientation. Deeper references:
 - `tests/` and `hourlize/tests/`: pytest tests. Some tests are lightweight unit
   tests; `tests/test_outputs.py` requires a completed ReEDS case.
 - `.github/workflows/`: CI, docs, and workflow-quality automation.
-- `CEPM/`: RMI/CEPM-specific docs and helpers kept separate from upstream docs.
-  To the extent practical, CEPM-specific additions belong here rather than
-  scattered through the upstream tree; prefer adding new CEPM-only files under
-  `CEPM/` over placing them elsewhere. `CEPM/README.md` summarizes every file in
-  the folder, and `CEPM/reeds-to-cepm-log.md` tracks divergence from upstream,
-  including which upstream files CEPM changed (currently a placeholder — use
-  `git diff` against upstream for an authoritative answer).
-  `CEPM/guidance/` holds `UV_MAMBA_GUIDE.md` (uv/mamba dependency mapping),
-  `internal-ci-testing.md` (on-prem CI runbook), and
-  `GAMS_ERROR_579_INVESTIGATION.md` (GAMS 44.4.0 compatibility investigation).
-  `CEPM/scripts/` holds `check_env_sync.py` (environment.yml vs pyproject.toml
-  drift check). The CEPM setup-and-run helper is `run_cepm.ps1` at repo root.
+- `CEPM/`: RMI/CEPM-specific docs and scripts (see the fork note above).
+  `CEPM/README.md` indexes every file; start with `CEPM/known-reeds-issues.md`
+  when a run fails. The CEPM setup-and-run helper is `run_cepm.ps1` at repo root.
 
 ## Environment
 
@@ -143,8 +134,9 @@ uv run python reeds/remote.py
 - Restart failed HPC runs: `uv run python helpers/restart_runs.py <batch_prefix>`
 - Run a completed-case output check:
   `uv run python -m pytest tests/test_outputs.py --casepath runs/<case>`
-- Build docs when docs dependencies are installed:
-  `uv run sphinx-build docs/source docs/build/`
+- Build docs (installs the docs packages on the fly, same pins as
+  `build-docs.yaml`):
+  `uv run --with sphinx==8.2.3 --with myst-parser==5.1.0 --with sphinx_rtd_theme==3.1.0 --with sphinxcontrib-bibtex==2.7.0 --with sphinx_design==0.7.0 sphinx-build docs/source docs/build/`
 
 `runreeds.py` command-line arguments (from its argparse): `-b/--BatchName`,
 `-c/--cases_suffix`, `-s/--single` (a single case or comma-delimited list),
@@ -257,7 +249,8 @@ Inputs and CSVs:
   comment.
 - Raw inputs belong under topical `inputs/` subdirectories.
 - Large or optional data should not be committed casually; use the remote-file
-  mechanism and document sources in `sources.csv` / `sources_documentation.md`.
+  mechanism and document sources in `docs/sources.csv` /
+  `docs/sources_documentation.md`.
 - Costs read into `reeds/core/setup/b_inputs.gms` should already be in 2004
   dollars unless the surrounding code clearly says otherwise; use `deflator.csv`
   rather than hard-coded conversions.
@@ -283,7 +276,6 @@ Inputs and CSVs:
 - Current `health_damages_caused_r.csv` files use the air-quality postprocessor
   schema (`ba`, `pollutant`, `tons`, `md`, `damage_$`, `mortality`); bokehpivot
   normalizes this to legacy report display columns in `postprocessing/bokehpivot/reeds2.py`.
-- `helpers/runstatus.py` summarizes running/failed/finished cases for a batch prefix.
 - `postprocessing/check_error.py` reads the `error_check` output for solved
   cases.
 - For GAMS data comparison, developer docs recommend targeted `execute unload`
@@ -293,23 +285,11 @@ Inputs and CSVs:
 
 ## Important Subsystems
 
-- Remote data: `reeds.remote` reads `inputs/remote_files.csv` and manages
-  downloads under `inputs/remote/`.
 - Monte Carlo sampling: `reeds/input_processing/mcs_sampler.py` plus YAML
   distribution files described in the user guide.
-- Temporal clustering and hourly data: `reeds/input_processing/hourly_repperiods.py`,
-  `hourly_writetimeseries.py`, `hourly_load.py`, and `inputs_case/rep/`.
-- Renewable capacity factors and resources: `reeds/input_processing/recf.py`,
-  `writesupplycurves.py`, `hourlize/`, and `inputs_case/recf.h5`.
-- Resource adequacy/stress periods: `reeds/resource_adequacy/` (`ra_calcs.py`,
-  `capacity_credit.py`, `stress_periods.py`, `run_pras.jl`, `reeds2pras/`) and
-  `GSw_PRM_*` switches.
-- Standard reports: `reeds/core/terminus/report.gms`, `report_dump.py`,
-  `postprocessing/bokehpivot/`, and `postprocessing/single_case_plots.py`.
 - Run comparisons: `postprocessing/compare_cases.py`,
   `postprocessing/combine_runs/`, and `postprocessing/uncertainty_plots.py`.
 - Retail rates: `postprocessing/retail_rate_module/`.
-- R2X translation: `postprocessing/run_r2x.py` and CI's `r2x-reeds` invocation.
 
 ## Security And Data Handling
 
@@ -320,7 +300,8 @@ Inputs and CSVs:
 - Do not delete, move, or overwrite run artifacts unless explicitly asked.
 - Ask before downloading large remote inputs or launching long solves.
 - Preserve source documentation when adding or changing data: update
-  `sources.csv`, `sources_documentation.md`, and relevant docs when applicable.
+  `docs/sources.csv`, `docs/sources_documentation.md`, and relevant docs when
+  applicable.
 
 ## Git Workflow For Agents
 

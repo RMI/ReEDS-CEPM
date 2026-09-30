@@ -13,9 +13,9 @@ with.
 |---|---|
 | **Source data** | EPRI Powering Intelligence dashboard, <https://powering-intelligence.epri.com/dashboard/>. The raw export lives in this folder: `EPRI Powering Intelligence - All States and Total (2026-08-19).csv` — 1,275 rows covering 2021-2030, scenarios `Historical` / `Low` / `Medium` / `High`, 50 state codes plus a `US` national total, with `Nominal Capacity (GW)`, `Peak Load (GW)`, and `Annual Energy (TWh)`. |
 | **Produces** | `inputs/load/loadsite_st_epri_{low,medium,high}_extended_to_2032.csv` — long format `*loadsitereg,t,MW`, 48 contiguous states, 2026-2032. All three are committed. |
-| **Related switch(es)** | `GSw_LoadSiteTrajectory = st_epri_(low\|medium\|high)_extended_to_2032`, resolved by `runfiles.csv` through `inputs/load/loadsite_{GSw_LoadSiteTrajectory}.csv`. `cases_cepm.csv` currently sets `st_epri_medium_extended_to_2032` for `USA_gas_mvp` and `USA_optimized_mvp`. The file is only staged when `GSw_LoadSiteCF > 0`. |
+| **Related switch(es)** | `GSw_LoadSiteTrajectory = st_epri_(low\|medium\|high)_extended_to_2032`, resolved by `runfiles.csv` through `inputs/load/loadsite_{GSw_LoadSiteTrajectory}.csv`. `cases_cepm.csv` sets `st_epri_medium_extended_to_2032` for every `_limitre`/`_optimized` case. The file is only staged when `GSw_LoadSiteCF > 0`. |
 | **ReEDS files touched** | None. That switch's `Choices` entry is a generic pattern (`^(nercr\|transreg\|transgrp\|cendiv\|st\|interconnect\|country\|usda_region)_.*$`) which already admits any `st_*` identifier, so no `cases.csv` edit is required, and no `dollaryear.csv` entry is needed — load sites are MW, not monetary values. |
-| **Confirmed run?** | Not yet on record. Note this is nevertheless the load-site input `cases_cepm.csv` currently selects, so it is wired up rather than speculative. |
+| **Confirmed run?** | Yes: v20260825 and v20260902t7 (see [`batch-log.md`](../../batch-log.md)). |
 
 ## Files and run order
 
@@ -66,15 +66,7 @@ Medium, and High.
   2026-2030 would be less sensitive to the endpoint. The switch to peak load made
   these rates steeper than they were under nominal capacity.
 
-- **Two folders build load-site inputs by inconsistent methods.**
-  `CEPM/preprocessing/dc_load_nm` produces a New-Mexico-only series from the same
-  EPRI dashboard, but converts `Annual Energy (TWh)` to a flat MW load and
-  extrapolates 2031-2032 linearly, where this folder uses `Peak Load (GW)` and
-  compounds a growth rate. They disagree on NM: 273-540 MW for 2026-2030 there
-  versus 284-562 MW here — close now that this folder uses peak load rather than
-  nominal capacity, but still a different quantity. Only this folder's output is
-  wired into `cases_cepm.csv`; the NM-only one is not committed and no case selects
-  it. Worth deciding whether `dc_load_nm` is superseded.
+- **`dc_load_nm/` is superseded** (see [its README](../dc_load_nm/README.md)).
 
 - **The raw export filename is hardcoded, including its date.** `EPRI_CSV_PATH`
   embeds `EPRI Powering Intelligence - All States and Total (2026-08-19).csv`, so

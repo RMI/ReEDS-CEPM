@@ -16,9 +16,9 @@
 
 ## Files and run order
 <Below: run order for the scripts/notebooks in this folder, if there's more than one.>
-| | |
+
 | File | Description |
-| | |
+|---|---|
 
 ## Issues
 <Known problems, data-quality caveats, or unfinished work in this pipeline. One
