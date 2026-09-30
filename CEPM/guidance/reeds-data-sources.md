@@ -12,7 +12,7 @@ CEPM inputs can live.
 ## What `runfiles.csv` is
 
 Despite the name, it is not a list of CSVs — it is a **file-staging manifest**
-with 270 data rows, and it governs the small, copyable, GAMS-bound inputs. Its
+with ~270 data rows, and it governs the small, copyable, GAMS-bound inputs. Its
 two load-bearing columns are the first two:
 
 | Column | Meaning |
@@ -22,61 +22,21 @@ two load-bearing columns are the first two:
 
 The remaining columns (`required_if`, `aggfunc`, `disaggfunc`, `region_col`,
 `fix_cols`, `wide`, `header`, `post_copy`, `GAMStype`, `GAMSname`, …) describe how
-to filter, aggregate, and hand the file to GAMS. 60 rows carry `GAMStype`/
-`GAMSname`, meaning they become GAMS symbols.
-
-For the record, the extension distribution: 263 `.csv`, 2 `.yaml`, and one each of
-`.gms`, `.h5`, `.toml`, `.txt`, `.py`. The `filename` and `filepath` extensions
-match in all 270 rows, because staging a non-region file is a straight
-`shutil.copy` (`copy_files.py:950`) with no format conversion.
-
-Large binary timeseries mostly **bypass** this manifest: only one of the four
-`.h5` files under `inputs/` is registered here. Profiles like `recf` and demand
-are loaded by directly-constructed paths elsewhere (e.g. `reeds/io.py`, which
-builds `inputs/profiles_demand/demand_{GSw_LoadProfiles}.h5` itself). So the CSV
-dominance is partly a selection effect, not a claim that ReEDS inputs are all
-CSVs.
+to filter, aggregate, and hand the file to GAMS. Rows that carry `GAMStype`/
+`GAMSname` become GAMS symbols.
 
 ## How the path gets resolved
 
-The substitution is a single `str.format()` call in
-`reeds/input_processing/copy_files.py` (in `read_runfiles`, around line 78):
-
-```python
-runfiles['full_filepath'] = runfiles.apply(
-    axis=1,
-    func=lambda row: os.path.join(inputs_case, row['filename'])
-    if pd.isna(row['filepath'])
-    else os.path.join(reeds_path, row['filepath'].format(**{**sw, **{'lvl': '{lvl}'}}))
-)
-```
-
-Step by step:
-
-1. `apply(axis=1)` runs once per manifest row.
-2. If `filepath` is blank, the file is already in `inputs_case/` and only needs
-   naming. (No row in this repo takes that branch — all 270 specify a source.)
-3. Otherwise `{**sw, **{'lvl': '{lvl}'}}` builds the substitution mapping. `sw` is
-   the switches `pd.Series` from `reeds.io.get_switches(inputs_case)`, read from
-   the case's `inputs_case/switches.csv`.
-4. `'lvl': '{lvl}'` maps `lvl` to its own placeholder text — a deliberate no-op,
-   because `format()` raises `KeyError` on any placeholder it cannot resolve, and
-   spatial resolution is not known to be single-valued yet. `{lvl}` therefore
-   survives verbatim and is filled in later (around lines 103 and 601).
-5. `format()` fills every other placeholder. 78 of 270 rows have at least one;
-   some have two (`inputs/dgen_model_inputs/{distpvscen}/distpvcap_{distpvscen}.csv`).
-6. `os.path.join(reeds_path, …)` makes it absolute.
-
-Note for anyone tracing this in our fork: **no CSV in this repo uses `{lvl}`** —
-it appears only inside `copy_files.py` itself. The mixed-resolution machinery that
-explodes a row into `ba`/`county` variants is currently inert here. It is
-forward-compatible with upstream rather than dead code, but it is not part of the
-story for any file we actually stage.
+The substitution is `os.path.join(reeds_path, row['filepath'].format(**sw))` in
+`read_runfiles()` (`reeds/input_processing/copy_files.py`), where `sw` is the
+case's switches. An unknown switch name raises a bare `KeyError`.
 
 ### `required_if` and failure behavior
 
 `required_if=1` makes a file mandatory: `copy_files.py` collects missing required
-files and raises with the unresolved path listed (around lines 111-124). Note the
+files in `read_runfiles()` and raises a `FileNotFoundError` with the unresolved
+paths listed; requiredness comes from `is_required_file()` evaluating
+`required_if`. Note the
 asymmetry — a **misspelled switch value** produces that helpful error, but a
 **misspelled switch name** in the `filepath` template raises a bare
 `KeyError: '<name>'` from inside the lambda, before the friendly check runs. If
@@ -85,7 +45,7 @@ that is the error you will see.
 
 ## What the `filename` column is really for
 
-`inputs_case/` is a **flat namespace** — all 270 destination names are unique, and
+`inputs_case/` is a **flat namespace** — all destination names are unique, and
 each is a bare filename in one directory. The `filename` column exists to
 normalize a hierarchy of scenario-specific source files into stable, flat,
 scenario-independent names. It does three jobs:
@@ -110,8 +70,8 @@ inputs/supply_curve/dollaryear.csv          -> dollaryear_sc.csv
 
 ## Where the copy lands
 
-This detail matters more than it looks. `write_non_region_files`
-(`copy_files.py:965`) picks the destination directory from the **first path
+This detail matters more than it looks. `write_non_region_files()` in
+`copy_files.py` picks the destination directory from the **first path
 segment of `filepath`**:
 
 ```python
@@ -121,9 +81,9 @@ else:
     dir_dst = os.path.dirname(inputs_case)   # the case root, runs/{case}/
 ```
 
-Current distribution of that first segment: `inputs/` 265, `postprocessing/` 1,
-`tests/` 1, and 3 rows with no directory at all (`Project.toml`, `gamslice.txt`,
-`runreeds.py`) which are repo-root files that belong in the case root.
+Almost every row starts with `inputs/`; a few start with `postprocessing/` or
+`tests/`, and a few have no directory at all (e.g. `Project.toml`,
+`gamslice.txt`, `runreeds.py`) — repo-root files that belong in the case root.
 
 So the `else` branch exists to handle **repo-root files**, not to handle arbitrary
 new top-level directories. Any path under a top-level directory not on that
@@ -136,7 +96,7 @@ A file's path is not the only thing tied to its location. Two separate deflator
 mechanisms exist, and both are registries you have to update alongside a new
 input:
 
-**`docs/sources.csv`** — read by `get_source_deflator_map` (`copy_files.py:158`),
+**`docs/sources.csv`** — read by `get_source_deflator_map()` in `copy_files.py`,
 keyed by `RelativeFilePath` (repo-root-relative, leading `/` stripped, e.g.
 `/inputs/plant_characteristics/battery_ATB_2024_advanced.csv`) with a
 `DollarYear` column. Files whose monetary values need deflating are looked up
@@ -157,7 +117,8 @@ themselves staged through the manifest.
 
 ## Worked example: `plantchar_gas`
 
-The full chain for `USA_gas_mvp` in `cases_cepm.csv`:
+The full chain for any `cases_cepm.csv` case (all set
+`plantchar_gas = gas-ccgt_CEPM_all`):
 
 1. `cases_cepm.csv` sets `plantchar_gas = gas-ccgt_CEPM_all`, overriding the
    `cases.csv` default `gas_ATB_2024_moderate`. `cases.csv` also documents the
@@ -171,20 +132,6 @@ The full chain for `USA_gas_mvp` in `cases_cepm.csv`:
    the switch value once more for the deflator lookup — which is why
    `inputs/plant_characteristics/dollaryear.csv` needs a
    `gas-ccgt_CEPM_all,2022` row (it has one).
-
-### The manifest itself can be swapped per case
-
-`copy_files.py:49-53` prefers the `runfiles.csv` colocated with the executing
-script (the case-local copy) over the repo one. Combined with the
-`file_replacements` switch, a case can substitute a whole different manifest —
-`USA_gas_mvp` sets:
-
-```
-reeds/input_processing/runfiles.csv << reeds/input_processing/runfiles_no_new_windsolar_ccs.csv
-```
-
-If a path is not resolving as you expect for a given case, check which manifest
-that case is actually using.
 
 ## What this means for where CEPM inputs should live
 
@@ -229,7 +176,7 @@ the fork's data surface visible in one place instead of scattered through
 
 It is not free, though. Verified prerequisites:
 
-1. **Extend the destination allowlist.** `copy_files.py:965` routes by first path
+1. **Extend the destination allowlist.** `write_non_region_files()` routes by first path
    segment. `CEPM/inputs/foo.csv` would fall to the `else` branch and land in
    `runs/{case}/` rather than `inputs_case/`, silently — downstream scripts
    reading `inputs_case/foo.csv` would then fail with a confusing missing-file

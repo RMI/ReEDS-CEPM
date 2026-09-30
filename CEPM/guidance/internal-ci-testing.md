@@ -4,7 +4,7 @@ This runbook reproduces the key checks from GitHub PR CI on an internal machine 
 
 ## Scope
 
-This process is intended to replace CI jobs that currently fail on GitHub-hosted runners due to GAMS license constraints:
+This replaces CI jobs skipped on GitHub because the repo variable `ENABLE_GAMS_CI` is false (no GAMS license on runners):
 
 - `run ReEDS model matrix` (all scenario matrix entries)
 - `run R2X compatibility matrix` (all scenario matrix entries)
@@ -23,7 +23,7 @@ It follows the same scenario set used in PR CI:
 - Repository checked out locally.
 - Git LFS installed.
 - Python environment matching project requirements.
-- Julia installed if required by your local environment process.
+- Julia 1.12.1 (stress periods are on by default).
 - Network access to fetch Zenodo test files.
 
 ---
@@ -121,7 +121,7 @@ If using `uvx` as in CI:
 
 ```bash
 uvx --from "r2x-reeds>=0.3.5" python postprocessing/run_r2x.py \
-  --reeds-run-path "github_Pacific-2029" \
+  --reeds-run-path "runs/test_github_Pacific" \
   --scenario "github_Pacific" \
   --solve-year "2029" \
   --weather-year "2012" \
@@ -131,8 +131,6 @@ uvx --from "r2x-reeds>=0.3.5" python postprocessing/run_r2x.py \
 Repeat with:
 - `github_Everything`, `2060`
 - `github_MA_county_CC`, `2026`
-
-> Note: Align `--reeds-run-path` to your local folder layout if different from CI artifact layout.
 
 ---
 

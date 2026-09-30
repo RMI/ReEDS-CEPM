@@ -1,40 +1,22 @@
 # Two-step baseline-constrained runs (`*_baseline` → `*_limitre` + `*_optimized`)
 
-**Status (2026-09-02):** **the workflow is built and works end to end.** One
-command now produces the three-case factorial and its comparison deck:
+**Status:** built and merged (PR #49), carried through the 2026.08.03 sync.
+Outstanding: **T10** (re-run T2/T3 post-sync on a current stem). Results below
+come from the former `WECC-SW`/`SERTP` cases (removed in #55) and pre-date the
+fix for Texas load landing in `p59`, which inflates the T9 figures (see
+[`batch-log.md`](../batch-log.md) and
+[`loadsite-mechanism.md`](loadsite-mechanism.md)). One command produces the
+three-case factorial and its comparison deck:
 
 ```powershell
 .\run_cepm.ps1 -y -x -b <batch> -c cepm -m st-AZNM
 ```
 
-Working branch `mvp/two-step-runs`, everything still in the working tree
-(nothing committed).
-
-- Done: the GAMS equations, parameters and guardrails (§4); the `cases.csv` /
-  `runfiles.csv` plumbing (§5.1); `make_tg_cap.py` (§5.3); the three
-  `cases_cepm.csv` case columns for **both `st-AZNM` and `st-MSALGA`**;
-  `run_cepm.ps1 -m` plus `CEPM/scripts/multistep_cases.py` (§5.4); and tests
-  **T0 through T9, all of them**.
-- The headline result (T9): holding wind/solar/storage at the no-data-center
-  baseline forces **+13.3 GW of gas and +2.2 GW of h2** in place of 21 GW of
-  foregone PV and 2 GW of wind, at a **+33.4%** 2032 objective.
-- Not done: the rebase + **T10**. Docs are complete (§9 step 6) and the
-  pre-commit housekeeping is resolved (§9).
-- One partial: **T5(d)** proves the zero-vs-floor mechanism decisively at the
-  equation level, but its solution-level half could not be exercised — neither
-  WECC-SW nor SERTP has economics that would build any of the three zero-build
-  groups even when starved (§7).
-- Sections §4, §5.1 and §5.4 have been corrected to match what was actually
-  built; where the built thing differs from the original proposal, the reason is
-  recorded inline rather than the proposal being quietly overwritten (see also
-  D8).
-
 **Scope:** a `run_cepm.ps1` mode that runs a CEPM case in two phases — first a
 `*_baseline` ReEDS run, then a pair of data-center-load runs where one
 (`*_limitre`) is capped at the baseline's own wind/solar/storage buildout and
 the other (`*_optimized`) is free — including the ReEDS-side plumbing needed to
-inject a per-batch capacity ceiling, the tests that prove it works, and what to
-re-check when we rebase onto upstream `2026.08.03`.
+inject a per-batch capacity ceiling and the tests that prove it works.
 
 **Short version:** the orchestration half is easy — `runreeds.py` already
 accepts a comma-delimited case list and blocks until the batch finishes, so
@@ -48,32 +30,28 @@ on `eq_interconnection_queues` — additive GAMS, no upstream lines edited, and
 written in the same units as the reported outputs so the harvest script needs no
 unit conversion at all.
 
-The "orchestration half is easy" claim above held up, but not quite as written:
-`runreeds.py` returns exit code 0 on a failed case and prompts interactively when
-given more than one, so both phases needed guarding rather than just sequencing
-(§5.4 "As built").
-
 **Decisions (all closed):** D1 purpose-built equations, closed by T0 (§6);
 D2 both scopes, switchable (§4); D3 cumulative gross builds from 2026 (§6);
 D4 wide group list — `pv`, `wind-ons`, `wind-ofs`, `csp`, `battery`,
 `pumped-hydro` — at 100% (§5.3); D5 generated cases file (§5.2b); D6 hard cap,
 no slack; D7 `INV + INV_REFURB + UPGRADES − UPGRADES_RETIRE`; D8 non-region
-`runfiles.csv` rows (§5.1). §4a records the path not taken.
+`runfiles.csv` rows (§5.1).
 
 ---
 
 ## 1. What we're building
 
-Given a CEPM case stem (say `WECC-SW`), three case columns in `cases_cepm.csv`:
+Given a CEPM case stem (`st-AZNM`, `st-MSALGA` or `VA` today), three case
+columns in `cases_cepm.csv`:
 
 | Case | Data-center load | RE ceiling | Purpose |
 |---|---|---|---|
-| `WECC-SW_baseline` | off | none | counterfactual; source of the ceiling |
-| `WECC-SW_limitre` | on | wind/solar/storage capped at baseline buildout | "what if new load can't lean on new RE" |
-| `WECC-SW_optimized` | on | none | "what the optimizer would actually do" |
+| `<stem>_baseline` | off | none | counterfactual; source of the ceiling |
+| `<stem>_limitre` | on | wind/solar/storage capped at baseline buildout | "what if new load can't lean on new RE" |
+| `<stem>_optimized` | on | none | "what the optimizer would actually do" |
 
-`WECC-SW_limitre` and `WECC-SW_optimized` differ **only** in the ceiling, and
-`WECC-SW_optimized` differs from `WECC-SW_baseline` **only** in the load. That
+`<stem>_limitre` and `<stem>_optimized` differ **only** in the ceiling, and
+`<stem>_optimized` differs from `<stem>_baseline` **only** in the load. That
 clean factorial is the whole point, and it constrains several decisions below —
 in particular it rules out reusing any mechanism that is already active in the
 baseline (see F4).
@@ -85,11 +63,11 @@ baseline (see F4).
 `runreeds.py` gives us everything we need:
 
 - `--single/-s` takes a **comma-delimited list** of case names and overrides the
-  `ignore` row for exactly those cases (`runreeds.py:81-95`, `909-918`,
-  `1831-1832`).
+  `ignore` row for exactly those cases (`runreeds.py`: `create_case_lists`,
+  `setupEnvironment`, and the `--single` argument in `main`).
 - On Windows a case is launched with `os.system('start /wait cmd /c ...')`
-  (`runreeds.py:1728`), and the worker pool joins, so `runreeds.py` **blocks
-  until the whole batch finishes**. `run_cepm.ps1` already relies on this
+  (`runreeds.py`, `launch_single_case_run`), and the worker pool joins, so
+  `runreeds.py` **blocks until the whole batch finishes**. `run_cepm.ps1` already relies on this
   (`Invoke-Native { uv run python runreeds.py @ForwardArgs }`), so sequencing
   two invocations needs no new waiting logic.
 - Run folders are `runs/{BatchName}_{case}`, so both phases can share one batch
@@ -98,10 +76,10 @@ baseline (see F4).
 So the flow is:
 
 ```
-Phase A   runreeds.py -b BATCH -c cepm -s WECC-SW_baseline -r 1
-          └── blocks until runs/BATCH_WECC-SW_baseline/outputs/outputs.h5 exists
+Phase A   runreeds.py -b BATCH -c cepm -s <stem>_baseline
+          └── blocks until runs/BATCH_<stem>_baseline/outputs/outputs.h5 exists
 Harvest   CEPM/scripts/make_tg_cap.py  (reads phase A outputs → writes cap CSV)
-Phase B   runreeds.py -b BATCH -c <generated> -s WECC-SW_limitre,WECC-SW_optimized -r 2
+Phase B   runreeds.py -b BATCH -c <generated> -s <stem>_limitre,<stem>_optimized --simult_runs 2
           └── blocks until both finish
 Compare   postprocessing/compare_cases.py "runs/BATCH_"      (existing -x path)
 Cleanup   delete the generated cap CSV + generated cases file (always, in finally)
@@ -109,11 +87,6 @@ Cleanup   delete the generated cap CSV + generated cases file (always, in finall
 
 Phase A must hard-fail the whole invocation if `outputs.h5` is missing — a
 ceiling harvested from a partial run is worse than no run at all.
-
-**Two corrections from building it** (§5.4 "As built" has the detail). Phase A
-needs no `-r`: one case short-circuits `runreeds.py` to `WORKERS=1`. Phase B
-*does* need `--simult_runs 2`, because two cases with no worker count makes
-`runreeds.py` prompt interactively and hang a background run.
 
 ---
 
@@ -124,95 +97,21 @@ against `runs/v20260824-2_WECC-SW_baseline`.
 
 ### F1 — `eq_growthlimit_absolute` goes **infeasible** in the final solve year
 
-The equation's allowance is the gap to the *next* modeled year
-(`c_model.gms:1088-1102`):
-
-```gams
-     (sum{tt$[tprev(tt,t)], yeart(tt) } - yeart(t)) * growth_limit_absolute(tg)
-     =g=
-     sum{(i,v,r)$[valinv(i,v,r,t)$tg_i(tg,i)], INV(i,v,r,t) }
-```
-
-`tprev(t,tt)` means "tt is the year before t" (`b_inputs.gms:1027`,
-`1053-1055`), so `tprev(tt,t)` selects the year *after* `t`. For the last
-modeled year no such `tt` exists, the sum collapses to 0, and the left-hand side
-becomes `-yeart(t) * growth_limit_absolute(tg)` — a large negative number
-required to be `=g=` a non-negative sum of `INV`. That is infeasible, not
-merely restrictive, and there is no slack variable.
-
-`yearweight` uses the identical expression (`b_inputs.gms:5573`) and then
-explicitly patches the last year (`b_inputs.gms:5574`);
-`eq_growthlimit_absolute` has no such patch. The bug is latent upstream only
-because `GSw_GrowthConLastYear` defaults to 2026 while runs end in 2050, so the
-equation is never generated in the final year.
-
-CEPM cases end at 2032 with solve years 2010/2026/2029/2032 (`cases_cepm.csv:5-7`,
-`copy_files.py:1301-1311`). Setting `GSw_GrowthConLastYear=2032` — exactly what
-[`tech-limit-options.md`](tech-limit-options.md) currently recommends for CEPM —
-puts the equation in the final year.
-
-**Confirmed (T0, part 1 — standalone GAMS reproduction, 2026-09-01).** A 40-line
-GAMS file replicating `b_inputs.gms:1049-1055` verbatim over a CEPM solve-year
-set, then generating the equation, reproduces it exactly. The year-gap
-coefficient (`c_model.gms:1094`) comes out:
-
-| solve year | 2010 | 2026 | 2029 | 2032 |
-|---|---:|---:|---:|---:|
-| `eq_growthlimit_absolute` gap | 16 | 3 | 3 | **−2032** |
-| `yearweight` gap (same expression, last year patched) | 16 | 3 | 3 | 2051 |
-
-and the generated row for the final year, using the shipped `pv` limit of
-28,582 MW/yr, is:
-
-```
-eq_growthlimit_absolute(2032)..  - INV(2032) =G= 58078624 ; (LHS = 0, INFES = 58078624 ****)
-```
-
-i.e. `INV(2032) ≤ −58,078,624 MW` against `INV ≥ 0`. CPLEX reports
-`Bound infeasibility column 'INV(2032)'`, GAMS model status 4 (Infeasible).
-Not restrictive — infeasible, exactly as the sign analysis predicted, and the
-side-by-side with `yearweight` shows this is a missing `tlast` patch rather than
-an intentional convention.
-
-**Confirmed (T0, part 2 — live ReEDS run, 2026-09-01).**
-`runs/v20260901t0_WECC-SW_t0growthcon` — `WECC-SW_baseline`'s exact
-configuration plus `GSw_GrowthAbsCon=1` and `GSw_GrowthConLastYear=2032`:
-
-| solve year | model status |
-|---|---|
-| 2026 | 1 Optimal |
-| 2029 | 1 Optimal |
-| 2032 | **4 Infeasible** |
-
-CPLEX's conflict refiner isolated it to a single row — no ambiguity about the
-cause:
-
-```
-Row 'eq_growthlimit_absolute(PV,2032)' infeasible, all entries at implied bounds.
-Number of equations in conflict: 1
-  lower: eq_growthlimit_absolute(PV,2032) > 5.80786e+07
-Number of variables in conflict: 8
-  lower: INV(upv_4,new15,p29,2032) > 0
-  ...
-```
-
-`5.80786e+07` matches part 1's predicted 58,078,624 exactly.
-`3_solve_oneyear.gms` then aborts with *"Model did not solve to optimality"*
-(return code 3), the run stops after 2029, and no `outputs.h5` is produced.
-
-The non-final years solving cleanly is the important half of this result: the
-constraint is well-behaved everywhere except the last modeled year, which is
-precisely the signature of the missing `tlast` patch rather than of a badly-sized
-limit.
-
-**D1 is therefore closed in favor of §4.** `tech-limit-options.md`'s CEPM
-recommendation section — which recommends exactly the configuration tested here
-— needs correcting, and this warrants an entry in `CEPM/known-reeds-issues.md`.
+The equation's allowance is the gap to the *next* modeled year (via `tprev`).
+In the last modeled year there is none, so the left-hand side collapses to
+`-yeart(t) * growth_limit_absolute(tg)` and the row is infeasible, not merely
+restrictive; `yearweight` uses the same expression but patches the last year.
+CEPM cases end at 2032, so `GSw_GrowthConLastYear=2032` puts the equation in the
+final year. T0 confirmed this on 2026-09-01, in a standalone GAMS reproduction
+and in a live run (2026/2029 Optimal, 2032 Infeasible, with CPLEX's conflict
+refiner isolating `eq_growthlimit_absolute(PV,2032)`). **D1 is therefore closed
+in favor of §4.** Full write-up:
+[`known-reeds-issues.md`](../known-reeds-issues.md#gsw_growthabscon1-makes-the-final-solve-year-infeasible-eq_growthlimit_absolute).
 
 ### F2 — `growth_limit_absolute(tg)` has no year index, and CEPM baselines are extremely lumpy
 
 The parameter is `growth_limit_absolute(tg)` — one MW/year number per tech
-group, no `t` (`b_inputs.gms:4804-4810`). The constraint is therefore a
+group, no `t` (`b_inputs.gms`). The constraint is therefore a
 **constant annual pace**, and the only way to hit a cumulative target is to
 divide the target by the horizon.
 
@@ -236,9 +135,10 @@ express a lumpy cumulative target.
 ### F3 — Reported capacity is MW_ac; `INV` is MW_dc
 
 Every reported capacity quantity is divided by the inverter loading ratio:
-`cap_new_out = INV / ilr(i)` (`report.gms:820-825`), and `ilr(i) = ilr_utility
-= 1.34` for UPV (`b_inputs.gms:3756-3762`, `inputs/scalars.csv:50`). PVB gets
-its own ILR (`b_inputs.gms:3763`). Wind and battery are 1.0.
+`cap_new_out = INV / ilr(i)` (`cap_new_out` in `report.gms`), and `ilr(i) =
+ilr_utility = 1.34` for UPV (the `ilr` assignments in `b_inputs.gms`;
+`ilr_utility` in `inputs/scalars.csv`). PVB gets its own ILR (`ilr_pvb_config`).
+Wind and battery are 1.0.
 
 So any ceiling written against `INV` must be in MW_dc, and a harvest script that
 reads `cap_new_out` and writes the number straight through would under-cap solar
@@ -262,15 +162,15 @@ First, it is already binding in CEPM baselines.
 rows — PV in `z28` exceeds its queue limit by ~5.0 GW in 2026, wind in `p31` by
 ~5.2 GW, gas in `p59` by ~2.0 GW. These are mostly prescribed 2026 builds that
 the queue data (aggregated to CEPM's zones) cannot accommodate, absorbed by the
-penalized slack `CAP_ABOVE_LIM` (`c_model.gms:1385-1403`,
-`d_objective.gms:47`). Overwriting `cap_limit.csv` with a policy ceiling would
-therefore change a constraint that is *already doing work* in the baseline,
+penalized slack `CAP_ABOVE_LIM` (`eq_interconnection_queues` in
+`c_model.gms`; the `cap_penalty * CAP_ABOVE_LIM` term in `d_objective.gms`).
+Overwriting `cap_limit.csv` with a policy ceiling would therefore change a constraint that is *already doing work* in the baseline,
 breaking the clean factorial in §1.
 
-Second, `cap_limit.csv` is computed directly in `copy_files.py:1403-1417` from
+Second, `cap_limit.csv` is computed directly in `copy_files.py` (`write_miscellaneous_files`) from
 `inputs/capacity_exogenous/interconnection_queues.csv` with no scenario switch,
 so making it case-specific means editing `copy_files.py` — the single
-most-churned file in the 2026.08.03 release (568 lines changed, see §8). That is
+most-churned file in the 2026.08.03 release (568 lines changed). That is
 the worst possible place to put a fork hook.
 
 Corollary, worth noting independently of this project: because the shipped queue
@@ -278,19 +178,9 @@ data only extends to 2030, `sum{(tgg,rr), cap_limit(tgg,rr,'2032')}` is zero and
 the queue constraint **switches itself off entirely in 2032** in every CEPM run
 today.
 
-**Followed up in depth (2026-09-03) — see
-[`interconnection-queue-and-prescribed-builds.md`](interconnection-queue-and-prescribed-builds.md).**
-F4's "already doing work" is a considerable understatement. The violations are
-priced at a flat **$10,000,000/MW**, recharged in every modeled year because the
-constraint is cumulative, and they amount to **77% of the 2026 objective** and
-65% of 2029's — while being excluded from reported `systemcost.csv` entirely.
-The collision is structural: CEPM's 2026 solve absorbs **16 years** of
-accumulated prescriptions (2011-2026, because the prior solve year is 2010) and
-must place 33.0 GW against 11.8 GW of queue headroom. About 94.5% of the penalty
-falls on prescribed capacity and so has no effect on the optimization, which is
-why F4's conclusion still holds and why the T9 comparison in §7 is unaffected
-(the 2032 objective carries no penalty at all). The remaining 5.5% is a live
-signal and looks wrong — see that doc's §4.4 on gas in `p59`.
+Followed up in depth, including the size of the penalty and why F4's conclusion
+still holds, in
+[`interconnection-queue-and-prescribed-builds.md`](interconnection-queue-and-prescribed-builds.md).
 
 ---
 
@@ -309,8 +199,9 @@ the set `r`, so a single `(tg,r)` parameter cannot carry a system-wide row
 without abusing the region set. If both files are populated, both bind (total
 ≤ X *and* each region ≤ Y), which is a sensible and documented semantic.
 
-**c_model.gms** — two lines in the equation declaration block (near line 176)
-and one block immediately after `eq_interconnection_queues` (line ~1403):
+**c_model.gms** — two lines in the equation declaration block (next to
+`eq_interconnection_queues`'s declaration) and one block immediately after the
+`eq_interconnection_queues` definition:
 
 ```gams
 * --- declarations ---
@@ -346,7 +237,7 @@ eq_cepm_tg_cap_reg(tg,r)$[cepm_tg_cap_reg(tg,r)$Sw_CEPM_TgCap$(not Sw_PCM)]..
 ```
 
 **b_inputs.gms** — two additive blocks next to the existing growth limits
-(line ~4810):
+(`growth_limit_absolute`):
 
 ```gams
 * CEPM: cumulative new-investment caps by tech group (empty file = no cap)
@@ -449,8 +340,8 @@ Two `abort`s, both gated on `Sw_CEPM_TgCap` so they can never affect a run that
 isn't using the caps:
 
 1. **`ilr(i) = 0` on an investable technology.** The equations divide `INV` by
-   `ilr(i)`; every investable tech is assigned `ilr = 1` at `b_inputs.gms:3758`,
-   so this should be unreachable — but a division by zero would corrupt the
+   `ilr(i)`; every investable tech is assigned `ilr = 1`
+   (`ilr(i)$[valcap_i(i)] = 1` in `b_inputs.gms`), so this should be unreachable — but a division by zero would corrupt the
    ceiling silently rather than fail, so it's checked explicitly.
 2. **Switch on, both cap files empty.** Since `0` means "no cap", a run with
    `GSw_CEPM_TgCap=1` and no data loaded would solve happily and completely
@@ -463,17 +354,7 @@ all-empty symbol is GAMS error 141. Without the directive, these guardrails abor
 *every* run — verified the hard way, and worth knowing before anyone adds a third
 one.
 
-### 4a. Fallback if T0 refutes F1
-
-If the final-year infeasibility does not reproduce, the Option 3 route
-(`GSw_GrowthAbsCon`) becomes available again but still needs: a first-year floor
-switch so prescribed 2026 builds don't force infeasibility, ILR handling in the
-harvest script (F3), and some answer to F2's lumpiness — which has no fix inside
-a parameter with no `t` index. In that case the realistic choice is Option 3 for
-a *pace* limit plus this equation for the *cumulative* ceiling, not Option 3
-alone. Revisit D1 with T0's result in hand.
-
-**Why this and not a patched `GSw_GrowthAbsCon`:**
+### Why this and not a patched `GSw_GrowthAbsCon`
 
 | | patch Option 3 | new equation |
 |---|---|---|
@@ -482,11 +363,11 @@ alone. Revisit D1 with T0's result in hand.
 | Fixes F2 | **cannot** — no `t` index on the parameter | n/a — cumulative by construction |
 | Fixes F3 | no — bounds `INV` in MW_dc | yes — `/ ilr(i)` puts it in MW_ac |
 | Can exclude prescribed 2026 builds | needs a *third* patch (no first-year floor exists) | `Sw_CEPM_TgCapStartYear` |
-| Model statement | n/a | none needed — `Model ReEDSmodel /all/` (`e_solveprep.gms:7`) |
+| Model statement | n/a | none needed — `Model ReEDSmodel /all/` (`e_solveprep.gms`) |
 | Rebase risk | edits lines upstream may touch | additive block; conflicts only on adjacent edits |
 
 `Sw_CEPM_TgCap` and `Sw_CEPM_TgCapStartYear` need **no GAMS plumbing at all**:
-`reeds.io.write_gswitches` (`reeds/io.py:1950-1980`) auto-emits `scalar Sw_X`
+`reeds.io.write_gswitches` auto-emits `scalar Sw_X`
 for every numeric `GSw_X` in the cases file.
 
 **No slack variable is proposed.** ReEDS already has unserved-energy slack, so a
@@ -495,10 +376,6 @@ to infeasibility. If a run does go infeasible we want to know, not to quietly
 pay a penalty. If that proves wrong in practice, the fallback is a penalized
 `CEPM_CAP_ABOVE(tg)` slack, which costs one extra line in `d_objective.gms` —
 see D6.
-
-**Semantics to document loudly:** `cepm_tg_cap(tg) = 0` means "no cap" (the
-`$cepm_tg_cap(tg)` guard drops the equation), not "zero builds". A true zero
-should use `bannew(i)` instead.
 
 ---
 
@@ -531,58 +408,12 @@ cepm_tg_cap_sys.csv,inputs/growth_constraints/cepm_tg_cap_sys_{cepmtgcapscen}.cs
 
 #### Why not the region-filter treatment (correcting this draft's original row)
 
-This draft first proposed `...,1,sum,ignore,r,tg,,1,0,...` for the regional row,
-on the reasoning that an `r`-indexed file should use the machinery the other
-`r`-indexed rows use, and that `aggfunc=sum` would be "a no-op in practice."
-Both halves of that are wrong, and the failure mode is silent rather than loud.
-
-`copy_files.py` splits `runfiles.csv` into non-region files (plain copy) and
-region files, on `region_col` being blank/`ignore` vs. not
-(`copy_files.py:128-146`). Setting `region_col=r` moves our file onto the region
-path, where `write_region_indexed_file` calls
-`reeds.spatial.upscale_from_county_to_zone` **unconditionally** whenever
-`aggfunc != 'ignore'` (`copy_files.py:1095-1101`) — not only when the run is at
-mixed or county resolution. That function does:
-
-```python
-df[region_col] = df[region_col].map(county_r_map)   # spatial.py:548
-```
-
-where `county_r_map` is indexed by five-digit-FIPS county labels (`p04013`,
-`spatial.py:535-536`). That whole framework assumes the *source* file in
-`inputs/` is county-resolution data waiting to be rolled up to the run's zones.
-Our cap file is the opposite kind of artifact: it is harvested from a **completed
-run at that run's own resolution**, so its regions are already model regions
-(`p27`, `p29`, `p31`, `p59`, `z28` in WECC-SW). None of those are counties, the
-`.map()` returns `NaN` for every row, and the subsequent `groupby` drops every
-NaN key — delivering an **empty** `cepm_tg_cap_reg.csv` to `inputs_case/`.
-
-Two independent things then go wrong:
-
-- If the run also has a system-scope cap, the empty-file guardrail in
-  `b_inputs.gms` does *not* fire (it sums both files), so the regional ceiling
-  vanishes silently and the run reports success while capping less than asked.
-- `fix_cols=tg` never matches anyway, because the CSV's first column is literally
-  `*tg` — the `*` that makes GAMS treat the header as a comment is not a pandas
-  comment character. `upscale_from_county_to_zone` keeps only `fix_cols` that are
-  actually present (`spatial.py:530`), so even on county-shaped data it would
-  have grouped by `r` alone and summed every tech group into one number per
-  region.
-
-`wide=1` was wrong for the same reason the `table` was (§4): the file is long,
-not a `tg × r` matrix.
-
-The tradeoff of the plain-copy path is that regions are no longer filtered
-against `val_r_all`. That is the right trade: reusing a cap harvested at one
-region set in a run with another is a mistake we want to hear about, and it fails
-loudly — an unrecognized label in a `parameter x(tg,r) / ... /` list is a GAMS
-domain error at compile time, not a silently dropped row. Verified end-to-end:
-`runs/v20260901t4b_WECC-SW_t4rc/inputs_case/cepm_tg_cap_reg.csv` is byte-identical
-to the harvested `inputs/growth_constraints/cepm_tg_cap_reg_t4rc.csv`.
-
-**General lesson for this fork:** `runfiles.csv`'s region columns are for
-*upstream county-resolution inputs*. Any CEPM file harvested from a finished run
-is already at model resolution and belongs on the non-region path.
+An earlier draft used `region_col=r, aggfunc=sum, fix_cols=tg, wide=1`. That puts
+the file through `reeds.spatial.upscale_from_county_to_zone`, which maps regions
+through a county index and would silently empty a cap harvested at model
+resolution; the plain-copy path instead fails loudly (a GAMS domain error) if the
+region set doesn't match. Full reasoning:
+[`reeds-to-cepm-log.md`, "Departure from convention"](../reeds-to-cepm-log.md#departure-from-convention-worth-knowing-both-rows-are-non-region-rows).
 
 `cases.csv` rows:
 
@@ -602,21 +433,18 @@ value naming the generated file.
 
 The `{switch}` pattern in `runfiles.csv` is deliberately chosen over a
 `copy_files.py` hook: `runfiles.csv` changed only by *added rows* in 2026.08.03,
-while `copy_files.py` was substantially rewritten (§8).
+while `copy_files.py` was substantially rewritten.
 
 ### 5.2 Getting the generated file to the `_limitre` case only
 
 The generated cap file is per-batch, but `cepmtgcapscen` lives in a git-tracked
 cases file. Two options:
 
-- **(a) Fixed token.** `cases_cepm.csv` carries `cepmtgcapscen,cepm_auto` for
-  the `_limitre` column forever; the orchestrator writes
-  `inputs/growth_constraints/cepm_tg_cap_cepm_auto.csv` before phase B and
-  deletes it after. Dead simple and readable, but two batches running phase B
-  concurrently from the same clone would clobber each other's ceiling.
+- **(a) Fixed token** (a permanent `cepmtgcapscen,cepm_auto`) — rejected,
+  because two batches running phase B concurrently would clobber each other's ceiling.
 - **(b) Generated cases file (recommended).** The orchestrator reads
-  `cases_cepm.csv` with `reeds.inputs.parse_cases` (`reeds/inputs.py:143`,
-  signature unchanged in 2026.08.03), substitutes
+  `cases_cepm.csv` with `reeds.inputs.parse_cases` (signature unchanged in
+  2026.08.03), substitutes
   `cepmtgcapscen = <BatchName>` into the `_limitre` column, writes
   `cases_cepm__<BatchName>.csv`, and passes `-c cepm__<BatchName>` to phase B.
   The cap file is `cepm_tg_cap_<BatchName>.csv`. Both generated files are
@@ -646,15 +474,15 @@ Behavior:
 1. Fail loudly if `<case>/outputs/outputs.h5` is absent.
 2. `df = reeds.io.read_output(case, 'cap_new_out')` → columns `i, r, t, Value`
    (MW_ac). `read_output` is unchanged in 2026.08.03.
-3. Build the `i → tg` map by mirroring `b_inputs.gms:794-807` on the **run's own**
+3. Build the `i → tg` map by mirroring the `tg_i` assignments in `b_inputs.gms` on the **run's own**
    `inputs_case/tech-subset-table.csv`, expanded through
-   `reeds.techs.import_tech_groups` (`reeds/techs.py:45-64`, which handles the
+   `reeds.techs.import_tech_groups` (which handles the
    `upv_1*upv_10` GAMS range syntax — a plain `pd.read_csv` does not):
    - `pv` ← (`UPV` ∪ `PVB`) − `distpv`
    - `wind-ons` ← `ONSWIND`
    - `wind-ofs` ← `OFSWIND`
    - `csp` ← `CSP` (plus the non-numeraire CSP classes when `GSw_WaterMain` is
-     on — `b_inputs.gms:810-811`; CEPM cases run with it off today, so flag
+     on — the `Sw_WaterMain` line of `tg_i`; CEPM cases run with it off today, so flag
      rather than silently ignore)
    - `battery` ← `BATTERY`
    - `pumped-hydro` ← `PSH`
@@ -667,7 +495,7 @@ Behavior:
    group's harvested value and flagging every floored cell explicitly. Warn on
    any `i` present in the outputs but absent from the map.
 
-For the WECC-SW baseline above, `--scope system --from-year 2026 --to-year 2032`
+For the former WECC-SW baseline above, `--scope system --from-year 2026 --to-year 2032`
 yields `pv,20181` / `wind-ons,16439` / `battery,8583`, and `wind-ofs`, `csp`,
 `pumped-hydro` all floored to `0.001` (MW_ac).
 
@@ -683,38 +511,20 @@ Sequence, all inside the existing transcript `try`/`finally`:
 1. Resolve `-b`/`-c` as today. Verify all three case columns exist in the cases
    file, and that `_limitre` has `GSw_CEPM_TgCap=1` while the other two have
    `0`; abort with a clear message otherwise.
-2. Phase A: `runreeds.py -b $BatchName -c $CasesSuffix -s "${stem}_baseline" -r 1`.
+2. Phase A: `runreeds.py -b $BatchName -c $CasesSuffix -s "${stem}_baseline"`.
    Non-zero exit or missing `outputs.h5` → throw (and ntfy).
 3. Harvest: `uv run python CEPM/scripts/make_tg_cap.py ...`.
 4. Write the generated cases file (§5.2b).
-5. Phase B: `runreeds.py -b $BatchName -c <generated> -s "${stem}_limitre,${stem}_optimized" -r 2`.
+5. Phase B: `runreeds.py -b $BatchName -c <generated> -s "${stem}_limitre,${stem}_optimized" --simult_runs 2`.
 6. Existing `-x` comparison path, unchanged — `compare_cases.py "runs/$BatchName_"`
    picks up all three and defaults its base to the alphabetically-first completed
    case, which is `_baseline`.
 7. `finally`: delete the generated cap CSV and cases file; warn, never throw.
 
-**Hazard found the hard way while running T0 — load-bearing for this design:**
-
-- **`runreeds.py` exits 0 on a failed case.** The T0 run's 2032 solve went
-  infeasible, `3_solve_oneyear.gms` aborted, no `outputs.h5` was written — and
-  `runreeds.py` still printed *"…has finished"* and returned exit code 0, so
-  `run_cepm.ps1` reported success. Phase A therefore **cannot** trust the exit
-  code; it must verify `runs/<Batch>_<stem>_baseline/outputs/outputs.h5` exists
-  before harvesting, and `make_tg_cap.py` must fail loudly if it doesn't (§5.3
-  step 1). Without both checks, a silently-failed baseline yields an empty or
-  partial ceiling and phase B runs on garbage. Worth considering a
-  `neue_<endyear>i0.csv` check too, since that file's absence is what first
-  flagged the failure here.
-
-Two further existing behaviors need a look in this mode:
-
-- `CEPM/scripts/get_batch_info.py` returns the first **non-ignored** case in the
-  cases file for the `bootstraplog.txt` destination and `--startyear`. Under
-  `-m`, `-s` overrides `ignore`, so that case may not be one of the three that
-  ran. Simplest fix: in `-m` mode, target `runs/<Batch>_<stem>_baseline`
-  directly and read `yearset` from the `_baseline` column.
-- ntfy messages should name the phase, so a long two-phase batch is legible from
-  a phone.
+**Hazard — `runreeds.py` exits 0 on a failed case** (found running T0). Phase A
+therefore verifies `runs/<Batch>_<stem>_baseline/outputs/outputs.h5` exists
+before harvesting, and `make_tg_cap.py` fails loudly if it doesn't (§5.3 step 1).
+See [`known-reeds-issues.md`, "`runreeds.py` reports success on a failed case…"](../known-reeds-issues.md#runreedspy-reports-success-on-a-failed-case-and-hangs-on-a-multi-case--s).
 
 ### As built (2026-09-02)
 
@@ -736,19 +546,11 @@ uses for `--startyear` and for the `bootstraplog.txt` destination.
 (e.g. `--harvest-args "--scope both --headroom 0.95"`). The script's own defaults
 already encode D2/D3/D4, so the common case needs nothing.
 
-**Hazard found while building it — phase B hangs without an explicit worker
-count.** `runreeds.py` short-circuits to `WORKERS=1` only when `len(caseList)==1`
-(`runreeds.py:979-989`); with two or more cases and no `--simult_runs` it calls
-`input('Number of simultaneous runs [positive integer]: ')`. Phase A is immune
-(one case), but **phase B runs two**, so a background or CI invocation would
-block forever on a prompt nobody can see. `-m` therefore passes
-`--simult_runs 2` itself unless the caller supplied one.
-
-This is *not* contradicted by the §9 note that `--simult_runs` fails through the
-wrapper: that bug is in PowerShell's binding of **caller-supplied** arguments
-(`-r` being a unique prefix of the script's own `$RunbatchArgs` parameter). Args
-the script builds into an array itself never reach that binder, so they work
-fine. Forward `--simult_runs 1` to run the two phase-B cases sequentially
+**Hazard — phase B hangs without an explicit worker count** (same
+[known-issues entry](../known-reeds-issues.md#runreedspy-reports-success-on-a-failed-case-and-hangs-on-a-multi-case--s), symptom 2). `-m` therefore passes
+`--simult_runs 2` itself unless the caller supplied one; arguments the script
+builds itself are not affected by the PowerShell `-r` binding trap described
+there. Forward `--simult_runs 1` to run the two phase-B cases sequentially
 instead.
 
 ### 5.5 Reporting
@@ -767,8 +569,7 @@ own ceiling for later plotting.
   `WECC-SW_baseline`-configured run, where CPLEX's conflict refiner isolated the
   infeasibility to `eq_growthlimit_absolute(PV,2032)` alone. `GSw_GrowthAbsCon`
   is unusable here without patching an upstream equation, and even patched it
-  cannot follow a lumpy baseline (F2). §4a is retained only as a record of the
-  path not taken.
+  cannot follow a lumpy baseline (F2).
 - **D2 — scope. DECIDED: both, switchable.** Two parameters and two equations
   (§4), selected per run by which file the harvest script populates
   (`--scope system|region|both`). Both populated means both bind. Note this
@@ -799,8 +600,8 @@ own ceiling for later plotting.
   is harvested from. `eq_interconnection_queues`, which this equation is modeled
   on, counts only `INV + INV_REFURB`; copying that would have left a real hole,
   because upgrade techs inherit `tg` membership from the tech they upgrade *to*
-  (`b_inputs.gms:412-413`) and `upgrade_link.csv` contains
-  `hydED → pumped-hydro`. With `GSw_Upgrades` defaulting to 1, a storage ceiling
+  (the `upgrade_to` assignment of `i_subsets` in `b_inputs.gms`) and
+  `upgrade_link.csv` contains `hydED → pumped-hydro`. With `GSw_Upgrades` defaulting to 1, a storage ceiling
   could otherwise have been evaded by upgrading hydro instead of building
   batteries. `INV_REFURB` matters independently: all 30 UPV/onshore/offshore wind
   classes are `refurbtech`, so repowering counts on both sides.
@@ -814,9 +615,8 @@ own ceiling for later plotting.
   zones, and it would have silently emptied our file — which is harvested from a
   finished run and is therefore already at model resolution. The related
   consequence is that the regional GAMS symbol is a long-format `parameter`, not
-  a `table` (§4). Re-checked against `2026.08.03` and `upstream/main` in §8a:
-  the split predicate this relies on is byte-identical at both, and the region
-  path we avoided is exactly the code upstream is currently rewriting.
+  a `table` (§4). What to re-check in new releases is in
+  [`reeds-to-cepm-log.md`](../reeds-to-cepm-log.md#cumulative-tech-group-investment-caps-gsw_cepm_tgcap) ("What to test in new releases").
 
 ---
 
@@ -827,8 +627,8 @@ Ordered so that the cheapest disqualifying test runs first.
 **T0 — confirm F1 before building anything. This is D1's decision gate.**
 Two parts:
 
-- *Part 1, standalone (0.3 s).* A GAMS file replicating `b_inputs.gms:1049-1055`
-  and the `eq_growthlimit_absolute` LHS over the CEPM solve-year set, solved as a
+- *Part 1, standalone (0.3 s).* A GAMS file replicating the `tprev` definitions
+  in `b_inputs.gms` and the `eq_growthlimit_absolute` LHS over the CEPM solve-year set, solved as a
   toy LP. Isolates the set arithmetic from everything else in ReEDS.
   **Result: infeasible, as predicted — see F1.** Worth keeping as a regression
   artifact (suggested home: `CEPM/scripts/t0_growthgap.gms`) since it re-runs in
@@ -841,13 +641,7 @@ Two parts:
   2010/2026/2029 to solve and 2032 to fail.
 
 **Both parts ran on 2026-09-01 and confirmed F1 — see F1 for results. D1 is
-closed.** Reproduce with:
-
-```powershell
-# cases_t0.csv = WECC-SW_baseline cloned, plus GSw_GrowthAbsCon=1,
-#                GSw_GrowthConLastYear=2032, cleanup_level=0
-.\run_cepm.ps1 -y -q -b v20260901t0 -c t0 -s WECC-SW_t0growthcon
-```
+closed.**
 
 **T1 — harvest unit test. PASSED 2026-09-01 (18/18 assertions).** Run
 `make_tg_cap.py` against a completed baseline and assert: totals match a hand
@@ -1123,6 +917,8 @@ propagated, and `git status` came back clean.
 **T9 — comparison sanity. PASSED 2026-09-02** on T7's batch. Cumulative gross new
 capacity 2026-2032, MW_ac, from each case's own `cap_new_out`:
 
+**Includes the Texas→`p59` load error; re-run before quoting.**
+
 | tech group | `_baseline` | `_limitre` | `_optimized` | ceiling |
 |---|---:|---:|---:|---:|
 | pv | 20,181.2 | **20,181.2** | 41,305.4 | 20,181.2 |
@@ -1197,207 +993,18 @@ bounds, and see
 [`interconnection-queue-and-prescribed-builds.md`](interconnection-queue-and-prescribed-builds.md)
 §4.5 for the measurement and §5 for what to do about it.
 
-**T10 — post-rebase.** Re-run T2 and T3 after the 2026.08.03 rebase.
+**T10 — post-sync. NOT YET RUN.** Re-run T2/T3 on a current stem (e.g. `st-AZNM`).
 
 ---
 
-## 8. Rebase to upstream `2026.08.03` — what we checked
+## 8. Sync checks
 
-This fork sits on upstream `2026.06.18` plus commits through `62f6381e`
-(`CEPM/reeds-to-cepm-log.md`). Everything below is `git diff 2026.06.18
-2026.08.03` on the specific paths this design touches.
-
-**Unchanged — safe to build on:**
-
-- `eq_growthlimit_absolute`, `growth_limit_absolute`, `tg_i`, `inputs/sets/tg.csv`,
-  `inputs/growth_constraints/*`, and the `growth_limit_absolute.csv` row in
-  `runfiles.csv`. (So F1 is *not* fixed upstream in this release either.)
-- `eq_interconnection_queues`, `cap_limit`, `cap_penalty` — the equation we are
-  copying is stable.
-- `Model ReEDSmodel /all/` (`e_solveprep.gms:7`) — new equations still enter the
-  model automatically.
-- All capacity reporting: `cap_out`, `cap_new_out`, `cap_new_ann`, `ilr`.
-  `report_params.csv` gains 5 rows, none of them capacity.
-- `inputs/scalars.csv`: `ilr_utility` still 1.34.
-- `reeds.io.read_output`, `reeds.io.write_gswitches`, `reeds.inputs.parse_cases`,
-  and `reeds/techs.py` — all signature-stable.
-- `runreeds.py`'s `--single` comma-list, run-folder naming, `file_replacements`,
-  and the blocking `start /wait` launch.
-
-**Changed — matters to us:**
-
-- `reeds/input_processing/copy_files.py` — 568 lines, the largest single change
-  in the release. The `cap_limit.csv` block survives but its region handling is
-  rewritten from the `agglevel_variables` machinery to a `county2zone` map. This
-  is the concrete reason §5.1 puts our hook in `runfiles.csv` (additive rows
-  only) rather than in `copy_files.py`.
-- `runfiles.csv` — additive rows (`employment_factor_plant`,
-  `gasreg_price_adj_regression_params`, `jtype`, `hydadjann/sea`) plus removals
-  of `financials_sys`, `financials_tech`, `incentives`, `regional_cap_cost_diff`,
-  and `modeled_regions`. Our new row will not collide.
-- `inputs/tech-subset-table.csv` — reformatted wholesale (148 lines) and gains a
-  `GENTECH` column. Expect the rebase diff to show the whole file; the columns our
-  mapper uses (`ONSWIND`, `OFSWIND`, `UPV`, `PVB`, `distpv`, `BATTERY`, `PSH`) are
-  all still present, verified against `2026.08.03`.
-- `cases.csv` — `GSw_PRM_StressThreshold` is replaced by
-  `GSw_PRM_StressThresholdMetrics` plus six per-metric switches; `GSw_ZoneSet`
-  default moves `z132` → `z90` and the allowed set gains `z90`;
-  `GSw_RegionResolution` is gone. **`cases_cepm.csv` will need updating for the
-  PRM stress switches** — independent of this project, but it will surface during
-  the same rebase.
-- New switches/params that are additive but worth knowing: `GSw_EmploymentFactor`,
-  `GSw_GasPriceAdjMethod`, `GSw_gopt_mga`, `gentech(i)`,
-  `storage_duration_m(i,v,r)`, `hours_t(allh,allt)`, a `gasreg` column in
-  `hierarchy`, and `cplex.op3`/`.op4`.
-- `postprocessing/compare_cases.py` — 61 lines; this fork already carries two
-  patches there (`reeds-to-cepm-log.md`), so expect conflicts, unrelated to this
-  project.
-
-**Net:** every mechanism this design depends on sits in the stable part of the
-codebase, and the design deliberately avoids the one file (`copy_files.py`) that
-churned. Re-run T2/T3 after the rebase (T10); the CEPM cases file's PRM rows will
-need attention regardless.
-
-### 8a. Re-checked against the spatial revamp (2026-09-02)
-
-Upstream has been rewriting the spatial machinery, so the §5.1 decision to put
-both cap files on the **non-region path** was re-verified against two refs:
-`2026.08.03` (the rebase target) and `upstream/main` at `1f73bd23` (2026-09-01,
-248 commits past the tag). Between our base `2026.06.18` and `upstream/main`,
-`copy_files.py` + `spatial.py` are −606 net lines.
-
-**The revamp is a simplification *inside* the region path; it does not touch the
-split predicate or the plain copy.** Verified stable at all three refs:
-
-| Mechanism we depend on | Status |
-|---|---|
-| non-region/region split on `region_col` blank/`ignore` (`copy_files.py:91-109`) | byte-identical at both upstream refs |
-| `{cepmtgcapscen}` substitution — `row['filepath'].format(**sw)` | present at all three refs |
-| our rows falling through to `shutil.copy` (blank `GAMStype`) | holds at both |
-| `runfiles.csv` 16-column schema | unchanged; only col 15 renamed `comment`→`GAMScomment` at `main`, and our rows leave it empty |
-| `eq_interconnection_queues` (our template *and* our insertion anchor) | byte-identical at `upstream/main` |
-| `cap_new_out` (what D7 aligns against) | byte-identical at `upstream/main` |
-| `ilr(i)$[valcap_i(i)] = 1` — the premise of the ilr guardrail | still present (`b_inputs.gms:3359` at `main`) |
-| `$include inputs_case%ds%*.csv` list-parameter idiom | intact; `growth_limit_absolute` still uses it at `main` |
-| every GAMS symbol the equations use — `valinv`, `valcap`, `tg_i`, `refurbtech`, `Sw_Refurb`, `Sw_Upgrades`, `Sw_PCM`, `upgrade_derate`, `UPGRADES`, `UPGRADES_RETIRE`, `INV_REFURB`, `tmodel`/`tfix` | all survive |
-| `tg.csv`; the `tech-subset-table.csv` columns `make_tg_cap.py` reads | unchanged / all present |
-| `reeds.techs.import_tech_groups`, `reeds.io.write_gswitches` | unchanged |
-| `reeds.io.read_output` | cosmetic only (`Path(case).suffix` vs `case.endswith`) |
-| `reeds.spatial.upscale_from_county_to_zone` | functionally identical at `main` — so §5.1's rationale does not go stale either |
-
-**The structural reason this is robust,** beyond the line-by-line check: the cap
-file is harvested from a finished run *at that run's own resolution* and consumed
-against the same `r` set the model solves on. Whatever upstream does to
-county→zone mapping, the ceiling and the quantity it constrains move together. We
-are only exposed to a change in how a file gets from `inputs/` to `inputs_case/`,
-which is the plain-copy path — the least likely part to change, and unchanged so
-far.
-
-**Three things to watch at rebase time (none of them correctness risks):**
-
-1. **`b_inputs.gms` churn — merge conflicts, not breakage.** 1,210 lines touched
-   between our base and `upstream/main` (net −985), so both of our insertion
-   points will likely need re-placing by hand. `c_model.gms` is far calmer (164
-   lines) and our anchor is identical, so that half should apply cleanly.
-2. **Upstream is migrating `$include` CSV parameters into `inputs.h5`.**
-   `GAMStype=parameter` rows in `runfiles.csv` went 1 → 1 → **11** across
-   `2026.06.18` → `2026.08.03` → `main`, with `write_non_region_file` now routing
-   `GAMStype in ['set','parameter']` to `write_csv_to_inputs_h5`. That is where
-   the deleted `b_inputs.gms` lines went. The growth-constraint parameters have
-   not been migrated, so our block is still idiomatic. If the migration completes,
-   converting is mechanical — fill `GAMStype`/`GAMSname` on our two rows and drop
-   the `$include` block — and it would hit every comparable upstream file at the
-   same time.
-3. **Pre-existing fork divergence in the same file.** Our `copy_files.py` is
-   *unmodified* from `2026.06.18`, but that version's `read_runfiles` carries
-   `{lvl}` multi-resolution machinery that upstream **removed** by `2026.08.03`.
-   Not our change and not our problem to fix, but it lands in the same function
-   we reasoned about above, so expect it in the rebase diff. The placeholder
-   mechanism our rows rely on (`format(**sw)`) survives the removal.
-
-Minor tidy, optional: our two rows sit at lines 3-4 of `runfiles.csv` rather than
-with the other `growth_constraints` rows near line 99. That breaks the file's
-grouping convention, though it is arguably *safer* for rebasing since upstream's
-churn is all in the body.
+See [`sync-log.md`](../sync-log.md) and
+[`reeds-to-cepm-log.md`](../reeds-to-cepm-log.md#cumulative-tech-group-investment-caps-gsw_cepm_tgcap) ("What to test in new releases").
 
 ---
 
-## 9. Suggested build order
+## 9. Remaining work
 
-1. ~~**T0.** Confirm F1 and close D1.~~ **Done 2026-09-01 — F1 confirmed, D1
-   closed in favor of §4.** Evidence in
-   `runs/v20260901t0_WECC-SW_t0growthcon/` (gitignored; `gamslog.txt` around the
-   `Row 'eq_growthlimit_absolute(PV,2032)' infeasible` line, and
-   `lstfiles/*_2032i0.lst`).
-2. ~~GAMS + plumbing (§4, §5.1) with `GSw_CEPM_TgCap=0` everywhere; run
-   **T2**.~~ **Done 2026-09-01 — T2 passes byte-identically.** Evidence in
-   `runs/v20260901t2b_WECC-SW_baseline` vs `runs/v20260824-2_WECC-SW_baseline`.
-   Two deviations from what §4/§5.1 originally specified, both now folded back
-   into those sections: the regional symbol is a long-format `parameter`, not a
-   `table`, and both `runfiles.csv` rows are non-region rows.
-3. ~~`make_tg_cap.py` (§5.3); run **T1** against the archived baseline — no ReEDS
-   run needed.~~ **Done 2026-09-01 — T1 passes, 18/18.** Note the test itself was
-   never committed; it needs rewriting as a file before it can serve as the
-   post-rebase regression check T10 assumes. Same for the T0 standalone GAMS
-   reproduction (suggested home `CEPM/scripts/t0_growthgap.gms`).
-4. ~~Wire `_limitre` by hand (write the cap CSVs manually, set the switches); run
-   **T3**, then **T4**/**T4r**.~~ **Done 2026-09-01 — T3, T4, T4r all pass.**
-   Evidence in `runs/v20260901t3_*` and `runs/v20260901t4b_*`. **T5(a)-(c) done
-   2026-09-02/03; T5(d) remains blocked on region choice** — see §7.
-5. ~~`run_cepm.ps1 -m` (§5.4); run **T6**, **T7**, **T8**.~~ **Done 2026-09-02 —
-   T6, T7, T8 and T9 all pass.** Also added: `CEPM/scripts/multistep_cases.py`,
-   the three `cases_cepm.csv` case columns, and `--harvest-args`.
-
-   The two `run_cepm.ps1` arg-plumbing bugs found while running T4 turned out to
-   affect only *caller-supplied* arguments, not what `-m` builds for itself: `-r`
-   is a unique prefix of the script's own `$RunbatchArgs` parameter, so PowerShell
-   binds it there and the *next* flag fails with a confusing "parameter not
-   found"; and `--simult_runs 1` fails separately with argparse reporting
-   `unrecognized arguments: 1`. Arguments the script assembles into an array
-   itself bypass that binder entirely, which is what lets `-m` pass
-   `--simult_runs 2` to phase B — see §5.4 "As built" for why phase B *needs* it.
-   For a plain (non-`-m`) invocation, the pattern that works is still one case per
-   invocation via `-s <single>`, which sets `WORKERS=1` with no prompt.
-6. ~~Docs: correct the CEPM recommendation in `tech-limit-options.md` (F1/F2),
-   add an F1 entry to `CEPM/known-reeds-issues.md`, and write the
-   `CEPM/reeds-to-cepm-log.md` inventory rows + section.~~ **Done** — the first
-   two 2026-09-01, the divergence-log entry 2026-09-02 (5 inventory rows and a
-   "Cumulative tech-group investment caps" section carrying D8's non-region
-   `runfiles.csv` decision and its post-rebase checks).
-7. Rebase onto 2026.08.03, then **T10**.
-
-### Housekeeping — resolved 2026-09-03
-
-All three open items were decided and applied before the first commit.
-
-- **Test scaffolding deleted (17 files).** `cases_t{3,4,5}.csv` and
-  `cepm_tg_cap_{sys,reg}_{t3,t4,t4ra,t4rb,t4rc,t5a,t5c}.csv` are gone. Only the
-  `_none` pair is committed; under §5.2b every real ceiling is generated per
-  batch and deleted in a `finally`, so a committed hand-made ceiling is an
-  invitation to pick up a stale one. (`cepm_tg_cap_sys_t5c.csv` in particular
-  contained a deliberately **invalid** tech group and would fail any run
-  selecting it.) T10's post-rebase T3 re-run has to re-harvest its ceiling from
-  the post-rebase baseline anyway, so only the case definition was reusable and
-  that is an `awk` one-liner to rebuild.
-- **`cleanup_level` stays at 0** — this is now a deliberate decision, not test
-  residue. `runreeds.py:959-967` blocks on
-  `input('Proceed? y/[n]: ')` (default `n`, so it quits) whenever **any** case
-  has `cleanup_level >= 1` and `--skip_checks` was not passed. Two details make
-  that specifically dangerous for `-m`: the check runs at launch, before anything
-  starts; and because `-m` always uses `-s`, ignored cases are **not** dropped
-  from `df_cases` first (`runreeds.py:899-905`), so the check scans *every*
-  column in the file — including the ten this batch is not running. One stray
-  `cleanup_level=2` anywhere in `cases_cepm.csv` therefore hangs a background
-  `-m` run on a prompt nobody can see. Recorded as a comment in `run_cepm.ps1`.
-- **`WECC-SW_dcload` removed**, resolving the duplication in favour of the
-  documented convention. `WECC-SW_optimized` was an exact copy of it — the same
-  scenario under two names, because §1's naming needs an `_optimized` and
-  `_dcload` predates it. `WECC-SW_dcloco2` is unaffected (it is an independent
-  column, not derived from `_dcload`), and completed runs under the old name are
-  untouched.
-
-- **SERTP two-step columns added 2026-09-03**, mirroring WECC-SW:
-  `SERTP_{limitre,optimized}` appended from `SERTP_dcload`'s config, and
-  `SERTP_dcload` then removed for the same duplication reason. Both stems now
-  validate for `-m`. The remaining stems (`NM_*`, `USA_*`) do not have two-step
-  columns, and `-m` refuses with a message naming the missing ones.
+Remaining: T10. The T1 test and T0 GAMS file were never committed; write them as
+files before T10.

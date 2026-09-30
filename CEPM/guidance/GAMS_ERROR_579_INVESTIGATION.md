@@ -1,6 +1,8 @@
 # GAMS Error 579 in the h5-to-gdx input pipeline
 
-**Status:** Fixed on `fix/GAMS-h5-bugfix`
+**Status:** Fixed in this fork (`h5_to_gdx.py`, `b_inputs.gms`). Carry forward
+while GAMS is 44.4.0; upstream `2026.09.08` has its own fix, to be checked at the
+next sync.
 **Affected versions:** GAMS 44.4.0 (this repo's pinned version)
 **Symptom:** `a_createmodel.gms` fails to compile with 16x `*** Error 579` in
 `autocode/b_load_sets.gms`, immediately after `copy_files.py`/`h5_to_gdx.py`
@@ -110,10 +112,6 @@ Changed files:
 - `reeds/core/setup/b_inputs.gms` — includes the new `autocode/b_sets.gms`
   in place of `b_declare_sets.gms`/`b_load_sets.gms`, with `$gdxin` opened
   first so sets can be loaded inline as they're declared.
-
-Also cherry-picked from upstream for alignment (unrelated to this bug, but
-touches the same function):
-- `h5_to_gdx.py: add v to special_keys` (upstream commit `066d8fe6`)
 
 ## Verification
 

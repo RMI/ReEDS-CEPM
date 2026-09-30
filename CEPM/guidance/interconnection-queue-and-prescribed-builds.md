@@ -1,11 +1,10 @@
 # Interconnection queues and prescribed builds: how they work, and why they collide in 2026
 
-**Status:** investigation, 2026-09-03. Verified against the code in this fork at
-`mvp/two-step-runs` and against two runs of the same three-case two-step batch:
-`runs/v20260902t7_WECC-SW_*` (as shipped) and `runs/v20260903qoff_WECC-SW_*`
-(identical but with the queue penalty disabled via `GSw_CapPenaltyMult`). The
-paired runs are what turned this from an argument into a measurement — and they
-overturned one of this doc's original conclusions; see §4.3 and §4.5.
+**Status:** mechanisms re-verified against post-sync `dev` (2026-09). Figures
+come from the former WECC-SW cases (removed in #55); the §4.5–4.6 two-step
+figures also carry the Texas→`p59` data-center load error (see
+[`../batch-log.md`](../batch-log.md) and
+[`loadsite-mechanism.md`](loadsite-mechanism.md)).
 
 **Why this doc exists.** Two exogenous mechanisms both constrain what ReEDS
 builds in its early years: an **interconnection-queue ceiling** and a set of
@@ -87,14 +86,11 @@ consequence in §2.3.
 
 ### 2.2 How it is wired into the run
 
-`reeds/input_processing/copy_files.py:1403-1433`, inline in `main()` — **not**
-via `runfiles.csv`, and with **no scenario switch**:
-
-1. Read the county-level file.
-2. Filter to counties in the run's `GSw_Region`.
-3. Map county → model region (`r_county`), with separate branches for
-   single-resolution, mixed and county resolution.
-4. `groupby(['tg','r']).sum()` → write `inputs_case/cap_limit.csv`.
+`reeds/input_processing/copy_files.py` (the `cap_limit` block, inline in
+`write_miscellaneous_files()`) — **not** via `runfiles.csv`, and with **no
+scenario switch**: read the county file → map county → zone via `county2zone`
+→ drop unmapped (out-of-scope) counties → `groupby(['tg','r']).sum()` →
+`inputs_case/cap_limit.csv`.
 
 The absence of a switch is why
 [`two-step-re-limited-runs.md`](two-step-re-limited-runs.md) §F4 rejected
@@ -105,7 +101,7 @@ Loaded in GAMS as `cap_limit(tg,r,t)` and consumed by one equation.
 
 ### 2.3 How it is wired into the optimization
 
-`reeds/core/setup/c_model.gms:1389`:
+`reeds/core/setup/c_model.gms`, `eq_interconnection_queues`:
 
 ```gams
 eq_interconnection_queues(tg,r,t)
@@ -128,20 +124,20 @@ eq_interconnection_queues(tg,r,t)
 Four things matter here.
 
 **It is cumulative.** The right-hand side sums investment from
-`interconnection_start` (**2025**, `inputs/scalars.csv:52`) through the current
+`interconnection_start` (**2025**, `inputs/scalars.csv`) through the current
 year. So an overshoot in 2026 stays on the books and is re-penalized in 2029.
 
-**It is soft.** `CAP_ABOVE_LIM(tg,r,t)` (`c_model.gms:30`) absorbs any excess.
+**It is soft.** `CAP_ABOVE_LIM(tg,r,t)` (declared in `c_model.gms`) absorbs any excess.
 The model is never made infeasible by this constraint — it just pays.
 
-**The price is flat and enormous.** `d_objective.gms:47`:
+**The price is flat and enormous.** `d_objective.gms` (`Z_inv`):
 
 ```gams
 + sum{(tg,r), cap_penalty(tg) * CAP_ABOVE_LIM(tg,r,t) }
 ```
 
-`cap_penalty` is loaded once at `b_inputs.gms:2024` from
-`inputs/financials/cap_penalty.csv` and **never rescaled or deflated**. All 13
+`cap_penalty` is loaded once in `b_inputs.gms` from
+`inputs/financials/cap_penalty.csv` and **never rescaled or deflated** upstream. All 13
 rows are identical: **10,000,000** $/MW. For scale, gas-CC capex is roughly
 $1.3M/MW — the penalty is ~8× the cost of the plant. The term sits inside
 `Z_inv(t)` scaled by `pvf_capital(t)`, which is **1.0** in CEPM runs, so it
@@ -168,12 +164,12 @@ in no reported cost metric.** Verified end to end:
 
 | where | penalty present? |
 |---|---|
-| `Z` / `Z_inv(t)` — what the solver minimizes (`d_objective.gms:47`) | **yes** |
+| `Z` / `Z_inv(t)` — what the solver minimizes (`d_objective.gms`) | **yes** |
 | `z_rep.csv`, `objfn_raw.csv` — the objective, dumped | **yes** (inherited) |
 | `systemcost.csv` — all 14 cost categories | **no** |
 | `systemcost_ba.csv` → `reeds/results.py:calc_systemcost()` → retail rates, bokeh report | **no** (inherits the exclusion) |
 | any Python in `reeds/` or `postprocessing/` | **no** — `cap_penalty` and `CAP_ABOVE_LIM` appear in **zero** Python files |
-| `report.gms` | **once**, at line 1745, inside `error_check('z')` |
+| `report.gms` | **once**, inside `error_check('z')` |
 | `cap_above_limit.csv` | the **MW quantity only** — registered in `report_params.csv` as `--MW--`, never priced |
 
 The one appearance in `report.gms` is the tell. It exists precisely because the
@@ -217,19 +213,19 @@ database:
 
 ```
 inputs/capacity_exogenous/ReEDS_generator_database_final_{unitdata}.csv
-   (runfiles.csv:256 -> inputs_case/unitdata.csv;  unitdata = "EIA-NEMS")
-        -> reeds/input_processing/writecapdat.py:338-345
+   (runfiles.csv -> inputs_case/unitdata.csv;  unitdata = "EIA-NEMS")
+        -> reeds/input_processing/writecapdat.py (main)
         -> inputs_case/prescribed_nonRSC.csv, prescribed_nonRSC_energy.csv
 ```
 
 **RSC / resource-constrained** (upv, wind-ons, geohydro) — from siting-scenario
 files, selected by switch:
 
-| file | switch | runfiles row |
-|---|---|---|
-| `prescribed_builds_wind-ons_{GSw_SitingWindOns}.csv` | `GSw_SitingWindOns` (default `reference`) | 206 |
-| `prescribed_builds_wind-ofs_{GSw_OffshoreFiles}_{GSw_SitingWindOfs}.csv` | `GSw_OffshoreFiles`, `GSw_SitingWindOfs` | 205 |
-| `exog_cap_upv_{siting}.csv`, `exog_cap_wind-ons_{siting}.csv`, `exog_cap_geohydro_*.csv` | siting switches | — |
+| file | switch |
+|---|---|
+| `prescribed_builds_wind-ons_{GSw_SitingWindOns}.csv` | `GSw_SitingWindOns` (default `reference`) |
+| `prescribed_builds_wind-ofs_{GSw_OffshoreFiles}_{GSw_SitingWindOfs}.csv` | `GSw_OffshoreFiles`, `GSw_SitingWindOfs` |
+| `exog_cap_upv_{siting}.csv`, `exog_cap_wind-ons_{siting}.csv`, `exog_cap_geohydro_*.csv` | siting switches |
 
 These land in the run as `inputs_case/prescribed_rsc.csv`, plus
 `prescribed_builds_wind-{ons,ofs}.csv` and `exog_cap_*.csv`.
@@ -248,7 +244,7 @@ double-counts — this is the same trap flagged as F5 in
 
 This is the single most important mechanism in this document.
 
-`b_inputs.gms:1985-1991`:
+`b_inputs.gms`, `noncumulative_prescriptions`:
 
 ```gams
 noncumulative_prescriptions(pcat,r,t)$tmodel_new(t)
@@ -268,12 +264,12 @@ between the first two is **16 years**. So the 2026 solve is required to build
 everything prescribed for **2011 through 2026** — sixteen years of committed
 projects, landing in a single model year.
 
-`m_required_prescriptions` (`b_inputs.gms:1943-1951`) is the cumulative
+`m_required_prescriptions` (`b_inputs.gms`) is the cumulative
 counterpart, and adds existing RSC capacity `caprsc` for the RSC categories.
 
 ### 3.3 How it is wired into the optimization
 
-`c_model.gms:922`:
+`c_model.gms`, `eq_forceprescription_power`:
 
 ```gams
 eq_forceprescription_power(pcat,r,t)
@@ -288,16 +284,16 @@ eq_forceprescription_power(pcat,r,t)
 ```
 
 It is written as an equality, but `EXTRA_PRESCRIP` makes it **a floor, not an
-exact target**. `EXTRA_PRESCRIP` appears only in `c_model.gms` (declared line
-35, used at 941/944/972) and **never in `d_objective.gms`** — it is genuinely
+exact target**. `EXTRA_PRESCRIP` appears only in `c_model.gms` (declared there and used
+in the `eq_forceprescription*` equations) and **never in `d_objective.gms`** — it is genuinely
 free slack. So the model may build *more* than prescribed at no charge, but
 never less.
 
 Supporting machinery:
 
-- `prescriptivelink(pcat,i)` — `b_inputs.gms:909-922`, maps prescription
-  categories to technologies. Upgrades are excluded (line 922).
-- `force_pcat(pcat,t)` — `b_inputs.gms:5938-5941`, activates the equation for a
+- `prescriptivelink(pcat,i)` — `b_inputs.gms`, maps prescription
+  categories to technologies. Upgrades are excluded.
+- `force_pcat(pcat,t)` — `b_inputs.gms`, activates the equation for a
   category in years before `firstyear_pcat` or in any year with a prescription.
 - `GSw_ForcePrescription` — `cases.csv`, default **1**. Turning it off "will
   allow unlimited but not free builds in historical years".
@@ -545,7 +541,9 @@ largest *2026* violation, because PV's violation clears by 2029 while
 penalty was *compressing* the apparent cost of holding RE at baseline by ~10
 percentage points, because `_optimized` (41 GW of PV) incurs more penalty than
 `_limitre` (which substitutes gas). Any headline number from a two-step batch
-carries this distortion.
+carries this distortion. (Both figures are also inflated by the Texas→`p59`
+load error; treat them as a measure of the penalty's effect, not as the
+headline result.)
 
 **What this does and does not license.** `GSw_CapPenaltyMult = 0.000001` removes
 a constraint that represents something real — physical interconnection limits —
@@ -563,7 +561,9 @@ truth lies between the two runs and we cannot yet say where.
 hydrogen system modelled. Both were tested together as a 2×2, four full
 three-case two-step batches differing only in those two switches.
 
-`_limitre` vs `_optimized` 2032 objective gap:
+`_limitre` vs `_optimized` 2032 objective gap (all four batches carry the
+Texas→`p59` load error, which inflates the levels; the differences between
+cells are the point):
 
 | | queue penalty on | penalty off (`GSw_CapPenaltyMult=1e-6`) |
 |---|---:|---:|
@@ -598,7 +598,9 @@ report the T9 substitution is therefore **thermal capacity, not a gas/h2 split**
 | `h2qoff` (penalty off, h2 off) | 14,052.2 MW |
 
 The gas/h2 split within that total is economically arbitrary; the queue penalty
-changes the total by ~1.4 GW.
+changes the total by ~1.4 GW. These thermal totals are inflated by the
+Texas→`p59` load error (most of the forced gas sat in `p59`); re-run before
+quoting them.
 
 **Consequences.**
 
@@ -643,7 +645,8 @@ Concretely:
   percentage points, because `_optimized` (41 GW of PV) is pushed further past
   queue limits than `_limitre` (which substitutes gas).
 
-So report the two-step result as a range, and say which end assumes what.
+So report the two-step result as a range, and say which end assumes what. (The
++33.4%/+43.4% figures themselves are inflated by the Texas→`p59` load error.)
 
 ### 5.2 Close the provenance gap on the queue data
 
@@ -659,46 +662,24 @@ The 16-year accumulation (§3.2) exists because CEPM jumps 2010 → 2026. The
 obvious response is to raise `startyear`. **Don't reach for it first** — it is
 the most trap-laden switch in this area, and there is a cleaner lever (§5.3d).
 
-#### 5.3a Hard ceiling: `startyear` cannot exceed **2022**
+#### 5.3a–b `startyear` must be ≤ 2022, and in practice well below
 
-The historical hydro capacity-factor data bundled in this repo covers
-**2007-2022** — verified directly on both source files staged into a run:
-
-```
-inputs_case/net_gen_existing_hydro.csv   min t 2007, max t 2022
-inputs_case/cap_existing_hydro.csv       min t 2007, max t 2022
-```
-
-`hydcf.py:166-169` filters that data to `t >= startyear`. At `startyear = 2023`
-or later the frame empties, `data_endyear = hydcf.index.max()` returns `NaN`
-(pandas does not raise on an empty numeric index), and
-`np.arange(data_endyear+1, model_endyear+1)` fails with
-`ValueError: arange: cannot compute length`. This is the already-logged failure
-in [`../known-reeds-issues.md`](../known-reeds-issues.md) that killed `USA_optimized_mvp` at
-`startyear=2026`, and it happens in input processing — before model compile,
-let alone a solve.
-
-**That entry's open question is now answered: the cutoff is 2022.** `startyear`
-must be ≤ 2022 or `hydcf.py` crashes, full stop.
-
-#### 5.3b Practical ceiling is well below 2022
-
-At `startyear = 2022` exactly one year of hydro data survives the filter. The run
-would not crash, but every hydro capacity factor would be derived from a single
-year's generation rather than sixteen — a silent quality loss, not an error. Any
-value approaching 2022 trades one problem for a worse, quieter one.
+The bundled hydro history covers 2007–2022, so `startyear` above 2022 crashes
+`hydcf.py`, and values near 2022 silently derive hydro CFs from very few years.
+See [`../known-reeds-issues.md`](../known-reeds-issues.md#startyear--2022-crashes-hydcfpy-arange-cannot-compute-length)
+("`startyear` > 2022 crashes `hydcf.py`").
 
 #### 5.3c `startyear` also redraws the existing/new capacity boundary
 
 This is the part that reaches beyond hydro. `writecapdat.py` splits the unit
 database on `startyear` in several places:
 
-- `create_rsc_wsc` (`writecapdat.py:51-52`) and `poi_cap_init`
-  (`writecapdat.py:306-326`) treat `onlineyear < startyear & RetireYear > startyear`
+- `create_rsc_wsc` and the `poi_cap_init` block in `writecapdat.py`
+  treat `onlineyear < startyear & RetireYear > startyear`
   as **existing capacity**.
 - Units with `onlineyear >= startyear` become **prescribed builds** instead.
 - hydro techs are reclassified `hydEND`/`hydED` on the same test
-  (`writecapdat.py:253-256`).
+  (`writecapdat.py` `main()`).
 
 So raising `startyear` moves units from "prescribed build" into "initial fleet".
 That does reduce the pile-up — but it also removes those MW from `cap_new_out`,
@@ -711,7 +692,7 @@ are not comparable on new-capacity metrics.** Not a free knob.
 
 Solve years come from `yearset` and are independent of `startyear` except that
 `startyear` is appended to the list and used as a lower bound
-(`copy_files.py:1301-1305`). So an **extra early solve year** can split the
+(the `solveyears` block in `copy_files.py`'s `write_miscellaneous_files()`). So an **extra early solve year** can split the
 prescription window without touching any of the traps above.
 
 **This is not an invention — it is what upstream already does.** ReEDS' default
@@ -866,7 +847,7 @@ penalty's behavioral effect go with it:
 
 **Use a small epsilon, not exactly 0.** At exactly 0 the optimizer has no
 incentive to minimize `CAP_ABOVE_LIM`, so it can settle anywhere at or above the
-true violation — and `5_varfix.gms:29` then fixes that arbitrary value for every
+true violation — and `5_varfix.gms` then fixes that arbitrary value for every
 later solve year, making `cap_above_limit.csv` useless as a record of what the
 exceedance was. `0.000001` (→ $10/MW) pins it to the true violation while
 contributing a few parts per million of the objective.
@@ -914,30 +895,30 @@ actual 2026" goal.
 
 | Location | What |
 |---|---|
-| `copy_files.py:1403-1433` | builds `cap_limit.csv`; no switch |
-| `writecapdat.py:338-345` | builds `prescribed_nonRSC.csv` from `unitdata.csv` |
-| `c_model.gms:1389` | `eq_interconnection_queues` |
-| `c_model.gms:30` | `CAP_ABOVE_LIM` declaration |
-| `d_objective.gms:47` | the $10M/MW penalty term |
-| `c_model.gms:922` | `eq_forceprescription_power` |
-| `c_model.gms:35` | `EXTRA_PRESCRIP` — free slack, never costed |
-| `b_inputs.gms:1985-1991` | `noncumulative_prescriptions` — the 16-year pile-up |
-| `b_inputs.gms:1943-1951` | `m_required_prescriptions` |
-| `b_inputs.gms:909-922` | `prescriptivelink` |
-| `b_inputs.gms:5938-5941` | `force_pcat` |
-| `b_inputs.gms:2024` | `cap_penalty` load (never rescaled upstream) |
+| `copy_files.py` (`write_miscellaneous_files()`, `cap_limit` block) | builds `cap_limit.csv`; no switch |
+| `writecapdat.py` (`main()`) | builds `prescribed_nonRSC.csv` from `unitdata.csv` |
+| `c_model.gms` | `eq_interconnection_queues` |
+| `c_model.gms` | `CAP_ABOVE_LIM` declaration |
+| `d_objective.gms` (`Z_inv`) | the $10M/MW penalty term |
+| `c_model.gms` | `eq_forceprescription_power` |
+| `c_model.gms` | `EXTRA_PRESCRIP` — free slack, never costed |
+| `b_inputs.gms` | `noncumulative_prescriptions` — the 16-year pile-up |
+| `b_inputs.gms` | `m_required_prescriptions` |
+| `b_inputs.gms` | `prescriptivelink` |
+| `b_inputs.gms` | `force_pcat` |
+| `b_inputs.gms` | `cap_penalty` load (never rescaled upstream) |
 | `b_inputs.gms` (just after the load) | **CEPM addition** — `cap_penalty(tg) = cap_penalty(tg) * Sw_CapPenaltyMult ;` |
-| `5_varfix.gms:29` | fixes `CAP_ABOVE_LIM` for solved years — the reason §5.6 wants an epsilon rather than 0 |
-| `report.gms:129` | `cap_above_limit` reporting |
-| `report.gms:1745` | the only place the penalty enters reporting (an error check) |
+| `5_varfix.gms` | fixes `CAP_ABOVE_LIM` for solved years — the reason §5.6 wants an epsilon rather than 0 |
+| `report.gms` | `cap_above_limit` reporting |
+| `report.gms` (`error_check('z')`) | the only place the penalty enters reporting (an error check) |
 
 ### Switches and scalars
 
 | Name | Where | Default | Effect |
 |---|---|---|---|
 | `GSw_CapPenaltyMult` | `cases.csv` (**CEPM addition**) | 1 | scales `cap_penalty`; ≈0 disables the queue constraint entirely (§5.6). Use `0.000001`, not `0` |
-| `interconnection_start` | `scalars.csv:52` | 2025 | first year whose builds count against the queue. **`>=`, so a 2025 solve year is included** (§5.3d) |
-| `model_builds_start_yr` | derived, `b_inputs.gms:1248` | — | earliest year the queue equation is generated |
+| `interconnection_start` | `scalars.csv` | 2025 | first year whose builds count against the queue. **`>=`, so a 2025 solve year is included** (§5.3d) |
+| `model_builds_start_yr` | derived, `b_inputs.gms` | — | earliest year the queue equation is generated |
 | `GSw_ForcePrescription` | `cases.csv` | 1 | prescriptions as a floor |
 | `unitdata` | `cases.csv` | `EIA-NEMS` | selects the unit database |
 | `GSw_SitingWindOns` / `GSw_SitingWindOfs` | `cases.csv` | `reference` | selects wind prescription files |

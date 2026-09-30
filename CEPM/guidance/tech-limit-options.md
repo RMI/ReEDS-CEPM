@@ -14,17 +14,10 @@ to skip past: do you want to guarantee a hard limit, or discourage the
 technology and let the model decide? Only some of the options below can actually
 promise the former.
 
-> **Correction, 2026-09-01.** An earlier version of this doc recommended
-> `GSw_GrowthAbsCon` with `GSw_GrowthConLastYear` set to the case's `endyear` as
-> the CEPM answer for non-RSC techs. That configuration makes the final solve
-> year **infeasible** — confirmed both in a standalone GAMS replication and in a
-> live `WECC-SW_baseline` run. See the ⚠️ block in Option 3 and the withdrawn
-> recommendation below. If you acted on the old advice, that's the cause.
-
 ## The core distinction: `ban(i)` vs `bannew(i)`
 
 `reeds/core/setup/b_inputs.gms` declares both sets side by side, with the
-distinction spelled out in a comment right above them (`b_inputs.gms:102-106`):
+distinction spelled out in a comment right above them:
 
 ```gams
 sets
@@ -35,16 +28,16 @@ sets
 ```
 
 - **`ban(i)`** removes the technology from `valcap` entirely, including
-  existing/prescribed capacity (`b_inputs.gms:2118-2119`, comment: *"existing
+  existing/prescribed capacity (`b_inputs.gms`, comment: *"existing
   plants are enabled if not in ban(i)"*). This is what `GSw_Biopower` and
-  `GSw_OfsWind` use (`b_inputs.gms:422-424`, `545-547`). A tech under `ban` does
+  `GSw_OfsWind` use (their `if(Sw_Biopower = 0, ...)` / `if(Sw_OfsWind = 0, ...)` blocks in `b_inputs.gms`). A tech under `ban` does
   not exist in the model at all in that run — no capacity, no generation, in
   any solve year.
-- **`bannew(i)`** only blocks new vintages (`b_inputs.gms:2134`,
-  `2141`, `2164`); existing/prescribed capacity stays in `valcap` and keeps
+- **`bannew(i)`** only blocks new vintages (the new-vintage `valcap`
+  assignments in `b_inputs.gms`); existing/prescribed capacity stays in `valcap` and keeps
   operating. `GSw_OnsWind6to10` uses this to freeze out new builds of specific
   onshore wind resource classes while leaving existing turbines alone
-  (`b_inputs.gms:549-554`).
+  (its `if(Sw_OnsWind6to10 = 0, ...)` block in `b_inputs.gms`).
 
 **Implication:** if the intent is "no new investment, but don't touch what's
 already built," `bannew` is correct and `ban` is a mistake — using `ban` will
@@ -55,7 +48,7 @@ change than most "turn off new X" requests actually want.
 
 Solar (UPV, DistPV), wind (onshore, offshore), geothermal, and PSH are all
 `rsc_i(i)` technologies, gated by `m_rscfeas`, which in turn requires nonzero
-resource in `rsc_dat(i,r,"cap",rscbin)` (`b_inputs.gms:1647`, `2141`). The
+resource in `rsc_dat(i,r,"cap",rscbin)` (`b_inputs.gms`). The
 supply curve *is* a ceiling already — it represents the physical resource
 available to build against.
 
@@ -76,7 +69,7 @@ This is a **data-only change** — no GAMS edits required.
 
 ## Option 2 — Interconnection queue cumulative cap (closest fit for a hard ceiling)
 
-`eq_interconnection_queues(tg,r,t)` (`c_model.gms:1385-1403`) already
+`eq_interconnection_queues(tg,r,t)` (`c_model.gms`) already
 constrains cumulative new investment by tech group and region against a
 data-driven limit:
 
@@ -99,14 +92,14 @@ eq_interconnection_queues(tg,r,t)
 ```
 
 `cap_limit(tg,r,allt)` is loaded from `inputs_case/cap_limit.csv`
-(`b_inputs.gms:2014-2020`). Repurposing this table to encode a policy ceiling
+(`table cap_limit` in `b_inputs.gms`). Repurposing this table to encode a policy ceiling
 (rather than actual queue data) is a **data-only change**, and it already
 handles cumulative investment, by tech group, by region — no new equation
 needed.
 
 **The catch: it is a soft constraint by design.** `CAP_ABOVE_LIM(tg,r,t)` is a
 penalized slack variable, not a hard bound — the objective charges
-`cap_penalty(tg) * CAP_ABOVE_LIM(tg,r,t)` (`d_objective.gms:47`) rather than
+`cap_penalty(tg) * CAP_ABOVE_LIM(tg,r,t)` (`d_objective.gms`) rather than
 making violation infeasible. That's intentional: a hard `=g=` with no slack
 would make the model infeasible any time the queue data and reality diverge.
 Two consequences:
@@ -117,13 +110,14 @@ Two consequences:
   (or set `cap_penalty(tg)` very high, which is a softer version of the same
   idea and easier to reason about numerically).
 - `tg` groups techs coarsely (all UPV + PVB is one `'pv'` group, for example —
-  see `tg_i(tg,i)` at `b_inputs.gms:793-810`). If your ceiling needs to apply
+  see the `tg_i(tg,i)` assignments in `b_inputs.gms`). If your ceiling needs to apply
   to a narrower slice than the existing groups, see the `tg` customization
   section below.
 
 **Not actually case-customizable in this fork today.** The "data-only change"
 framing above is true for editing the file once, repo-wide — it is not true
-per-case. `copy_files.py:1404-1433` computes `cap_limit.csv` directly from
+per-case. `copy_files.py` (the `cap_limit` block in
+`write_miscellaneous_files()`) computes `cap_limit.csv` directly from
 `inputs/capacity_exogenous/interconnection_queues.csv` (real interconnection
 queue data), reading the source via `reeds_path` rather than the case
 directory, with no scenario switch and no corresponding row in
@@ -133,7 +127,7 @@ directory, with no scenario switch and no corresponding row in
   or `GSw_SitingUPV` parameterize their files.
 - It can't be swapped per case via `file_replacements` either — that
   mechanism only substitutes files already staged under `casedir/reeds/...`
-  by the time it runs (`runreeds.py:1249-1274`), and `cap_limit.csv`'s source
+  by the time it runs (the `file_replacements` step in `runreeds.py`'s `write_batch_script()`), and `cap_limit.csv`'s source
   never passes through there.
 
 Repurposing this option for a policy ceiling today means editing the shared
@@ -145,9 +139,9 @@ vary by case.
 
 ## Option 3 — Growth-rate constraints (not a ceiling — a pace limiter)
 
-`GSw_GrowthAbsCon` / `GSw_GrowthPenalties` (`cases.csv:153-156`) drive
+`GSw_GrowthAbsCon` / `GSw_GrowthPenalties` (`cases.csv`) drive
 `eq_growthlimit_absolute(tg,t)` and `eq_growthlimit_relative(i,st,t)`
-(`c_model.gms:1088-1102`, `1048-1075`). These bound **MW added per year**, not
+(`c_model.gms`). These bound **MW added per year**, not
 cumulative capacity:
 
 ```gams
@@ -170,40 +164,11 @@ is "never exceed X GW"; reach for it if the ask is "don't let X grow faster
 than Y per year."
 
 **⚠️ CEPM-specific trap: setting `GSw_GrowthConLastYear` to the run's `endyear`
-makes the final solve year infeasible.** This section previously recommended
-exactly that; it is wrong, and the correction is important enough to state
-before anything else about Option 3.
-
-The equation's allowance is the gap to the **next** modeled year. `tprev(t,tt)`
-means "tt is the year before t" (`b_inputs.gms:1027`, `1053-1055`), so
-`tprev(tt,t)` in the equation selects the year *after* `t`. For the last
-modeled year no such `tt` exists, the sum collapses to 0, and the coefficient
-becomes `-yeart(t)` — a large negative number required to be `=g=` a
-non-negative sum of `INV`. There is no slack variable, so the solve is
-infeasible, not merely tight.
-
-`yearweight` uses the identical expression and then explicitly patches the last
-year (`b_inputs.gms:5573-5574`); `eq_growthlimit_absolute` never got that patch.
-The bug is latent upstream (confirmed still present at tag `2026.08.03`) only
-because `GSw_GrowthConLastYear` defaults to 2026 while runs end in 2050, so the
-equation is never generated in the final year.
-
-**Confirmed empirically, 2026-09-01**, on `WECC-SW_baseline`'s exact
-configuration plus `GSw_GrowthAbsCon=1`/`GSw_GrowthConLastYear=2032`
-(`runs/v20260901t0_WECC-SW_t0growthcon`): 2026 and 2029 solve to
-`MODEL STATUS 1 Optimal`, 2032 returns `MODEL STATUS 4 Infeasible`, and CPLEX's
-conflict refiner isolates it to a single row —
-
-```
-Row 'eq_growthlimit_absolute(PV,2032)' infeasible, all entries at implied bounds.
-Number of equations in conflict: 1
-  lower: eq_growthlimit_absolute(PV,2032) > 5.80786e+07
-```
-
-5.80786e+07 = 2032 × 28,582, i.e. the year number times the shipped `pv`
-MW/year limit. Full writeup in
-[`two-step-re-limited-runs.md`](two-step-re-limited-runs.md) (finding F1) and
-[`../known-reeds-issues.md`](../known-reeds-issues.md).
+makes the final solve year infeasible.** The equation's coefficient is the gap
+to the *next* modeled year; in the last year there is none, the coefficient
+collapses to `-yeart(t)`, and with no slack the solve is infeasible (confirmed on
+the former WECC-SW case, `runs/v20260901t0_WECC-SW_t0growthcon`). See
+[`../known-reeds-issues.md`](../known-reeds-issues.md#gsw_growthabscon1-makes-the-final-solve-year-infeasible-eq_growthlimit_absolute).
 
 **The workaround: a sacrificial final solve year.** Because the coefficient only
 needs *some* later modeled year to exist, extending the run one solve period past
@@ -262,7 +227,7 @@ Three limitations remain, and together they are why CEPM's baseline-constrained
 work did *not* end up using Option 3:
 
 1. **No year index.** `growth_limit_absolute(tg)` is a single MW/year number per
-   tech group (`b_inputs.gms:4804`) — the constraint is necessarily a *constant
+   tech group (`b_inputs.gms`) — the constraint is necessarily a *constant
    annual pace*. Real CEPM baselines are extremely lumpy: the WECC-SW baseline
    builds 200 MW of onshore wind in 2029 and 9,531 MW in 2032. A flat rate sized
    to that total allows 4,866 MW per solve year, which would cap a scenario
@@ -270,7 +235,7 @@ work did *not* end up using Option 3:
    the parameter cannot express a lumpy target.
 2. **Unit mismatch.** The constraint bounds `INV`, which for UPV is MW_dc, while
    every reported capacity output is MW_ac (`cap_new_out = INV / ilr(i)`,
-   `report.gms:820-825`; `ilr_utility = 1.34`). A limit derived from reported
+   `report.gms`; `ilr_utility = 1.34`). A limit derived from reported
    capacity and applied without conversion under-caps solar by 34%.
 3. **No first-year floor.** The constraint's lower year bound is
    `model_builds_start_yr`, with no switch to raise it, so it also applies to the
@@ -292,15 +257,15 @@ bug or with lumpy build profiles.
 
 ## Option 4 — CAPEX/cost multiplier (discourage, don't cap)
 
-`GSw_NukeStateBan` (`cases.csv:240`) already implements this as a selectable
+`GSw_NukeStateBan` (`cases.csv`) already implements this as a selectable
 mode alongside a hard ban:
 
 ```
 GSw_NukeStateBan,Switch to limit nuclear with state bans. [0] off / [1] full ban / [2] cost multiplier,0; 1; 2,1,
 ```
 
-Mode 1 is a hard `valcap` exclusion (`b_inputs.gms:2280-2282`); mode 2 instead
-inflates `cost_cap_fin_mult(i,r,t)` (`2_financials.gms:93-97`):
+Mode 1 is a hard `valcap` exclusion (`nuclear_ba_ban` in `b_inputs.gms`); mode 2
+instead inflates `cost_cap_fin_mult(i,r,t)` (`2_financials.gms`):
 
 ```gams
 if(Sw_NukeStateBan = 2,
@@ -325,7 +290,7 @@ soft policy headwind," not when the goal is "guarantee ≤ X GW."
 
 Both the growth constraints and the interconnection-queue cap operate on `tg`,
 which groups technologies more coarsely than individual `i` — e.g. all UPV and
-PVB (minus DistPV) collapse into one `'pv'` group (`b_inputs.gms:796`). If an
+PVB (minus DistPV) collapse into one `'pv'` group (`b_inputs.gms`). If an
 existing group is too coarse for what you want to cap, `tg` is easier to
 extend than it looks.
 
@@ -338,8 +303,8 @@ alias(tg,tgg) ;
 ```
 
 (`autocode/b_declare_sets.gms`, generated per run). Its members today come
-entirely from the literal `tg_i(tg,i)$[...] = yes ;` assignments at
-`b_inputs.gms:793-810`, plus whatever labels appear in the associated input
+entirely from the literal `tg_i(tg,i)$[...] = yes ;` assignments in
+`b_inputs.gms`, plus whatever labels appear in the associated input
 CSVs (`cap_limit.csv`, `cap_penalty.csv`, `growth_limit_absolute.csv`). Adding
 a new group needs only:
 
@@ -437,7 +402,7 @@ the resource supply curve (Option 1), but don't edit the shared default file —
 these already key off scenario switches. `supplycurve_upv-{GSw_SitingUPV}.csv`,
 `supplycurve_wind-ons-{GSw_SitingWindOns}.csv`, and
 `supplycurve_wind-ofs-{GSw_SitingWindOfs}.csv`
-(`reeds/input_processing/runfiles.csv:231-233`) are all parameterized by a
+(`reeds/input_processing/runfiles.csv`) are all parameterized by a
 siting-scenario switch already. Add a new siting-scenario value pointing at a
 capped copy of the supply curve, rather than shrinking the default file that
 every other case also reads. Genuinely data-only, no code touched, and it's a
@@ -445,18 +410,11 @@ real physical ceiling — `m_rscfeas` simply won't allow more capacity than what
 the bins contain.
 
 **Everything else (`gas`, `coal`, `nuclear`, `battery`, `h2`, `biomass`,
-`hydro`):** ~~use `GSw_GrowthAbsCon` + `GSw_GrowthConLastYear`~~ — **this
-recommendation has been withdrawn.** It said to set
-`GSw_GrowthConLastYear` to the case's `endyear`, which is precisely the
-configuration that makes the final solve year infeasible (see the ⚠️ block in
-Option 3 above, and the live confirmation on `WECC-SW_baseline`). Even with the
-sacrificial-final-year workaround, the flat MW/year parameter can't follow a
-lumpy build profile, bounds MW_dc while outputs report MW_ac, and has no way to
-exempt the first year's prescribed builds.
+`hydro`):** use `GSw_CEPM_TgCap` (below); Option 3 doesn't work here.
 
-**Use instead:** the purpose-built cumulative caps
+`GSw_CEPM_TgCap` drives the purpose-built cumulative caps
 (`eq_cepm_tg_cap_sys` / `eq_cepm_tg_cap_reg`) added for CEPM's
-baseline-constrained runs, driven by `GSw_CEPM_TgCap` and
+baseline-constrained runs, read from
 `inputs/growth_constraints/cepm_tg_cap_{sys,reg}_{cepmtgcapscen}.csv`. They are
 genuinely cumulative (so the final year is fine), available at both system-wide
 and per-region scope, and expressed in MW_ac so the numbers match
@@ -464,17 +422,10 @@ and per-region scope, and expressed in MW_ac so the numbers match
 are documented in
 [`two-step-re-limited-runs.md`](two-step-re-limited-runs.md) §4.
 
-**Why not Option 2 for this** — worth recording, since the queue mechanism looks
-like the obvious fit. `cap_limit`/`eq_interconnection_queues` is already active
-*and already violated* in CEPM baselines: `cap_above_limit.csv` from
-`runs/v20260824-2_WECC-SW_baseline` has 20 non-zero rows (PV in `z28` ~5.0 GW
-over its limit in 2026, wind in `p31` ~5.2 GW over, gas in `p59` ~2.0 GW over),
-absorbed by the penalized `CAP_ABOVE_LIM` slack. Repurposing it for a policy
-ceiling would perturb a constraint that is already doing work in the baseline,
-which breaks any controlled baseline-vs-scenario comparison. Separately worth
-knowing: the shipped queue data stops at 2030, so
-`sum{(tgg,rr), cap_limit(tgg,rr,'2032')}` is zero and the queue constraint
-**switches itself off entirely in 2032** in every CEPM run today.
+**Why not Option 2 for this:** the queue constraint is already active and
+violated in CEPM baselines, so repurposing it perturbs the baseline — see
+[`two-step-re-limited-runs.md`](two-step-re-limited-runs.md) F4 and
+[`interconnection-queue-and-prescribed-builds.md`](interconnection-queue-and-prescribed-builds.md).
 
 ## Recommendation
 
