@@ -70,3 +70,15 @@ docs/build/*
 
 # uv stuff
 ReEDS.egg-info/
+
+# run_cepm.ps1 -m (multistep) per-batch working files
+# Generated at the start of phase B and removed again by the script's own
+# cleanup step, so they normally only exist mid-run -- but that is exactly when
+# they clutter the staging area, and an interrupted run leaves them behind.
+# The token is the batch name, so the names vary per run.
+# Keep the checked-in *_none.csv pair, which is the real 'no cap' input.
+cases*__*.csv
+inputs/growth_constraints/cepm_tg_cap_sys_*.csv
+inputs/growth_constraints/cepm_tg_cap_reg_*.csv
+!inputs/growth_constraints/cepm_tg_cap_sys_none.csv
+!inputs/growth_constraints/cepm_tg_cap_reg_none.csv

@@ -23,6 +23,38 @@ Each entry includes a **Fixed upstream?** note checked against
 latest tagged release as of this writing, commit `1515f8ae`) — not the tip of
 upstream's `main` branch, which may have moved further.
 
+## Index
+
+Every entry in this file, in page order. **Status** describes the state of the
+*fix*, not the severity — the two most dangerous entries here are `Open` and fail
+**silently**, producing a complete-looking run with wrong results. Those are
+flagged in their descriptions; if you are auditing a finished run rather than
+chasing a crash, start with them.
+
+| Issue | Status | What it does |
+|---|---|---|
+| [GAMS 44.4.0: `Error 579` on model compile](#gams-4440-compile-failure-error-579-in-autocodeb_load_setsgms-fixed) | Fixed | Blocked every run at model compile on our pinned GAMS. Fixed in `h5_to_gdx.py`. |
+| [`GSw_GrowthAbsCon=1`: final solve year infeasible](#gsw_growthabscon1-makes-the-final-solve-year-infeasible-eq_growthlimit_absolute) | Open — workaround | Last modeled year goes infeasible from a year-gap sign error. Use a sacrificial final year, or the cumulative caps instead. |
+| [`GSw_CEPM_TgCap=1`: Virginia 2029 infeasible](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found) | Open — cause unknown | VA `limitre` dies at 2029 with 1665 infeasible rows. Cap is the trigger; the colliding constraint is not yet identified. Disabling the RPS is **not** expected to help. |
+| [Offshore-wind RPS infeasibility for NY/CT](#offshore-wind-rps-infeasibility-for-nyct-eq_rps_ofswind--fix-reverted-currently-live-again) | Reverted — live again | `GSw_StateRPS` carve-out unsatisfiable when `GSw_OfsWind=0`. Fix was reverted; `file_replacements` no longer works as a workaround. |
+| [H2 infeasibility in DE (2032)](#h2-infeasibility-in-de-2032--unfixed-workaround-not-applied-to-active-case) | Open — untested | Forced H2 production where demand is fixed to zero. Root cause never traced; the `GSw_H2=0` workaround is not applied to the active case. |
+| [`z134` (the default zoneset) doesn't work](#z134-the-default-zoneset-doesnt-work) | Open | Every z134 case dies at `writecapdat.py` for a missing `ba` key. Leaving `GSw_ZoneSet` blank selects z134, so blank is not safe. |
+| [`z90` zoneset missing `hierarchy_from134.csv`](#z90-zoneset-is-missing-a-required-input-file) | Open | z90 is unusable, and including it in a batch blocks the whole batch at switch validation. |
+| [`cendivweights.csv` domain violation at cendiv borders](#cendivweightscsv-domain-violation-near-census-division-borders-fixed) | Fixed — not on `main` | Sub-national runs near a census-division border fail GAMS compile. Fixed on `dev`; `main` still has it. |
+| [`recf.py` crashes when offshore wind is disabled](#recfpy-crashes-when-offshore-wind-is-disabled-fixed) | Fixed | `GSw_OfsWind=0` left `df_windofs` undefined before a concat. |
+| [Onshore wind supply curve dropped under pandas 3](#onshore-wind-supply-curve-silently-dropped-under-pandas-3-when-a-sibling-curve-is-empty) | Open — fix identified | **Silent.** A landlocked region with `GSw_OfsWind=1` builds zero new onshore wind, with no error. Live upstream too. Four runs affected and still recurring. |
+| [`startyear` must be ≤ 2022 for hydro CF data](#startyear-must-be-old-enough-for-historical-hydro-capacity-factor-data) | Worked around | A later `startyear` empties the historical hydro frame and dies at an unrelated `arange`. Trap is live for any new case. |
+| [`report_dump.py` crashes reading `df_capex_init.csv`](#postprocessing-report_dumppy-crashes-reading-df_capex_initcsv) | Open | Postprocessing ordering bug: the system-cost CSV is never written. Run itself unaffected. |
+| [`reeds_to_rev.py` can't reach supply curves on `nrelnas01`](#reeds_to_revpy-cant-reach-supply-curve-source-files-on-nrelnas01) | Environment | Not a repo bug — check VPN / share access. Breaks the reV handoff and the VRE-sites map overlays. |
+| [`single_case_plots.py` plots fail on reduced-region cases](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases) | Open — partly by design | Several diagnostic maps fail on single-region or reduced-hierarchy runs. Each is caught; core outputs unaffected. |
+| [bokehpivot: every map section fails on an aggregated zoneset](#bokehpivot-html-report-every-map-type-section-fails-on-an-aggregated-zoneset) | Open | No boundary file exists for aggregated zonesets, so all map sections of the HTML report are missing. |
+| [`compare_cases.py` crashes on a shared-prefix glob](#compare_casespy-crashes-when-comparing-cases-via-a-shared-prefix-glob-typeerror-in-parse_caselist-fixed) | Fixed | `TypeError` in `parse_caselist()` blocked the comparison report entirely. |
+| [`compare_cases.py` hardcodes year 2020](#compare_casespy-hardcodes-year-2020-in-several-plots-instead-of-using---startyear-fixed) | Fixed | Five literal `2020`s broke slides for any batch whose years exclude 2020 — i.e. every CEPM case. |
+| [`runreeds.py` reports success on failure, hangs on multi-case `-s`](#runreedspy-reports-success-on-a-failed-case-and-hangs-on-a-multi-case--s) | Open — worked around | **Silent.** Exit code 0 despite an aborted solve; interactive prompts hang under a wrapper. Check for `outputs.h5`, not the exit code. |
+| [`z_rep` dominated by the interconnection-queue penalty](#z_rep-is-dominated-by-the-interconnection-queue-penalty-and-does-not-match-systemcostcsv) | Not a bug | `z_rep` is unusable as a cost figure and the penalty does shift buildout. Use `systemcost.csv`. |
+| [`reeds2pras` `BoundsError` for `hydud`/`hydund`](#reeds2pras-boundserror-for-hydudhydund-hydro-capacity--no-monthly-profile-data) | Open — non-fatal | Hydro-upgrade categories have no monthly profile data, so PRAS zeroes their contribution. Diagnostic layer only. |
+| [Cosmetic warnings safe to ignore](#cosmetic-warnings-safe-to-ignore) | Informational | Known-harmless warnings from `copy_files.py` and `hourly_repperiods.py`. |
+
 ## GAMS 44.4.0 compile failure: `Error 579` in `autocode/b_load_sets.gms` (FIXED)
 
 **Symptom:** `a_createmodel.gms` fails to compile with 16x
@@ -135,7 +167,10 @@ code — the missing final-year `neue` file is what first flagged this.
   than per-year and so have no final-year arithmetic at all. Option 3 has three
   further limitations for a ceiling use case (no year index, MW_dc vs MW_ac, no
   first-year floor) documented in
-  [two-step-re-limited-runs.md](guidance/two-step-re-limited-runs.md).
+  [two-step-re-limited-runs.md](guidance/two-step-re-limited-runs.md). Note the
+  caps avoid *this* failure mode but have one of their own — see
+  [the Virginia 2029 entry](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found)
+  immediately below.
 
 A genuine fix, if we ever want Option 3 itself to work, is a one-line `tlast`
 fallback in the equation mirroring what `yearweight` already does. Not applied —
@@ -157,6 +192,94 @@ latent bug, inherited, not RMI-introduced. It stays latent upstream because
 equation is never generated in the final year. Good candidate to contribute back,
 since the fix pattern (`yearweight`'s `tlast` override) already exists a few
 thousand lines away in the same codebase.
+
+## `GSw_CEPM_TgCap=1` makes the Virginia 2029 solve infeasible — root cause not yet found
+
+**Symptom:** a `limitre` case fails partway through its horizon with
+```
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      4 Infeasible
+*** Error at line 165146: Execution halted: abort 'Model did not solve to optimality'
+```
+and then `Exception: 3_solve_oneyear.gms failed with return code 3`. Observed on
+`runs/v20260925_VA_limitre` (2026-09-25 19:36), which solved 2010 and 2026 normally
+and died at **2029**, leaving only 6 files in `outputs/` and no `cap.csv`. The report
+summary counts **1665 infeasible rows** (sum of violations 4,262,097; max 695,620).
+
+Note the solver log looks alarming but is a red herring: CPLEX's barrier bails out
+after 0.1 s with
+```
+Barrier limit on dual objective exceeded.
+Infeasible barrier solution (dependent on objective limit).
+--- LP status (22): dual objective limit exceeded.
+```
+and the dual objective running away to 1.57e20. That is the signature of an infeasible
+primal, not a numerical or scaling problem.
+
+**Root cause: not yet identified.** What is established:
+
+- **The cumulative cap is the trigger.** `VA_limitre` differs from `VA_optimized`
+  *only* by `GSw_CEPM_TgCap=1` and `cepmtgcapscen=v20260925` (verified by diffing
+  `inputs_case/switches.csv`). `VA_optimized` carries the identical high data-center
+  load (`GSw_LoadSiteTrajectory=st_epri_medium_extended_to_2032`,
+  `GSw_LoadSiteCF=1`, `GSw_LoadSiteRA=1`) and solves through 2032 cleanly. So the
+  infeasibility is created by `eq_cepm_tg_cap_sys`, not by the load scenario.
+- **Not a prescribed-build collision.** The obvious failure mode for a cumulative
+  investment cap is a forced build that exceeds it, but prescribed capacity from 2026
+  on fits comfortably inside every cap: wind-ofs 2,640 MW against a 3,949.7 MW cap
+  (the CVOW build in 2027), upv 1,465.6 against 23,976.6, wind-ons 78.0 against
+  11,866.4. Ruled out.
+- **Not the state RPS.** This was the first hypothesis and it does not hold up. VA's
+  RPS rises 14.5% (2026) → 19.7% (2029) → 25.8% (2032), so capping RE while
+  data-center load grows does make it harder to meet — but `eq_REC_Requirement`
+  includes `+ ACP_PURCHASES(rpscat,st,t)$(not acp_disallowed(st,RPSCat))`,
+  `acp_disallowed.csv` in the run is **empty** (ACP allowed everywhere), and
+  `ACP_PURCHASES` is a positive variable with **no upper bound**. VA's 2029 ACP price
+  is $54.36/MWh. The model can always buy its way out of the RPS, so an unreachable
+  RPS produces an expensive solution, not an infeasible one. **Setting
+  `GSw_StateRPS=0` is therefore not expected to unblock this run.**
+- **Reserve margin is an unlikely culprit but unconfirmed.** The caps cover only
+  `battery`, `csp`, `pumped-hydro`, `pv`, `wind-ofs` and `wind-ons` — gas is uncapped,
+  and `eq_co2_cumul_limit` generates 0 rows in this run, so on the face of it the
+  model should be able to meet PRM with gas. Not yet verified.
+
+**Why the conflict refiner did not answer this already:** `iis 1` is *already set* in
+the run's `cplex.opt`, but the refiner never ran. CPLEX only invokes it on a clean
+infeasibility proof, and with `lpmethod = 4` the barrier aborted on "dual objective
+limit exceeded" (LP status 22) instead. Re-solving 2029 with `lpmethod 1` or `2`
+(primal/dual simplex) should let the already-enabled refiner produce the minimal
+infeasible constraint set and name the offending equations. Everything needed is
+present: GAMS 44.4.0, and the restart file
+`g00files/v20260925_VA_limitre_2026i0.g00`. This is the obvious next step and has not
+been done.
+
+**Impact:** blocks the `limitre` leg of the two-step workflow for VA. Because
+`limitre` is the constrained half of the `*_baseline` → `*_limitre`/`*_optimized`
+comparison, its absence makes the VA batch's headline comparison impossible, not just
+incomplete. `VA_baseline` and `VA_optimized` both completed and are unaffected.
+
+Note the failure is easy to miss for the reason documented in the `runreeds.py` entry
+below: the batch still reports success. Check for `outputs/cap.csv` and
+`outputs/outputs.h5` rather than trusting the exit code.
+
+**Status:** not fixed, root cause not yet isolated. No workaround identified — and
+specifically, the intuitive one (disable the state RPS) is expected not to work, per
+above. Until the conflict refiner is run, the honest summary is: the cumulative cap
+makes VA's 2029 LP infeasible and we do not yet know which constraint it collides
+with.
+
+Worth checking once the refiner names the rows: whether this is specific to VA's
+cap *values* (harvested from `VA_baseline` by `CEPM/scripts/make_tg_cap.py`) or a
+general property of the cap mechanism under high load growth. The same two-step
+workflow runs for WECC-SW and SERTP without this failure, which points toward the
+former — VA's caps may simply be harvested too tight relative to what the
+data-center load scenario needs — but that is a hypothesis, not a finding.
+
+**Fixed upstream?** N/A. `GSw_CEPM_TgCap` and `eq_cepm_tg_cap_sys`/`_reg` are
+RMI-fork-only additions (see the "Cumulative tech-group investment caps" entry in
+[`reeds-to-cepm-log.md`](reeds-to-cepm-log.md)); there is no upstream equivalent to
+compare against. If the refiner turns out to implicate a stock ReEDS equation rather
+than the cap itself, that part should be re-checked against upstream.
 
 ## Offshore-wind RPS infeasibility for NY/CT (`eq_RPS_OFSWind`) — fix reverted, currently live again
 
@@ -427,6 +550,173 @@ the identical `if int(sw['GSw_OfsWind']) != 0: df_windofs = ...` block with no
 same crash if run with `GSw_OfsWind=0`. Good candidate to contribute back, since
 it's the same fix pattern upstream already uses for `GSw_distpv`/`GSw_CSP` a few
 lines below.
+
+## Onshore wind supply curve silently dropped under pandas 3 when a sibling curve is empty
+
+**Symptom:** a run completes normally — no error, no warning, `writesupplycurves.py`
+logs `Starting`/`Finished` as usual — but builds **no new onshore wind at all**.
+Total `wind-ons` capacity sits flat at the existing fleet for every solve year. The
+tell is in `inputs_case/rsc_combined.csv`: `wind-ons` has only `cost_cap` and
+`cost_trans` rows, and no `cap` or `cost` rows, so the model is handed zero buildable
+wind resource. To check any run:
+
+```bash
+awk -F, 'NR>1{split($1,a,"_"); print a[1]"|"$3}' inputs_case/rsc_combined.csv \
+  | sort | uniq -c | grep wind
+```
+
+A healthy run shows four categories (`cap`, `cost`, `cost_cap`, `cost_trans`) with
+equal row counts. An affected run is missing `cap` and `cost` entirely:
+
+```
+  377 cap   377 cost   377 cost_cap   377 cost_trans     <- healthy (v20260916v4_st-AZNM_baseline)
+                       377 cost_cap   377 cost_trans     <- broken  (v20260924fix_st-AZNM_baseline)
+```
+
+First surfaced 2026-09-24 on `runs/v20260924fix_st-AZNM_*`, which built 0.7 GW of wind
+in 2032 (the existing fleet, nothing new) against 14.2 GW (`baseline`/`limitre`) and
+15.8 GW (`optimized`) in the otherwise-comparable `runs/v20260916v4_st-AZNM_*` eight
+days earlier. Switches, `numbins_*` and siting scenarios were identical between the
+two.
+
+**Root cause:** a dtype bug in `agg_supplycurve()`
+(`reeds/input_processing/writesupplycurves.py`) that only became live with pandas 3.0.
+
+`st-AZNM` is landlocked, so its `supplycurve_wind-ofs.csv` is header-only — but
+`GSw_OfsWind=1`, so offshore wind is still processed. For an empty input,
+`agg_supplycurve()` takes its `if dfin.empty:` branch and assigns `dfin['bin'] = []`,
+which pandas types as **float64**. pandas 3.0 stopped excluding empty frames from
+dtype resolution in `pd.concat`, so `windall = pd.concat(wind, axis=0)` — which stacks
+the onshore and offshore frames row-wise into a MultiIndex — upcasts the `bin` level
+from int64 to float64. The next line,
+`windall["bin"] = "wsc" + windall["bin"].astype(str)`, then produces `wsc1.0` instead
+of `wsc1`, so the rename map `{"wsc1": "bin1", ...}` matches nothing and the wind bin
+columns keep their `wsc*.0` names.
+
+From there the loss is silent by construction: `alloutcap.pivot(...)` selects its value
+columns with `[c for c in alloutcap.columns if c.startswith("bin")]`, which wind no
+longer has, so all wind capacity is dropped without complaint. The final
+`.pivot(...).dropna()` over the `(cap, cost)` pair then discards the orphaned wind cost
+rows too. Only `cost_cap`/`cost_trans` survive, because those are concatenated on
+*after* that pivot.
+
+UPV, CSP, geohydro and EGS escape only incidentally — see Scope. `class` escapes for a
+similar accidental reason: it is read from the CSV, which pandas types as object for an
+empty file, rather than being assigned a bare `[]`.
+
+**Trigger:** this fork's pandas pin moved to `pandas==3.0.*` on 2026-09-10 (`129ecdbc`,
+"Bump Python to 3.14, realign packages with environment.yml"), and the local venv was
+rebuilt to pandas 3.0.5 on 2026-09-24 at 20:24 — 21 minutes before the first affected
+run started. `uv.lock` carried `pandas 2.0.3` from 2026-05-05 until that bump, so every
+run before 2026-09-24 was unaffected with identical inputs and switches. This is a
+pre-existing upstream bug that the pandas upgrade activated, not a regression
+introduced by the pin — and note upstream pinned `pandas=3.0` four months before we did
+(see **Fixed upstream?** below). Do not "fix" it by pinning pandas back.
+
+**Scope — all four conditions must hold at once:**
+
+1. **pandas >= 3.0.** The concat dtype-resolution change is what makes the latent bug
+   live. Confirmed on 3.0.5: concatenating a populated int64-`bin` frame with an empty
+   float64-`bin` one yields `['wsc1.0', 'wsc2.0', ...]`; the populated frame alone
+   yields `['wsc1', 'wsc2', ...]`.
+2. **The code path stacks sub-techs with `pd.concat(dict, axis=0)` and then does
+   `.astype(str)` on the `bin` level.** Only two sites qualify: wind
+   (`pd.concat(wind, axis=0)` over `ons`/`ofs`, then `"wsc" + bin.astype(str)`) and
+   geothermal (`pd.concat(geo, axis=0)` over `geohydro`/`egs`, then
+   `"geosc" + bin.astype(str)`). **UPV and CSP cannot hit this** — they call
+   `agg_supplycurve()` standalone, so an empty result just stays empty with no
+   populated sibling to corrupt.
+3. **One member of that dict is empty and the other is not.** Both populated, no
+   upcast; both empty, nothing to lose. Only the *mixed* case does damage, because the
+   empty frame's float64 silently rewrites the populated frame's bin labels.
+4. **The empty member is still being processed** — its switch is on, so it reaches the
+   concat even though it has no resource.
+
+For wind that reduces to: **offshore wind enabled in a region with no offshore
+resource.** Verified against the affected `st-AZNM` inputs — `GSw_OfsWind=1` yields
+0 `cap`/0 `cost` wind rows, `GSw_OfsWind=0` yields 1640/1640. It is leaving the switch
+*on* over an empty curve that bites; turning it *off* is safe.
+
+`GSw_OfsWind` defaults to **1** in `cases.csv`, so every case satisfies condition 4
+unless it explicitly opts out. Which regions satisfy condition 3, measured by offshore
+supply curve rows across existing runs:
+
+| Region | offshore rows | exposed? |
+|---|---|---|
+| `st/AZ.NM` | 0 | **yes** — what this entry was raised for |
+| `nercr/WECC_SW` | 0 | **yes** |
+| `st/VA` | 149 | no |
+| `st/MS.AL.GA` | 1207 | no |
+| `transreg/SERTP` | 2848 | no |
+| `country/USA` | 16191 | no |
+
+**`nercr/WECC_SW` is exposed and has not been re-run since the pandas upgrade** — its
+existing runs predate it and are clean, but the next WECC-SW run will lose its wind the
+same way.
+
+**The geothermal site is latent, not live.** `geoall = pd.concat(geo, axis=0)` followed
+by `"geosc" + geoall["bin"].astype(str)` is the same construct, and fails condition 3
+only by accident: `rev_geo_types` is built from whichever of `geohydrosupplycurve` /
+`egssupplycurve` equals `reV`, and current switches set `egssupplycurve=reV` with
+`geohydrosupplycurve=ATB_2023`, leaving a single-element dict with nothing to concat
+against. Set both to `reV` in a region where one is empty and it would bite identically.
+
+**Impact:** severe and silent — this is the dangerous kind. The run completes, every
+output file is written, and the results look plausible; wind is simply absent from the
+build. Anything downstream of capacity (generation mix, system cost, emissions, prices,
+PRAS) is wrong in a way no error surfaces. Because the failure mode is a missing input
+rather than a crash, affected runs have to be identified by inspecting
+`rsc_combined.csv` — scanning logs will not find them.
+
+**Status:** not fixed. Diagnosed, with a validated candidate fix not yet applied.
+
+The candidate fix is one line — type the empty column to match the int64 that
+`reeds.inputs.get_bin` produces in the non-empty branch, so the `bin` level never
+upcasts:
+
+```python
+ if dfin.empty:
+-    dfin['bin'] = []
++    dfin['bin'] = pd.Series([], dtype='int64')
+```
+
+Fixing at the dtype source rather than at the `.astype(str)` call is deliberate: the
+same trap sits one line below on `class`, and `agg_supplycurve()` also feeds the
+geothermal concat above. Validated offline against the real
+`v20260924fix_st-AZNM_baseline` inputs — restores 377 `cap` and 377 `cost` rows for
+`wind-ons` and 920.3 GW of buildable resource, with the `cap` rows byte-identical to
+the pre-pandas-3 `v20260916v4` run, and UPV output unchanged. Not yet committed to any
+mainline branch.
+
+**Still recurring.** A sweep of every run under `runs/` finds four affected cases: the
+three original `v20260924fix_st-AZNM_*` runs and `20260929_st-AZNM_baseline`, launched
+2026-09-29 — after the bug was diagnosed but before any fix landed, and it lost its
+wind the same way (0.7 GW in 2032). Every affected run needs re-running once a fix is
+applied; their results are not usable.
+
+Worth noting for whoever fixes this: the reason it went unnoticed is that
+`[c for c in alloutcap.columns if c.startswith("bin")]` drops non-matching columns
+silently. Asserting that no `wsc*` columns survive the rename would turn this class of
+failure loud rather than letting the pivot discard them.
+
+**Fixed upstream?** No — and, unlike most entries here, **the bug is live upstream right
+now, not latent.** `reeds/input_processing/writesupplycurves.py` has the identical bare
+`dfin['bin'] = []` at line 105 at tag `2026.08.03` and at line 121 on the current
+`upstream/main`, and upstream's `environment.yml` has pinned `pandas=3.0` since
+2026-05-08 (`2ff493b5`, "update all python packages and use conda-forge for
+everything") — four months before this fork moved to it. So upstream satisfies
+conditions 1 and 2 already; they simply have not hit conditions 3-4, because their
+default and test cases (`cendiv/Pacific`, `country/USA`) are coastal or national and
+always have a populated offshore curve. Any upstream user running a landlocked region
+with `GSw_OfsWind=1` on a current checkout gets silently zeroed wind.
+
+Not raised upstream as of 2026-09-29. Searched the `ReEDS-Model/ReEDS` issue tracker
+(all 86 issues, open and closed) plus PR history for `writesupplycurves`,
+`agg_supplycurve`, `rsc_combined`, `rscbin`/`wsc`, pandas/dtype, and
+offshore/landlocked supply-curve terms. The nearest hits are unrelated: #27 ("Offshore
+wind zones incompatible with custom regions") is about prescribed offshore builds under
+`GSw_OffshoreZones=1`, and #28 is an offshore-zone TODO list. Strong candidate to report
+and contribute back — it is a one-line dtype correction that is a no-op under pandas 2.
 
 ## `startyear` must be old enough for historical hydro capacity factor data
 
