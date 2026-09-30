@@ -6,7 +6,7 @@ and why, how it was fixed, and whether each entry in
 [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md)'s "what to test in new
 releases" lists actually needed attention.
 
-This is different from the other two logs. `known-issues.md` is the
+This is different from the other two logs. `known-reeds-issues.md` is the
 symptom-level "my run failed, what is this" index. `reeds-to-cepm-log.md` is
 the standing "what does this fork change vs. upstream, and what to re-check"
 index — it describes the *current* divergence, and gets edited in place as
@@ -32,7 +32,7 @@ Not yet merged to `main`.
 | Ending upstream release | tag `2026.08.03` (`sync/august-26`) | — |
 | Upstream merged into sandbox branch `temp-august`, then `temp-august` merged into `temp-dev` | `622ceba6` | 2026-08-27 |
 | PR #47: `temp-dev` merged back into `temp-august` (the sync "lands") | `16f8e013` | 2026-08-27 |
-| Fix-up commits (environment + doc work below) | `129ecdbc`..`b8dd04d8` | 2026-09-10/11 |
+| Fix-up commits (environment + doc work below) | `129ecdbc`..`b8dd04d8` | 2026-09-10 |
 
 `ad0f56b0` is the last commit before this sync started, and is worth keeping
 as a reference: it's the commit `mvp/two-step-runs` still sits on, and the one
@@ -48,11 +48,11 @@ cut the sync branch**, before anything gets merged, renamed, or deleted.
 | Commit | What broke | Why | Fix |
 |---|---|---|---|
 | *(part of PR #47 itself, not a separate commit)* | `cases_test.csv`'s merge resolution kept RMI's (`temp-dev`'s) version wholesale, silently dropping upstream's own independent additions (`MultiMetricRA` column, `GSw_PRM_StressThresholdMetrics` row, `USA_fast`'s `yearset` edit) | `cases_test.csv` is upstream's own file that both sides edit independently; a "take one side" merge resolution — the default outcome of any ordinary merge tool on a two-sided edit — has no way to know that | `687e758e`: reconciled with a 3-way `pandas` comparison (base `62f6381e` vs. RMI vs. upstream, cell-by-cell — a raw text diff is unreadable here since both sides insert new columns at different positions) |
-| `129ecdbc` | Any `uv run`/`runreeds.py` invocation on `temp-august` failed immediately: `ValueError: Your environment is reeds2 and your pandas version is 2.0.3` | Upstream's `environment.yml` moved Python 3.11→3.14 and bumped ~25 packages (notably `pandas` 2.0→3.0, `numpy` 1.26→2.5) as part of the same release; `pyproject.toml`/`uv.lock` hadn't been touched to match | Full realignment to `environment.yml`, resolving 5 distinct blockers along the way: removed `rmi.etoolbox` (pins `pandas<2.4`, flatly incompatible — confirmed unused anywhere in the repo first); dropped the `docs` extra (its packages are never actually installed by anything that runs — the real docs build does its own independent `pip install`); kept `fiona` version-matched to `environment.yml` but platform/version-marker-excluded on Windows+3.14 (no wheel yet, confirmed a Linux wheel exists — a publishing lag, not an incompatibility); bumped `pyproj` 3.6.1→3.8.0 (same wheel problem, no `environment.yml` pin to preserve); pinned `pillow==12.3.*` explicitly (transitive `python-pptx` dependency on a pre-3.14 release that fails to build) |
+| `129ecdbc` | Any `uv run`/`runreeds.py` invocation on `temp-august` failed immediately: `ValueError: Your environment is reeds2 and your pandas version is 2.0.3` | Upstream's `environment.yml` moved Python 3.11→3.14 and bumped ~25 packages (notably `pandas` 2.0→3.0, `numpy` 1.26→2.5) as part of the same release; `pyproject.toml`/`uv.lock` hadn't been touched to match | Full realignment to `environment.yml`, resolving 5 distinct blockers along the way: removed `rmi.etoolbox` (pins `pandas<2.4`, flatly incompatible — confirmed unused anywhere in the repo first); dropped the `docs` extra (its packages are never actually installed by anything that runs — the real docs build does its own independent `pip install`); kept `fiona` version-matched to `environment.yml` but platform/version-marker-excluded on Windows+3.14 (no cp314 wheel on any platform as of 2026-09-29; the marker only skips Windows); bumped `pyproj` 3.6.1→3.8.0 (same wheel problem, no `environment.yml` pin to preserve); pinned `pillow==12.3.*` explicitly (transitive `python-pptx` dependency on a pre-3.14 release that fails to build) |
 | `a889d914` | `check_env_sync.py` reported false-positive drift after the above bump: `sphinx<9` and `gamsapi[transfer]` | Its parser (`split_conda_spec`) only recognized `==`/`=` separators, so a range constraint was mis-parsed; it also never stripped a PEP 508 extras bracket before comparing names | Extended the separator regex to `<`,`<=`,`>`,`>=` (version comes back `None`, already treated as "nothing to compare"); added an extras-stripping step to `normalize()` |
 | `bce87b39` | `run_cepm.ps1` hard-failed at bootstrap: its Step 4 pin-check hardcoded `3.11` in ~6 places and tried to force a re-pin back to it, which fails outright against `requires-python = "==3.14.*"` | Literal version strings written directly into the script rather than derived from `pyproject.toml` | Parses `requires-python` out of `pyproject.toml` with a regex and pins to whatever it finds — no version literal in the script at all going forward. Also renamed `CONDA_DEFAULT_ENV` `reeds2`→`reeds` (matches `environment.yml`'s `name:`; was not itself blocking anything, just stale) |
 | `687e758e` | *(see PR #47 row above)* | | |
-| `b8dd04d8` | — (no code break; documentation only) | | Recorded all of the above in `reeds-to-cepm-log.md`, `guidance/UV_MAMBA_GUIDE.md`, and `known-issues.md` |
+| `b8dd04d8` | — (no code break; documentation only) | | Recorded all of the above in `reeds-to-cepm-log.md`, `guidance/UV_MAMBA_GUIDE.md`, and `known-reeds-issues.md` |
 
 ### Validation performed
 
@@ -94,7 +94,7 @@ post-sync code (not assumed from the doc) before this sync was called done:
 | `report_utils.py` `parse_caselist` | Yes | No | `_caselist[0]` fix present |
 | `compare_cases.py` hardcoded `2020` | Yes | No | all 5 sites use the `startyear` variable; see the false-alarm note in Validation above |
 | Minor/cosmetic (`reeds2pras` README, `cases_small.csv`) | Yes | No | paths and `endyear` unchanged |
-| Gas CAPEX (`dollaryear.csv`, `cases.csv`) | Yes | No | all 3 rows present, `plantchar_gas` `Choices` pattern unchanged |
+| Gas CAPEX (`dollaryear.csv`, `cases.csv`) | Yes | No | all 3 rows present, RMI's `gas-ccgt_CEPM_*` `Choices` alternative intact |
 | Data-center load forecasts | Yes | No | all 5 loadsite files present; `runfiles.csv` template and `GSw_LoadSiteCF`/`Trajectory` switches unchanged |
 | `cases_test.csv` reconciliation | N/A — one-time event, not an ongoing patch | This sync's own outcome | See the PR #47 row above |
 
@@ -103,19 +103,14 @@ redundant by this sync.
 
 ### Open items / carried into the next sync
 
-- **`fiona`'s platform marker** — re-check whether a Windows/cp314 wheel has
-  shipped yet; if so, drop the marker (see `pyproject.toml`).
-- **Gas CAPEX schema** — did not re-verify `gas_ATB_2024_moderate.csv`'s
-  columns/units against the new upstream release this cycle; do so before
-  trusting the CEPM gas-cost files are still shape-compatible.
-- **`mvp/two-step-runs` merged to `dev` first** (PR #49, `db39de07`), before
-  `temp-august` did. `dev` and `temp-august` diverged independently from the
-  same commit (`ad0f56b0`) the whole time this sync was in progress — see
-  "Landing this sync into dev" below for how the two were reconciled.
-- **`known-issues.md` vs. `known-reeds-issues.md`** — resolved as part of that
-  same reconciliation: `dev`'s rename (via `mvp/two-step-runs`) was kept,
-  `temp-august`'s two content additions were folded into the renamed file by
-  hand.
+- **`fiona`'s platform marker** — no `fiona` 1.10.x cp314 wheel exists on any
+  platform (checked 2026-09-29), so Linux/HPC also builds from sdist (needs
+  GDAL). Re-check; if a wheel ships, drop the marker (see `pyproject.toml`).
+- **Delete `temp-august`** (local and `origin/temp-august`): fully merged into
+  `dev`.
+- **Next target `2026.09.08`:** requires `startyear = 2010` (CEPM uses 2010);
+  includes NERC PR #87, the `outputs.h5` and `df_capex_init` fixes, and
+  upstream's own Error 579 fix.
 
 ### Landing this sync into dev
 

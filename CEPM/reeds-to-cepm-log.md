@@ -5,11 +5,8 @@ Tracks how this repo diverges from upstream
 upstream file that CEPM changed and what to re-check when we rebase onto a new
 upstream release.
 
-**Current ReEDS base:** upstream tag `2026.08.03`, synced via `temp-august`
-(merge base with `upstream/main` at commit `62f6381e`, 2026-06-23 — the same
-base the prior `2026.06.18` sync used; entries below predating the August 2026
-sync were written against that earlier base and are being re-verified against
-`2026.08.03` as each is touched).
+**Current ReEDS base:** upstream tag `2026.08.03` (`1515f8ae`), also the merge
+base with `upstream/main`.
 
 Most bug-fix entries below have a matching symptom-level entry in
 [`known-reeds-issues.md`](known-reeds-issues.md); that file is the "my run failed, what is
@@ -20,7 +17,7 @@ To regenerate the file-level inventory below:
 
 ```bash
 git fetch upstream
-git diff --stat $(git merge-base HEAD upstream/main) HEAD -- . ':!CEPM'
+git diff --stat 2026.08.03 HEAD -- . ':!CEPM' ':!runs'
 ```
 
 ## Divergence inventory
@@ -40,7 +37,7 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `reeds/report_utils.py` | Modified | parse_caselist TypeError with a prefix-glob caselist |
 | `postprocessing/compare_cases.py` | Modified | compare_cases.py hardcodes 2020 instead of --startyear |
 | `cases_small.csv` | Modified | Minor and cosmetic |
-| `cases_test.csv` | Modified | Minor and cosmetic |
+| `cases_test.csv` | Modified | Minor and cosmetic; Custom test-case reconciliation |
 | `CONTRIBUTING.md` | Modified | CEPM documentation |
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/dollaryear.csv` | Modified | Updated CAPEX for gas resources |
@@ -63,10 +60,6 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `inputs/growth_constraints/cepm_tg_cap_{sys,reg}_none.csv` | Added | Cumulative tech-group investment caps |
 
 # Changes to base ReEDS files
-
-In some cases, we change base ReEDS files to fix bugs, ensure compatibility,
-or adjust ReEDS functionality for CEPM's needs. Most of these are captured in
-[`known-reeds-issues.md`](known-reeds-issues.md).
 
 ## GAMS compatibility
 
@@ -91,6 +84,9 @@ see this on its own toolchain.
 - `reeds/core/setup/b_inputs.gms` — includes `autocode/b_sets.gms` inside the
   `$gdxin` block instead of the old declare-then-load pair, with a comment
   recording the version constraint.
+- `reeds/input_processing/h5_to_gdx.py` also carries `special_keys = ['r', 'v']`
+  and a test-path comment from upstream `a09865ec` (post-tag). These are not RMI
+  changes and should vanish at the next sync.
 
 ### Reference:
 
@@ -108,6 +104,10 @@ see this on its own toolchain.
 - If the GAMS install moves to **45.6.0 or newer**, this patch is no longer
   required — consider dropping it and returning to upstream's codegen to shrink
   the diff.
+- Upstream tag `2026.09.08` replaced `write_declaration`/`write_gdxread` with
+  `write_declare_and_load()` (declare and load each set in turn, primary sets
+  first). It is likely upstream's own Error 579 fix; at the next sync, confirm it
+  compiles on GAMS 44.4.0, then drop this patch.
 
 ## Resolving census divisions in fuelcostprep.py
 
@@ -191,7 +191,7 @@ dropped one slide rather than aborting the comparison.
 
 ### Reference:
 
-n/a
+[`known-reeds-issues.md`](known-reeds-issues.md)
 
 ### What to test in new releases:
 
@@ -281,10 +281,9 @@ Small changes with no effect on model results.
   after upstream relocated the vendored ReEDS2PRAS tree without updating its
   README.
 - `cases_small.csv` — `endyear` 2030 to 2029.
-- `cases_test.csv` — adds a `USA_fasterish` column (a faster national smoke-test
-  case: `country/USA`, `z54`, `2010..2050..10`) and flips `Pacific`'s `ignore`
-  from `0` to `1` so the default `-c test` batch runs `USA_fasterish` instead.
-  Used for `runs/20260821_USA_fasterish`. No effect on any CEPM case.
+- `cases_test.csv` — adds `USA_fasterish` (`country/USA`, `z54`,
+  `2010..2050..10`); sets `ignore=1` for `Pacific` and `USA_fast`; blanks
+  `Simple`'s `GSw_ZoneSet`.
 
 ### Reference:
 
@@ -297,8 +296,7 @@ n/a
   drop the divergence.
 - If upstream fixes its own reeds2pras README paths, drop our version to keep the
   vendored tree byte-identical to upstream. That tree is otherwise nearly
-  pristine, which is what keeps future ReEDS2PRAS syncs cheap — see Issue 4 of
-  [`guidance/SUBNATIONAL_REGION_SUPPORT.md`](guidance/SUBNATIONAL_REGION_SUPPORT.md).
+  pristine, which is what keeps future ReEDS2PRAS syncs cheap.
 
 # Custom CEPM inputs and changes to ReEDS files
 
@@ -329,9 +327,9 @@ Gas-CT uses the same CT forecast in all three. Selected via `plantchar_gas`.
 
 ### Underlying ReEDS files changed:
 
-- `cases.csv` — `plantchar_gas` description amended to note that upstream options
-  start with `gas_` while RMI/CEPM options start with `gas-ccgt_`. The `Choices`
-  pattern already admitted the new names, so no validation change was needed.
+- `cases.csv` — `plantchar_gas` description and `Choices` amended to accept
+  `gas-ccgt_CEPM_(low|high|all)`. Upstream's explicit list would reject our
+  files, so this edit is load-bearing.
 - `inputs/plant_characteristics/dollaryear.csv` — three new rows registering all
   three files as `2022` dollars.
 
@@ -348,9 +346,9 @@ name.
 - Does `dollaryear.csv` still exist in the same location and format, and are our
   three rows still present after the rebase? A dropped row stays silent until
   costs come out wrong by an inflation factor.
-- Has the `Choices` pattern for `plantchar_gas` in `cases.csv` become stricter
-  (an explicit list rather than a prefix pattern)? If so, our filenames must be
-  added to it.
+- Does our `gas-ccgt_CEPM_(low|high|all)` alternative survive in
+  `plantchar_gas`'s `Choices` in `cases.csv`? Taking upstream's side makes
+  `runreeds.py` reject every CEPM case.
 - Has upstream changed the ATB vintage, or the columns/units in
   `gas_ATB_2024_moderate.csv`? Our files are derived from that shape, so a schema
   change means regenerating them.
@@ -628,16 +626,14 @@ than erroring, so deleting it silently skips both jobs while still reporting a
 green check. And the comparison is a case-sensitive string match against
 `'true'`, so `True`, `TRUE`, or `1` will not enable it.
 
-Note that workflow files seem to automatically change the commit SHA that accompanies some of the workflow steps--this is not something we need to worry about when updating ReEDS releases.
-
 ### Files included:
 
 - `.github/workflows/python-app.yaml` — `if:` conditions on the `run-ReEDS` and
   `run-R2X` jobs, plus a comment in the workflow-level `env:` block recording
-  where the variable actually lives. (An earlier revision also set
-  `ENABLE_GAMS_CI: 'false'` as a workflow `env:` value; that had no effect,
-  since `env:` populates the `env` context and not `vars`, and it has been
-  replaced by the comment.)
+  where the variable actually lives. Also, three
+  `uses: ./.github/actions/setup-reeds-env` lines carry
+  `# zizmor: ignore[self-repository]` (`11efac87`); drop these once actionlint
+  accepts the `$/...` syntax.
 
 ### Reference:
 
@@ -652,7 +648,6 @@ value via `gh variable list --repo RMI/ReEDS-CEPM`
   upstream's side restores unconditional execution and turns CI red.
 - Does the variable still exist at the repo level? It is not version-controlled,
   so it can be deleted without leaving any trace in the repo.
-- Don't worry about changes to the alphanumeric SHAs after the steps in the workflow files.
 
 ## Using uv instead of mamba for environment/package management
 
@@ -661,12 +656,10 @@ value via `gh variable list --repo RMI/ReEDS-CEPM`
 CEPM manages the Python environment with [uv](https://docs.astral.sh/uv/) rather
 than conda/mamba. Upstream ships `environment.yml`; we keep that file for
 reference and upstream parity but resolve dependencies from `pyproject.toml` /
-`uv.lock`, pinned to Python 3.14 as of the August 2026 sync (previously 3.11 —
-see the "Python 3.14 / August 2026 environment sync" section below). Because
-ReEDS itself expects conda-style environment variables, `run_cepm.ps1` sets
-`CONDA_DEFAULT_ENV=reeds` (matching upstream's `environment.yml` name; this was
-`reeds2` before the August 2026 sync) and `CONDA_PREFIX` to the uv venv path so
-the model's own checks pass.
+`uv.lock`, pinned to Python 3.14. Because ReEDS itself expects conda-style
+environment variables, `run_cepm.ps1` sets `CONDA_DEFAULT_ENV=reeds` (matching
+upstream's `environment.yml` name) and `CONDA_PREFIX` to the uv venv path so the
+model's own checks pass.
 
 `environment.yml` and `pyproject.toml` are kept in sync **by hand**, with drift
 reported by [`scripts/check_env_sync.py`](scripts/check_env_sync.py) against a
@@ -681,91 +674,24 @@ known-accepted allowlist.
   committed *and* listed in `.gitignore`; because it is tracked, the ignore rule
   has no effect. Worth reconciling one way or the other.
 - `hourlize/pyproject.toml` — trailing-whitespace cleanup only
-- `.gitignore` — ignores `.python-version` and `ReEDS.egg-info/`
+- `.gitignore` — ignores `.python-version`, `.markdownlint.json`, and
+  `ReEDS.egg-info/`
 - [`scripts/check_env_sync.py`](scripts/check_env_sync.py) — drift checker
 - [`guidance/UV_MAMBA_GUIDE.md`](guidance/UV_MAMBA_GUIDE.md) — the sync procedure
   and accepted-drift list
 
-### Changes made in the August 2026 Python 3.14 sync
+### Deliberate deviations from environment.yml
 
-Upstream's `environment.yml` moved from Python 3.11 to 3.14 and bumped ~25
-package pins (most notably `pandas` 2.0→3.0 and `numpy` 1.26→2.5) as part of
-the same release. Reconciling `pyproject.toml`/`uv.lock` to match surfaced
-several real, only-discoverable-by-actually-running-`uv lock` issues, in the
-order hit:
-
-1. **`rmi.etoolbox` removed entirely.** It pins `pandas>=1.4,<2.4`, which is
-   flatly incompatible with the new `pandas==3.0.*` floor — there is no version
-   of pandas that satisfies both, so this isn't a version-tuning problem. Not
-   imported anywhere in this repo (`reeds/`, `postprocessing/`, `CEPM/`, or any
-   tracked notebook), so removed rather than pinned to an incompatible range.
-2. **`docs` extra (`sphinx`, `myst-parser`, `sphinx-rtd-theme`,
-   `sphinxcontrib-bibtex`) removed.** The actual documentation build
-   (`.github/workflows/build-docs.yaml`) installs its own dependencies directly
-   via a standalone `pip install` on Python 3.12 — it never reads
-   `pyproject.toml`/`uv`/`environment.yml` at all. Since `run_cepm.ps1` only
-   ever runs `uv sync --extra dev`, these packages were never actually
-   exercised by anything that runs in practice.
-3. **`fiona` kept, but platform/version-conditioned.** `environment.yml` itself
-   declares `fiona=1.10 # for interactive maps` — this is upstream's package,
-   not RMI's, so the version was kept matched rather than bumped or dropped.
-   The problem is Windows-specific: no prebuilt wheel exists yet for
-   `fiona==1.10.*` on Python 3.14 (confirmed a real wheel *does* exist for
-   Linux + 3.14 — this is a wheel-publishing lag, not an incompatibility), and
-   building from source requires GDAL on PATH, which isn't set up on RMI dev
-   machines. Marked
-   `"fiona==1.10.*; sys_platform != 'win32' or python_full_version != '3.14.*'"`
-   so it stays declared (and installs normally on Linux/HPC) but doesn't block
-   a Windows `uv sync`. Nothing in this repo imports `fiona` directly, and
-   `geopandas` 1.1+ uses `pyogrio` as its I/O backend instead, so this doesn't
-   affect any actual model or postprocessing code path.
-4. **`pyproj` bumped 3.6.1 → 3.8.0.** Same root cause as `fiona` (no Windows
-   wheel at the old pin, needs PROJ on PATH to build from source) — but unlike
-   `fiona`, `pyproj` has no `environment.yml` entry to stay consistent with, so
-   it was simply bumped to a release that already ships a Windows/cp314 wheel,
-   rather than marker-excluded.
-5. **`pillow==12.3.*` added explicitly.** A different failure mode: `python-pptx`
-   pulls in `pillow==9.5.0` transitively, and that specific old release
-   (mid-2023) fails to build under Python 3.14 with an internal `KeyError` in
-   its own `setup.py` — not a missing system library, just staleness. Pinned a
-   current release with a real cp314 wheel instead of relying on
-   `python-pptx`'s own floor.
-6. **`check_env_sync.py` allowlist cleanup**: `proj`, `pyyaml`, and the old
-   `pytables`/`tables` version gap all resolved on their own as part of this
-   sync (confirmed via the script's own "no longer drifts" output) and were
-   removed from `KNOWN_DRIFT_*`. Added `python-abi` to `CONDA_ONLY_OK` (conda
-   ABI-tagging metadata, not a real pip package) and `pyproj`/`networkx` to
-   `UV_ONLY_OK` (RMI-only, no `environment.yml` equivalent, kept intentionally
-   despite being unused anywhere in this repo).
-7. **`check_env_sync.py` parser fix**: `split_conda_spec()` only recognized
-   `==`/`=` as separators, so a range constraint like upstream's `sphinx<9`
-   couldn't be parsed at all — it was silently treated as one unmatched name
-   instead of `sphinx` with no comparable version, producing a spurious
-   "drift" line every run. Extended to also recognize `<`, `<=`, `>`, `>=`
-   (version comes back `None` for range operators, which `versions_align()`
-   already treats as "nothing to compare" rather than a mismatch).
-8. **`run_cepm.ps1`**: its own Step 4 pin-check hard-coded `3.11` in ~6 places
-   and would forcibly re-pin back to it — this actively broke the bootstrap
-   once `pyproject.toml` moved to `3.14` (`uv python pin 3.11` fails outright
-   against a `requires-python = "==3.14.*"` project). Updated to check/pin
-   `3.14` instead. Also renamed `CONDA_DEFAULT_ENV` from `reeds2` to `reeds`
-   (matching `environment.yml`'s `name: reeds`) — this specific rename wasn't
-   itself blocking anything (`runreeds.py`'s check is a substring match, and
-   `'reeds'` is contained in `'reeds2'`), but was already known to be stale and
-   is now consistent. Matching doc updates in `README.md` and `AGENTS.md`.
-
-**GAMS 44.4.0 compatibility — tested, not just assumed.** The one risk that
-couldn't be resolved by reading files: does `gamsapi`/`gdxpds` 4.0.0, built for
-Python 3.14, actually work against the GAMS 44.4.0 engine this repo is pinned
-to? Upstream tests on GAMS 49.6.0/51.3.0 (see the GAMS compatibility section
-above), not 44.4.0, so this combination had no existing evidence either way.
-Tested directly: read a real GDX file from a completed `USA_fasterish` run
-(1444 symbols, all correct) and round-tripped a fresh write/read — both
-succeeded. Not yet tested: the actual GAMS compile/solve step itself
-(`a_createmodel.gms`/`3_solve_oneyear.gms`), which runs as a direct `gams.exe`
-subprocess rather than through these Python bindings, so is inherently less
-exposed to a Python version change — a full case run (`USA_faster`) is the
-real end-to-end confirmation.
+1. **`rmi.etoolbox` removed.** It pins `pandas<2.4`, incompatible with
+   `pandas==3.0.*`, and nothing in this repo imports it.
+2. **`docs` extra removed.** The real docs build
+   (`.github/workflows/build-docs.yaml`) pip-installs its own dependencies.
+3. **`fiona` platform marker.** No `fiona` 1.10.x cp314 wheel exists on any
+   platform (checked 2026-09-29), so Linux/HPC also builds from sdist and needs
+   GDAL; the marker skips it on Windows + 3.14. Nothing imports `fiona`.
+4. **`pyproj` bumped to 3.8.0** (3.6.1 has no cp314 wheel).
+5. **`pillow==12.3.*` pinned** to override `python-pptx`'s transitive
+   `pillow==9.5.0`, which fails to build on Python 3.14.
 
 ### Reference:
 
@@ -777,14 +703,12 @@ real end-to-end confirmation.
 - Does the environment still resolve? Run `uv sync --extra dev` on a clean
   checkout.
 - Did Python version expectations change again? If upstream's `environment.yml`
-  moves off 3.14, update `requires-python`, `.python-version`, and
-  `run_cepm.ps1`'s Step 4 pin-check together — don't just update one.
+  moves off 3.14, update `requires-python` and `.python-version` together.
+  `run_cepm.ps1` reads the pin from `pyproject.toml`, so it needs no change.
 - Did upstream add, remove, or re-pin any dependency in `environment.yml`? Each
   change has to be mirrored into `pyproject.toml` by hand; run
   `check_env_sync.py` and reconcile anything not on the allowlist.
-- Has a Windows/cp314 wheel shipped for `fiona==1.10.*` yet? If so, the
-  platform/version marker can be dropped — check the exact version condition in
-  the marker still matches what's pinned before removing it.
+- Has any cp314 wheel shipped for `fiona==1.10.*`? If so, drop the marker.
 - Has upstream adopted its own root `pyproject.toml`? If so, ours conflicts
   directly and needs merging rather than overwriting.
 - Does ReEDS still read `CONDA_DEFAULT_ENV` / `CONDA_PREFIX`? If upstream drops
@@ -797,7 +721,8 @@ real end-to-end confirmation.
 A PowerShell wrapper that runs the whole CEPM setup-and-launch sequence in one
 command: verifies GAMS is on `PATH` and licensed, verifies Julia is exactly
 1.12.1, sets the conda-style environment variables ReEDS expects, pins Python
-3.14 and runs `uv sync --extra dev`, instantiates Julia dependencies (offline
+to the version read from `pyproject.toml`'s `requires-python` and runs
+`uv sync --extra dev`, instantiates Julia dependencies (offline
 fast path first, full instantiate as fallback), warns on `environment.yml` to
 `pyproject.toml` drift, then launches `runreeds.py` forwarding all remaining
 arguments. It also sends best-effort ntfy.sh notifications (topic
@@ -842,7 +767,7 @@ section of the [root README](../README.md)
   and upstream's install docs.
 - Have `runreeds.py`'s flags changed — particularly `-b/--BatchName` and
   `-c/--cases_suffix`, which the script parses itself, and any new short flag
-  that could collide with `-y`, `-q`, or `-u`?
+  that could collide with `-y`, `-q`, `-u`, `-x`, `-o`, or `-m`?
 - Is `runreeds.py` still the entry point, still at the repo root, still under
   that name?
 
@@ -867,17 +792,6 @@ because that is where readers and tools look for them.
 - `CONTRIBUTING.md` (repo root) - Added a short preamble to guide CEPM contributors.
 - [`CEPM/`](README.md) — everything else, indexed by
   [`CEPM/README.md`](README.md).
-
-Two `CEPM/` files worth calling out because they are new or renamed:
-
-- [`batch-log.md`](batch-log.md) (added 2026-09-04) — the in-repo record of what
-  each notable batch ran, changed and showed. `runs/` is gitignored and archived
-  to VM_Outputs, so without this there is no durable account of past runs.
-- [`known-reeds-issues.md`](known-reeds-issues.md) — **renamed from
-  `known-issues.md`, 2026-09-04.** The new name states the scope: issues with the
-  *function of the underlying repo*, not with a scenario or a result. Anything
-  wrong with a result now goes in `batch-log.md`. Old links to
-  `CEPM/known-issues.md` are dead.
 
 ### Reference:
 
@@ -907,25 +821,14 @@ upstream's `cases.csv`. `runreeds.py` already supports this through its
 `--cases_suffix cepm` and needs **no upstream code change** — `cases.csv` stays
 as the untouched switch-defaults reference.
 
-Current cases: `st-AZNM_{baseline,limitre,optimized,dcloco2}`,
-`st-MSALGA_{baseline,limitre,optimized,dcloco2}`,
-`NM_optimized_{2yrs,3yrs,LLtest}`, `USA_gas_mvp_NOTE-DEPRECATED`, and
-`USA_optimized_mvp`. Set a case's `ignore` row to `1` to skip it.
-
-**`_dcload` was removed for both stems, 2026-09-03.** `<stem>_optimized` — added
-for the two-step workflow — was an exact copy of `<stem>_dcload`: the same
-scenario under two names, because the `_optimized` convention postdates
-`_dcload`. `_optimized` is the surviving name. The `_dcloco2` columns are
-independent and unaffected; completed runs under the old names are untouched.
-
-Both `WECC-SW` and `SERTP` therefore support `run_cepm.ps1 -m <stem>` as of
-2026-09-03. The remaining stems (`NM_*`, `USA_*`) do not, and `-m` will refuse
-with a clear message naming the missing columns.
+Current cases: `{st-AZNM,st-MSALGA,VA}_{baseline,limitre,optimized}`; all
+three stems support `run_cepm.ps1 -m <stem>`. Set a case's `ignore` row to `1`
+to skip it.
 
 Two things to know about the two-step columns. They are reached through
 `run_cepm.ps1 -m`, which uses `-s` and therefore overrides `ignore`, so they are
 marked `ignore=1` and never picked up by an ordinary `-c cepm` batch.
-`st-AZNM_limitre` also ships with `GSw_CEPM_TgCap=1` and `cepmtgcapscen=none`,
+Each `_limitre` column ships with `GSw_CEPM_TgCap=1` and `cepmtgcapscen=none`,
 which means running it *without* `-m` (i.e. without a harvested ceiling)
 deliberately aborts at the empty-cap-files guardrail rather than solving
 uncapped — that is the safety property, not a misconfiguration.
@@ -943,18 +846,13 @@ techs, so `GSw_H2Combustionupgrade` needs no change. Measured effect on results:
 §4.6). It is an interpretability choice, not a modelling correction.
 
 **`cleanup_level` is deliberately 0 for every case — do not raise it.**
-`runreeds.py:959-967` blocks on `input('Proceed? y/[n]: ')` (defaulting to `n`,
-which quits) whenever **any** case in the file has `cleanup_level >= 1` and
-`--skip_checks` was not passed. The check runs at launch, and because `-s`
-leaves ignored cases in `df_cases` (`runreeds.py:899-905`) it scans *every*
-column — not just the ones being run. So a single `cleanup_level=2` anywhere in
-this file hangs a background or CI run, including any `-m` batch, on a prompt
-that is never displayed.
+`runreeds.py` blocks on a hidden `input('Proceed? y/[n]: ')` prompt (defaulting
+to `n`, which quits) when a selected case has `cleanup_level >= 1` and
+`--skip_checks` was not passed, which hangs background, CI, and `-m` runs.
 
 ### Files included:
 
 - `cases_cepm.csv` — the case definitions
-- `cases.csv` — unchanged apart from the `plantchar_gas` description noted above
 
 ### Reference:
 
@@ -972,56 +870,17 @@ switch value becomes an input file path
   cases.
 - Is the `cases_{suffix}.csv` convention still supported by `runreeds.py`?
 - Re-run at least one case through `copy_files.py` to confirm the switch
-  combination still initializes; see
-  [`guidance/SUBNATIONAL_REGION_SUPPORT.md`](guidance/SUBNATIONAL_REGION_SUPPORT.md)
-  for which `GSw_ZoneSet`/`GSw_Region` combinations are known to work.
+  combination still initializes.
 
 ## Custom test-case reconciliation with upstream (`cases_test.csv`)
 
 ### Description:
 
-Unlike `cases_cepm.csv` (entirely RMI-owned), `cases_test.csv` is upstream's own
-test-case matrix — both sides add and edit columns in it independently, so a
-sync has to reconcile two sets of changes rather than just re-checking ours.
-The August 2026 merge (PR #47) initially resolved this by keeping RMI's
-(`temp-dev`'s) version of the file wholesale, which correctly preserved RMI's
-own edits but silently dropped upstream's independent additions as a side
-effect — not a deliberate decision, just what "take one side" does to a file
-both sides touched.
-
-Reconciled by comparing all three points (the shared base at commit `62f6381e`,
-RMI's edits, and upstream's `2026.08.03` edits) with `pandas`, cell by cell,
-rather than trusting the raw text diff — the two sides inserted their new
-columns in different positions, which shifts every subsequent field and makes
-a plain line diff unreadable. That comparison found:
-
-- **RMI added** one column, `USA_fasterish` — kept.
-- **RMI edited** three cells: `Pacific`'s `ignore` (`0`→`1`), removed
-  `GSw_PRM_StressThresholdMetrics` (didn't exist at the base either — see next
-  point), and added `github_MA_county_CC`'s `pras_samples` (`10`) — kept.
-- **Upstream added** one column, `MultiMetricRA`, and one row,
-  `GSw_PRM_StressThresholdMetrics` (populated only for `MultiMetricRA`, value
-  `NEUE/LOLH/LOLE/LOLD/duration/depth` — the same switch-rename documented in
-  the "Updated CAPEX for gas resources"/`cases.csv` entries elsewhere in this
-  log) — both restored.
-- **Upstream edited** two pre-existing cells: `USA_fast`'s `yearset` (blank →
-  `2010..2050..5`) and `Simple`'s `GSw_ZoneSet` (blank → `z134`) — only the
-  first was restored.
-
-`Simple`'s `GSw_ZoneSet=z134` was deliberately **not** restored: z134 is Issue 3
-in [`SUBNATIONAL_REGION_SUPPORT.md`](guidance/SUBNATIONAL_REGION_SUPPORT.md) —
-a confirmed, currently-unfixed bug that crashes `writecapdat.py` for every z134
-case regardless of region selection. Restoring that cell would make `Simple`
-fail immediately rather than run.
-
-**`MultiMetricRA` itself has a live gap, inherited from upstream, not
-introduced by this reconciliation:** its `GSw_ZoneSet` cell is blank in
-upstream's own file too, which falls through to `cases.csv`'s file-level
-default — `z90`, which is Issue 2 in the same guidance doc (a missing
-`hierarchy_from134.csv` file, unrelated to z134). `MultiMetricRA` will fail to
-launch until that's fixed — see the note added to `known-issues.md`'s z90
-entry. This isn't a regression from the sync; a fresh upstream checkout hits
-the same thing.
+`cases_test.csv` is upstream's own test matrix, so both sides edit it and a
+sync must reconcile it three-way (previous tag vs. RMI vs. new tag, compared
+cell by cell with `pandas`; a text diff hides column shifts). Current RMI
+divergence: see "Minor and cosmetic". History: [`sync-log.md`](sync-log.md)
+(Sync 1).
 
 ### Files included:
 
@@ -1029,18 +888,15 @@ the same thing.
 
 ### Reference:
 
-[`guidance/SUBNATIONAL_REGION_SUPPORT.md`](guidance/SUBNATIONAL_REGION_SUPPORT.md)
-(Issues 2 and 3), [`known-issues.md`](known-issues.md) (`z90`/`z134` entries)
+[`sync-log.md`](sync-log.md) (Sync 1)
 
 ### What to test in new releases:
 
-- Diff `cases_test.csv` against the new tag using the merge-base method above
-  (base vs. RMI, base vs. upstream, compared cell-by-cell with `pandas` — a raw
-  text diff hides changes under any column-position shift), not a plain file
-  diff or "just take one side."
-- Has `z134` (Issue 3) or `z90` (Issue 2) been fixed? If so, `Simple`'s
-  `GSw_ZoneSet=z134` can be safely restored, and `MultiMetricRA` will actually
-  be runnable rather than a known-broken placeholder.
+- Diff `cases_test.csv` against the new tag three-way as described above, not
+  with a plain file diff or "just take one side."
+- z134 should now work (the sync removed the `writecapdat.py` `'ba'`-key bug).
+  Smoke-test one z134 case, then restore upstream's `Simple`
+  `GSw_ZoneSet=z134`.
 - Did upstream rename/retarget `GSw_PRM_StressThresholdMetrics` again, the way
   it replaced `GSw_PRM_StressThreshold` this cycle? Check against `cases.csv`'s
   current switch list before assuming the row is still valid.
