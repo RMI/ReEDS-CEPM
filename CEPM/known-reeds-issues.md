@@ -1011,6 +1011,41 @@ from `reeds/reedsplots.py`'s `plot_trans_diff()` (`tran_out[case].pivot(...)[sub
 
 **Fixed upstream?** No. `postprocessing/compare_cases.py` at tag `2026.08.03` has identical hardcoded `2020` literals at all five sites — same bug, inherited, not RMI-introduced. Doesn't surface upstream by default because upstream's own default `--startyear` is also 2020, so it only breaks for a start year other than 2020 — which is what every CEPM case uses.
 
+## RA diagnostic plots slow every solve year on Windows and never appear in `gamslog.txt` (FIXED)
+
+**Symptom:** two, independent. On Windows, each solve year stalls for ~30 s
+after the solve finishes, before the next year starts. On every platform,
+`gamslog.txt` contains no `diagnostic_plots.py` lines at all, even when that
+script raises. On a completed run, 24 other scripts appear in `gamslog.txt`
+and this one appears zero times.
+
+**Root cause:** `runreeds.py` writes
+`python ... diagnostic_plots.py ... &` into the generated run script after
+each solve year, meaning to background it. On Windows the run script is a
+`.bat`, and in `cmd.exe` `&` separates commands rather than backgrounding one,
+so the plots run synchronously. Separately, `diagnostic_plots.py` never calls
+`reeds.log.makelog`. Each script writes its own lines to `gamslog.txt` through
+that `FileHandler`, not through shell redirection, so a script that skips it
+never reaches the run log. Because the call is also backgrounded (on
+Linux/macOS) and its exit code is never checked, its failures were silent.
+
+**Impact:** on Windows, ~2.0 min per run (~8.5% of wall clock) on a
+4-solve-year WECC-SW case. On all platforms, any error in the RA diagnostic
+plots goes unreported. Model results are unaffected.
+
+**Status:** fixed. `runreeds.py` now launches the plots with `start /b ""` on
+Windows and keeps the trailing `&` on Linux/macOS, and `diagnostic_plots.py`
+calls `reeds.log.makelog` like every other run-step script. See
+[`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) ("RA diagnostic plots block the
+solve loop on Windows and are never logged") for the change and rebase checks.
+
+**Files changed:**
+- `runreeds.py` — the RA plot invocation in `setup_sequential()`.
+- `reeds/resource_adequacy/diagnostic_plots.py` — `makelog` call in `__main__`.
+
+**Fixed upstream?** No. Both files at tag `2026.08.03` have the trailing `&`
+and no `makelog` call. Inherited, not RMI-introduced.
+
 ## `runreeds.py` reports success on a failed case, and hangs on a multi-case `-s`
 
 Two separate behaviors, both of which break unattended/batch automation rather
@@ -1027,18 +1062,20 @@ guardrail (`runs/v20260902t5b_WECC-SW_limitre`).
 **Symptom 2 — interactive hang on the worker count.** With more than one case
 requested, `runreeds.py` calls
 `WORKERS = int(input('Number of simultaneous runs [positive integer]: '))`
-(`runreeds.py:987`) unless `--simult_runs`/`-r` was given. A single case
-short-circuits to `WORKERS = 1` with no prompt (`runreeds.py:979-981`), so this
+(in `runreeds.py`'s `#%% Set number of workers` block) unless
+`--simult_runs`/`-r` was given. A single case short-circuits to `WORKERS = 1`
+with no prompt (the `if len(caseList)==1:` branch just above it), so this
 only appears once a batch has two or more — where it blocks forever in a
 background, CI, or non-interactive shell with no visible prompt.
 
-**Symptom 3 — interactive hang on `cleanup_level`.** `runreeds.py:959-967`
-prints an R2X warning and blocks on `input('\nProceed? y/[n]: ')` — defaulting
+**Symptom 3 — interactive hang on `cleanup_level`.** `runreeds.py`'s
+`#%% User warnings` block prints an R2X warning and blocks on `input('\nProceed? y/[n]: ')` — defaulting
 to `n`, which `quit()`s — whenever **any** case has `cleanup_level >= 1` and
 `--skip_checks`/`-f` was not passed. Two details make this nastier than it
 looks: it fires at launch, before any run starts; and with `-s/--single` the
 ignored cases are **not** dropped from `df_cases` first
-(`runreeds.py:899-905`), so the check scans *every* column in the cases file,
+(see the `# If no --single/-s, drop the ignored cases` block in `runreeds.py`),
+so the check scans *every* column in the cases file,
 not just the ones being run. A single `cleanup_level=2` on an unrelated,
 ignored case therefore kills an otherwise valid batch. Note this is the
 *launch-time* check only — the per-case cleanup that `runreeds.py` schedules at
