@@ -36,24 +36,25 @@ chasing a crash, start with them.
 | [GAMS 44.4.0: `Error 579` on model compile](#gams-4440-compile-failure-error-579-in-autocodeb_load_setsgms-fixed) | Fixed | Blocked every run at model compile on our pinned GAMS. Fixed in `h5_to_gdx.py`. |
 | [`GSw_GrowthAbsCon=1`: final solve year infeasible](#gsw_growthabscon1-makes-the-final-solve-year-infeasible-eq_growthlimit_absolute) | Open — workaround | Last modeled year goes infeasible from a year-gap sign error. Use a sacrificial final year, or the cumulative caps instead. |
 | [`GSw_CEPM_TgCap=1`: Virginia 2029 infeasible](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found) | Open — cause unknown | VA `limitre` dies at 2029 with 1665 infeasible rows. Cap is the trigger; the colliding constraint is not yet identified. Disabling the RPS is **not** expected to help. |
-| [Offshore-wind RPS infeasibility for NY/CT](#offshore-wind-rps-infeasibility-for-nyct-eq_rps_ofswind--fix-reverted-currently-live-again) | Reverted — live again | `GSw_StateRPS` carve-out unsatisfiable when `GSw_OfsWind=0`. Fix was reverted; `file_replacements` no longer works as a workaround. |
-| [H2 infeasibility in DE (2032)](#h2-infeasibility-in-de-2032--unfixed-workaround-not-applied-to-active-case) | Open — untested | Forced H2 production where demand is fixed to zero. Root cause never traced; the `GSw_H2=0` workaround is not applied to the active case. |
-| [`z134` (the default zoneset) doesn't work](#z134-the-default-zoneset-doesnt-work) | Open | Every z134 case dies at `writecapdat.py` for a missing `ba` key. Leaving `GSw_ZoneSet` blank selects z134, so blank is not safe. |
-| [`z90` zoneset missing `hierarchy_from134.csv`](#z90-zoneset-is-missing-a-required-input-file) | Open | z90 is unusable, and including it in a batch blocks the whole batch at switch validation. |
+| [H2 infeasibility with `GSw_H2=2` (unverified)](#possible-h2-infeasibility-with-gsw_h22-in-national-runs-unverified) | Open — untested | A 2026-07 national run went infeasible in DE. Root cause never traced; every CEPM case sets `GSw_H2=0`. |
 | [`cendivweights.csv` domain violation at cendiv borders](#cendivweightscsv-domain-violation-near-census-division-borders-fixed) | Fixed — not on `main` | Sub-national runs near a census-division border fail GAMS compile. Fixed on `dev`; `main` still has it. |
 | [`recf.py` crashes when offshore wind is disabled](#recfpy-crashes-when-offshore-wind-is-disabled-fixed) | Fixed | `GSw_OfsWind=0` left `df_windofs` undefined before a concat. |
 | [Onshore wind supply curve dropped under pandas 3](#onshore-wind-supply-curve-silently-dropped-under-pandas-3-when-a-sibling-curve-is-empty) | Open — fix identified | **Silent.** A landlocked region with `GSw_OfsWind=1` builds zero new onshore wind, with no error. Live upstream too. Four runs affected and still recurring. |
-| [`startyear` must be ≤ 2022 for hydro CF data](#startyear-must-be-old-enough-for-historical-hydro-capacity-factor-data) | Worked around | A later `startyear` empties the historical hydro frame and dies at an unrelated `arange`. Trap is live for any new case. |
-| [`report_dump.py` crashes reading `df_capex_init.csv`](#postprocessing-report_dumppy-crashes-reading-df_capex_initcsv) | Open | Postprocessing ordering bug: the system-cost CSV is never written. Run itself unaffected. |
-| [`reeds_to_rev.py` can't reach supply curves on `nrelnas01`](#reeds_to_revpy-cant-reach-supply-curve-source-files-on-nrelnas01) | Environment | Not a repo bug — check VPN / share access. Breaks the reV handoff and the VRE-sites map overlays. |
+| [`startyear` > 2022 crashes `hydcf.py`](#startyear--2022-crashes-hydcfpy-arange-cannot-compute-length) | Open — fixed in `2026.09.08` | A later `startyear` empties the historical hydro frame and dies at an unrelated `arange`. Resolves at the next sync. |
+| [`report_dump.py` crashes reading `df_capex_init.csv`](#postprocessing-report_dumppy-crashes-reading-df_capex_initcsv) | Open — fixed in `2026.09.08` | Postprocessing ordering bug: the system-cost CSV is never written. Run itself unaffected. |
+| [`report_dump.py` leaves GAMS sets out of `outputs.h5`](#report_dumppy-leaves-gams-sets-out-of-outputsh5-could-not-convert-string-to-float-) | Open — fixed in `2026.09.08` | **Silent.** `read_output()` returns an empty table for sets such as `hierarchy`; read `outputs/<set>.csv`. Solve unaffected. |
 | [`single_case_plots.py` plots fail on reduced-region cases](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases) | Open — partly by design | Several diagnostic maps fail on single-region or reduced-hierarchy runs. Each is caught; core outputs unaffected. |
 | [bokehpivot: every map section fails on an aggregated zoneset](#bokehpivot-html-report-every-map-type-section-fails-on-an-aggregated-zoneset) | Open | No boundary file exists for aggregated zonesets, so all map sections of the HTML report are missing. |
+| [Retail rate module: pandas-3 no-ops](#retail-rate-module-chained-assignments-are-no-ops-under-pandas-3) | Open | Some retail-rate fills and replacements silently do nothing, so retail outputs may be off. Capacity and dispatch unaffected. |
 | [`compare_cases.py` crashes on a shared-prefix glob](#compare_casespy-crashes-when-comparing-cases-via-a-shared-prefix-glob-typeerror-in-parse_caselist-fixed) | Fixed | `TypeError` in `parse_caselist()` blocked the comparison report entirely. |
 | [`compare_cases.py` hardcodes year 2020](#compare_casespy-hardcodes-year-2020-in-several-plots-instead-of-using---startyear-fixed) | Fixed | Five literal `2020`s broke slides for any batch whose years exclude 2020 — i.e. every CEPM case. |
+| [`compare_cases.py` "Flexibly Sited Demand" slide](#compare_casespy-flexibly-sited-demand-slide-calls-the-wrong-module-fixed) | Fixed | Called `add_to_pptx` from the wrong module, dropping the slide. |
 | [`runreeds.py` reports success on failure, hangs on multi-case `-s`](#runreedspy-reports-success-on-a-failed-case-and-hangs-on-a-multi-case--s) | Open — worked around | **Silent.** Exit code 0 despite an aborted solve; interactive prompts hang under a wrapper. Check for `outputs.h5`, not the exit code. |
 | [`z_rep` dominated by the interconnection-queue penalty](#z_rep-is-dominated-by-the-interconnection-queue-penalty-and-does-not-match-systemcostcsv) | Not a bug | `z_rep` is unusable as a cost figure and the penalty does shift buildout. Use `systemcost.csv`. |
+| [Operating reserves effectively off by default](#operating-reserves-are-effectively-off-under-default-switches) | Expected | Reserve constraints have 0 rows under default switches (upstream design with stress periods). |
 | [`reeds2pras` `BoundsError` for `hydud`/`hydund`](#reeds2pras-boundserror-for-hydudhydund-hydro-capacity--no-monthly-profile-data) | Open — non-fatal | Hydro-upgrade categories have no monthly profile data, so PRAS zeroes their contribution. Diagnostic layer only. |
-| [Cosmetic warnings safe to ignore](#cosmetic-warnings-safe-to-ignore) | Informational | Known-harmless warnings from `copy_files.py` and `hourly_repperiods.py`. |
+| [PRAS crashes on single-zone regions](#pras-crashes-on-single-zone-regions-boundserror--0-element-vectorline) | Open | A one-zone region has no lines, so `make_pras_interfaces()` throws after the solve. Use ≥ 2 zones. |
+| [Cosmetic warnings safe to ignore](#cosmetic-warnings-safe-to-ignore) | Informational | Known-harmless warnings from `copy_files.py`, `hourly_repperiods.py`, the VRE-sites maps and bokeh "Firm Capacity". |
 
 ## GAMS 44.4.0 compile failure: `Error 579` in `autocode/b_load_sets.gms` (FIXED)
 
@@ -112,6 +113,10 @@ just never hits the bug because they test on GAMS 49.6.0/51.3.0, both well past
 the 45.6.0 release where GAMS itself patched `$loadDCR`. Since this repo alone is
 pinned to 44.4.0, there's no upstream fix to pull — the incompatibility only
 exists on our GAMS version, and the fix has to live in this fork.
+
+No at `2026.08.03`. Upstream tag `2026.09.08` has its own fix
+(`write_declare_and_load()`); at that sync, confirm it compiles on GAMS 44.4.0,
+then drop our patch and this entry.
 
 ## `GSw_GrowthAbsCon=1` makes the **final** solve year infeasible (`eq_growthlimit_absolute`)
 
@@ -281,191 +286,12 @@ RMI-fork-only additions (see the "Cumulative tech-group investment caps" entry i
 compare against. If the refiner turns out to implicate a stock ReEDS equation rather
 than the cap itself, that part should be re-checked against upstream.
 
-## Offshore-wind RPS infeasibility for NY/CT (`eq_RPS_OFSWind`) — fix reverted, currently live again
+## Possible H2 infeasibility with `GSw_H2=2` in national runs (unverified)
 
-**Symptom:** GAMS solve fails with no feasible/optimal solution; root cause traced
-to `eq_RPS_OFSWind` having a contradictory RHS for CT and NY — a state RPS
-offshore-wind carve-out target that can't be satisfied because those states have
-zero available offshore wind capacity in the run.
-
-**Root cause:** two compounding issues, first hit on the (now-deprecated)
-`USA_gas_mvp` case (`country/USA`, `GSw_StateRPS` active) with `GSw_OfsWind`
-disabled:
-1. The state RPS's offshore-wind carve-out for NY/CT stays active and unmet
-   whenever `GSw_OfsWind=0` zeroes out available offshore capacity everywhere —
-   `GSw_StateRPS` and `GSw_OfsWind` aren't mutually consistent by default.
-2. Separately, `copy_files.py`'s `read_runfiles()` always read the base repo's
-   `reeds/input_processing/runfiles.csv`, never a case-specific override, so the
-   `file_replacements` switch — meant to let a case swap in a custom input file
-   (e.g. a modified banned-tech/policy file to work around #1) — silently did
-   nothing. Attempting to fix the policy contradiction via `file_replacements`
-   wouldn't have worked without also fixing this.
-
-**Impact:** blocked the `v20260717_USA_gas` run outright (no feasible solution).
-
-**Status:** fixed once, then **reverted — currently live again.**
-- Fixed 2026-07-30 in commit `2b95f3d7` ("Bug fix for getting reeds to read the
-  case-specific runfiles.csv thereby allowing easier custom file replacement"):
-  `read_runfiles()` was changed to prefer a `runfiles.csv` colocated with the
-  executing copy of the script, falling back to the base repo copy. The
-  triggering case was also given `GSw_StateRPS=0`/`GSw_OfsWind=0` to remove the
-  policy contradiction directly.
-- Reverted 2026-08-20 in commit `3efc5f9d` ("undo techs_banned and changes to
-  copy_files and runfiles"), part of deprecating that case (renamed
-  `USA_gas_mvp_NOTE-DEPRECATED` in the immediately preceding commit `37405c2e`)
-  and simplifying `copy_files.py`/`techs_banned` handling back toward upstream's
-  format. `read_runfiles()` no longer prefers a case-local `runfiles.csv` — it
-  unconditionally reads the base repo copy again, exactly as before the fix.
-
-**Live risk today:** lower than it looks, but not zero. `file_replacements` is
-`none` for every case in `cases_cepm.csv` right now, and the active
-`USA_optimized_mvp` case runs with `GSw_StateRPS`/`GSw_OfsWind` both at their
-enabled defaults (`1`) — the combination that avoids the contradiction. The
-original trigger (`GSw_OfsWind=0` while `GSw_StateRPS` stays on) was specific to
-the abandoned `USA_gas_mvp` "ban most non-gas builds" scenario design, which
-isn't planned to be revisited — so this specific contradiction is unlikely to
-recur *by accident* under the current case set. It's kept here as a documented
-hazard rather than a live alarm: if `GSw_OfsWind` is ever turned off again for
-any national/NY-CT-inclusive case, for whatever reason, check `GSw_StateRPS`'s
-offshore carve-out first — and note that `file_replacements` isn't currently a
-usable workaround path either way, since `read_runfiles()` no longer honors it.
-
-**Files changed (fix, now reverted):**
-- `reeds/input_processing/copy_files.py` — `read_runfiles()`'s case-local
-  `runfiles.csv` preference (commit `2b95f3d7`), removed by commit `3efc5f9d`.
-- `reeds/input_processing/runfiles.csv`, `cases_cepm.csv`,
-  `inputs/state_policies/techs_banned*.csv` — related file-replacement plumbing
-  for the triggering case, also removed/reverted by `3efc5f9d`.
-
-**Fixed upstream?** N/A for the `read_runfiles()` piece — `file_replacements`
-and the case-local-runfiles mechanism it depends on are RMI-fork-only additions,
-not present upstream. The `GSw_StateRPS`/`GSw_OfsWind` policy-contradiction risk
-itself is a switch-combination hazard, not a code bug, so there's nothing
-upstream to check against either way.
-
-## H2 infeasibility in DE (2032) — unfixed, workaround not applied to active case
-
-**Symptom:** GAMS solve fails with no feasible/optimal solution for a solve year
-(2032 observed). Diagnosis pointed to a contradiction in Delaware: constraints
-force positive hydrogen production (`PRODUCE(H2, electrolyzer, ..., DE, 2032)`)
-while DE's regional hydrogen-demand balance equations are fixed to zero across
-many timeslices for that same year — production is mandated where demand is
-simultaneously forced to zero.
-
-**Root cause:** not actually identified. The investigation in `cepm_errorlog.md`
-got as far as isolating *where* the contradiction shows up (DE, 2032, H2
-production vs. demand balance) but the specific switch/input creating the
-positive lower bound on H2 production was never traced further before the
-workaround (below) was applied instead.
-
-**Impact:** blocked the `v20260730_USA_gas_mvp` run (now the deprecated
-`USA_gas_mvp_NOTE-DEPRECATED` case) at the 2032 solve year.
-
-**Status:** not fixed — worked around, and the workaround isn't in the current
-active case. The response at the time was to turn `GSw_H2` off entirely for that
-run rather than fix the underlying contradiction. That workaround isn't reflected
-in `cases_cepm.csv` today: `GSw_H2` is blank for every CEPM case, including the
-active `USA_optimized_mvp`, so it inherits the repo-wide default `GSw_H2=2`
-(regional H2 with storage — i.e. **on**, the same setting that triggered the
-original infeasibility). `USA_optimized_mvp` also matches the original failure's
-scope and timing exactly: `country/USA` (includes DE) with a `yearset` that
-reaches 2032.
-
-**Live risk today:** genuinely unknown, not just unmitigated. `USA_optimized_mvp`
-as currently configured has the same switch/scope combination that failed before,
-but there's no recent evidence either way — both `v20260818_USA_optimized_mvp`
-and `v20260818_TF_USA_optimized_mvp` failed at input processing on the unrelated
-`startyear=2026` hydro-CF bug (see the entry above) before ever reaching a solve
-year, so neither run tested whether this H2 contradiction still occurs. Unlike
-the offshore-wind RPS entry above, this one's trigger was never actually traced
-to a specific switch, so there's no basis for assuming it's tied to the abandoned
-banned-tech scenario and therefore moot — it could just as easily be a general
-latent issue in any national-scope, `GSw_H2=2`, year-2032 run. Recommended next
-step: fix `USA_optimized_mvp`'s `startyear` first, then either run it through
-2032 as a real test, or set `GSw_H2=0` as a precaution if you'd rather not risk
-the solve failing there before finding out.
-
-**Fixed upstream?** Unknown/not checked — the root cause was never isolated to a
-specific input or code path in the first place, so there's nothing concrete to
-compare against upstream yet. Worth revisiting once the trace is actually done.
-
-## `z134` (the default zoneset) doesn't work
-
-**Symptom:**
-```
-FileNotFoundError: .../inputs_case/inputs.h5 has no 'ba' key and .../inputs_case/ba.csv does not exist
-```
-raised from `writecapdat.py:887` (`reeds.io.read_input(inputs_case, agglevel)`), for
-any `GSw_Region` selection under z134 — including a full national run, since z134 is
-what a case gets whenever `GSw_ZoneSet` is left blank.
-
-**Root cause:** `copy_files.py` writes an `aggreg`-named alias of the region set
-when a zoneset aggregates BAs (e.g. z48/z54/z69/z90/z132), but never writes an
-equivalent `ba`-named alias for z134's un-aggregated case, even though
-`get_agglevel_variables()`/`writecapdat.py` expect a `'ba'`-keyed dataset to exist
-whenever resolution is `'ba'`.
-
-**Impact:** blocks every z134 case at `writecapdat.py`, regardless of region
-selection. **Leaving `GSw_ZoneSet` blank in a new case is not safe** — it silently
-selects z134. Set `GSw_ZoneSet` explicitly to a zoneset other than z134 (e.g. z132)
-until this is fixed.
-
-**Status:** not fixed. Full root-cause writeup and candidate fixes (Issue 3) in
-[SUBNATIONAL_REGION_SUPPORT.md](guidance/SUBNATIONAL_REGION_SUPPORT.md).
-
-**Fixed upstream?** No upstream fix needed — the bug doesn't exist there. The
-`get_agglevel_variables()`/`agglevel_variables` mechanism in `reeds/spatial.py`
-that this bug lives in is entirely absent from ReEDS-Model at tag `2026.08.03`;
-upstream's `writecapdat.py` reads the region set unconditionally via
-`reeds.io.read_input(inputs_case, 'r')`, with no `'ba'`-keyed lookup at all. This
-looks like an RMI-fork-only mechanism (plausibly added to support the
-`mixed`-resolution `PJMcounty`/`UTcounty` zonesets), so there's nothing to pull
-from upstream — the fix has to be made locally.
-
-## `z90` zoneset is missing a required input file
-
-**Symptom:**
-```
-FileNotFoundError: [Errno 2] No such file or directory: inputs/zones/z90/hierarchy_from134.csv
-```
-raised in `check_compatibility()` (`reeds.io.get_hierarchy`), before any case
-directory is even created. Because `runreeds.py` validates every requested case's
-switches up front, including `z90` in a launch batch alongside other cases blocks
-the *entire* batch, not just the z90 case.
-
-**Root cause:** every other zoneset directory (z48, z54, z69, z132, z134) ships
-`hierarchy_from134.csv` alongside `hierarchy.csv`; `inputs/zones/z90/` only has
-`hierarchy.csv`. This is a genuine missing-data gap in the repo's `inputs/zones/z90/`
-directory, not a `copy_files.py` code bug — inherited from upstream, where the same
-file is missing but harmless because upstream no longer reads it at all.
-
-**Impact:** `z90` is entirely unusable in its current state, regardless of
-`GSw_Region` selection (including `country/USA`).
-
-**Status:** not fixed — a genuine data gap, not yet resolved. Candidate fixes
-(reconstruct the file from `county2zone.csv`, or migrate to upstream's
-`assemble_hierarchy()` and drop the `hierarchy_from134.csv` dependency entirely) are
-written up as Issue 2 in
-[SUBNATIONAL_REGION_SUPPORT.md](guidance/SUBNATIONAL_REGION_SUPPORT.md). Workaround: avoid
-`GSw_ZoneSet=z90` for now, and don't batch it alongside other cases you need to run.
-
-**Fixed upstream?** Not directly, but effectively moot there. `hierarchy_from134.csv`
-is missing from `inputs/zones/z90/` at tag `2026.08.03` too — the same underlying
-data gap, not RMI-introduced. But it no longer matters upstream, because upstream's
-`copy_files.py` doesn't read `hierarchy_from134.csv` at all anymore (no hits
-anywhere in the tag's source for that filename) — it assembles the hierarchy via
-`reeds.io.assemble_hierarchy()` instead. Our fork still has a dormant
-`## TEMPORARY 20260402` TODO in `copy_files.py` marking this exact migration as
-not yet done; doing it would close this gap (and Issue 3/z134 above) at the root
-instead of patching each symptom.
-
-**Also affects `MultiMetricRA`** (the test case restored into `cases_test.csv` from
-upstream's `2026.08.03` release as part of the August 2026 sync — see
-`reeds-to-cepm-log.md`'s "Custom test-case reconciliation" entry): its `GSw_ZoneSet`
-cell is blank in upstream's own file too, which falls through to `cases.csv`'s
-file-level default — `z90`. So `MultiMetricRA` will hit this exact gap and fail to
-launch until this is fixed, the same as it would on a fresh upstream checkout. Not
-something introduced by the sync; flagging so it isn't mistaken for a new bug.
+A 2026-07 `country/USA` run with `GSw_H2=2` went infeasible in 2032: electrolyzer
+`PRODUCE` was forced positive in DE while DE's H2 demand balance was fixed to
+zero. The root cause was never traced. Every `cases_cepm.csv` case now sets
+`GSw_H2=0`; check this first if H2 is turned back on for a national run.
 
 ## `cendivweights.csv` domain violation near census-division borders (FIXED)
 
@@ -498,8 +324,9 @@ well clear of a cendiv boundary.
 site — `dfgroups` is now restricted to `val_cendiv` (the run's own `cendiv` set)
 before computing weights. Committed in `4e943cdc` and present on `dev` and the
 `mvp/*` branches, but **not yet on `main`** — a checkout of `main` still has the
-bug. Full writeup as Issue 5 in
-[SUBNATIONAL_REGION_SUPPORT.md](guidance/SUBNATIONAL_REGION_SUPPORT.md).
+bug. Also tracked in [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md)'s
+["Resolving census divisions in fuelcostprep.py"](reeds-to-cepm-log.md#resolving-census-divisions-in-fuelcostpreppy)
+section.
 
 **Files changed:**
 - `reeds/input_processing/fuelcostprep.py` — the `cendivweights = smear(...)` call
@@ -718,80 +545,22 @@ wind zones incompatible with custom regions") is about prescribed offshore build
 `GSw_OffshoreZones=1`, and #28 is an offshore-zone TODO list. Strong candidate to report
 and contribute back — it is a one-line dtype correction that is a no-op under pandas 2.
 
-## `startyear` must be old enough for historical hydro capacity factor data
+## `startyear` > 2022 crashes `hydcf.py` (`arange: cannot compute length`)
 
-**Symptom:** confirmed live traceback, from `runs/v20260818_USA_optimized_mvp/gamslog.txt`
-and `runs/v20260818_TF_USA_optimized_mvp/gamslog.txt` (both 2026-08-18/19), which
-failed identically at `hydcf.py`, right after `copy_files.py`, before ever reaching
-model compile or solve:
-```
-hydcf.py | ... | ERROR | + np.arange(data_endyear+1, model_endyear+1).tolist()
-hydcf.py | ... | ERROR | ValueError
-hydcf.py | ... | ERROR | : arange: cannot compute length
-```
-at `assemble_hydcf()` (`hydcf.py:397`).
+**Symptom:** `ValueError: arange: cannot compute length` in `hydcf.py`'s
+`assemble_hydcf()`, right after `copy_files.py`, before model compile.
 
-**Root cause:** `calculate_historical_monthly_regional_cf()` filters the
-EIA-plant-generation-derived historical hydro CF data down to
-`t >= startyear` (`hydcf.py:166-169`). Historical generation data only exists up
-through some past year; if `startyear` is set later than that, the filter empties
-out the historical CF dataframe entirely. Downstream in `assemble_hydcf()`,
-`data_endyear = hydcf.index.max()` on that now-empty frame returns `NaN` (pandas
-doesn't raise on `.max()` of an empty numeric index), and
-`np.arange(data_endyear+1, model_endyear+1)` then raises `ValueError` because one
-bound is `NaN` — this `arange` crash is the concrete failure mode of the same
-empty-historical-data condition described generically below.
+**Root cause:** `calculate_historical_monthly_regional_cf()` keeps only
+`t >= startyear`, but the historical hydro data (`net_gen_existing_hydro.csv`,
+`cap_existing_hydro.csv`) covers 2007–2022. A later `startyear` empties the frame,
+`data_endyear` becomes `NaN`, and `np.arange` fails.
 
-Confirmed in `switches.csv` for the failed runs (`startyear=2026`,
-`endyear=2032`, `GSw_Region=country/USA`, `GSw_ZoneSet=z48`), and at the time in
-`cases_cepm.csv`, whose `startyear` row carried an explicit `2026` in the
-`USA_optimized_mvp` column. `hydcf.py` has not changed since those runs (`diff`
-against the run's own copied `hydcf.py` is empty), so the case would have failed
-the same way on any re-run. This was the same defect already fixed for
-`USA_gas_mvp` in commit `fd6fb46a` ("Corrected cases_cepm -- note that startyear
-has to be 2010 or hydro capacity factor breaks"); that fix had never been applied
-to `USA_optimized_mvp`'s own column.
+**Status:** not fixed. Leave `startyear` at the 2010 default. Other `startyear`
+traps: [interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
+§5.3.
 
-**~~Open question~~ — ANSWERED 2026-09-03: the cutoff is 2022.** The historical
-hydro data bundled in this repo covers **2007-2022**, confirmed directly on both
-files `hydcf.py` reads, as staged into `runs/v20260902t7_WECC-SW_baseline`:
-
-```
-inputs_case/net_gen_existing_hydro.csv   min t 2007, max t 2022
-inputs_case/cap_existing_hydro.csv       min t 2007, max t 2022
-```
-
-So `startyear` **must be ≤ 2022**; at 2023 or later the `t >= startyear` filter
-empties the frame and the `arange` crash above is guaranteed.
-
-Note the practical limit is lower than the hard one: at `startyear = 2022`
-exactly one year of data survives, so hydro capacity factors would be derived
-from a single year rather than sixteen — no crash, but a silent quality loss.
-And `startyear` is not a free knob for other reasons either — it also redraws the
-existing-vs-prescribed capacity boundary in `writecapdat.py`, so two runs with
-different `startyear` values are not comparable on new-capacity metrics. See
-[interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
-§5.3 for the full set of traps, and for why adding an early *solve year* is the
-better lever when the goal is to spread out prescribed builds.
-
-**Status: worked around, 2026-09-04.** `cases_cepm.csv`'s `startyear` value for
-`USA_optimized_mvp` is now blank, so the case inherits the repo default of `2010`
-— the same fix already applied to `USA_gas_mvp`. That unblocks input processing;
-it does not fix the underlying script, which still empties the frame silently and
-then dies at an unrelated `arange` rather than saying what went wrong. Keep this
-entry: the trap is live for any new case that sets `startyear` past 2022.
-
-`USA_optimized_mvp` has not been re-run since the change, so whether the
-offshore-wind RPS and DE/H2 issues below still reproduce remains untested — the
-`startyear` failure had been masking both.
-
-**Fixed upstream?** No — same latent bug. `reeds/input_processing/hydcf.py` at tag
-`2026.08.03` has the identical `t >= startyear` filter and the identical
-`historical_endyear = historical_monthly_regional_cf.index.get_level_values('t').max()`
-in `assemble_hydcf()`. (Upstream's `hydcf.py` has otherwise diverged well past our
-fork's version — it adds an entire hydropower climate-adjustment layer ours
-doesn't have yet — but that addition doesn't touch this filter.) Inherited, not
-RMI-introduced; not something upstream has addressed.
+**Fixed upstream?** No at `2026.08.03`; fixed in `2026.09.08` — resolves at the
+next sync.
 
 ## Postprocessing: `report_dump.py` crashes reading `df_capex_init.csv`
 
@@ -818,47 +587,31 @@ plotting) still runs — this doesn't stop the run overall.
 `retail_rate_calculations.py` before `report_dump.py`, or have `report_dump.py`
 generate/depend on `df_capex_init.csv` itself) — not yet implemented.
 
-**Fixed upstream?** No. `runreeds.py` at tag `2026.08.03` calls `report_dump.py`
-before `retail_rate_calculations.py` in the identical order, and `reeds/results.py`'s
-`calc_systemcost()` reads `df_capex_init.csv` via the same plain
-`pd.read_csv(os.path.join(inputs_case, 'df_capex_init.csv'))` — upstream would hit
-the identical `FileNotFoundError` under the same conditions. (Upstream's `main`
-branch, past this tag, has since refactored that read to go through
-`reeds.io.read_input(case, 'df_capex_init')`, but that only changes the error
-message shape — the fallback path still looks for a CSV that hasn't been written
-yet, so the underlying ordering dependency remains unresolved even there.)
+**Fixed upstream?** No at `2026.08.03`; fixed in `2026.09.08` (`1b3bba93`:
+`calculate_historical_capex` moved into `report_dump.py`) — resolves at the next
+sync.
 
-## `reeds_to_rev.py` can't reach supply curve source files on `\\nrelnas01`
+## `report_dump.py` leaves GAMS sets out of `outputs.h5` (`could not convert string to float: ''`)
 
-**Symptom:**
-```
-***Error reading //nrelnas01\ReEDS\Supply_Curve_Data\...\results\..._supply_curve_raw.csv...
-FileNotFoundError: [Errno 2] No such file or directory: '...'
-```
-for one or more of wind-ons, UPV, GeoHydro (any tech whose raw supply curve lives on
-that network share).
+**Symptom:** one caught traceback per set (`r`, `hierarchy`, `valcap_i`, `cendiv`,
+`e`, `fuel2tech`, `h_szn`, `szn_stress_t`, `v`) from `reeds/io.py`'s
+`write_output_to_h5`:
+`ValueError: could not convert string to float: '': Error while type casting for column 'Value'`.
+The run continues.
 
-**Root cause:** not a code bug — the network share path is unreachable or the file
-isn't present there from this machine (VPN not connected, drive not mapped, or the
-configured path is stale). Confirm by checking whether `\\nrelnas01\ReEDS\...` is
-browsable at all from the machine running the case.
+**Root cause:** gdxpds 4.0 returns a set's `Value` as `''` instead of
+`ctypes.c_bool`, so the drop-`Value` check misses it. Introduced by the August
+2026 sync.
 
-**Impact:** built capacity for the affected tech(s) can't be disaggregated for the
-reV handoff step, so those reV output files aren't produced. The core ReEDS solve
-outputs are unaffected — this only breaks the reV/site-level disaggregation output.
-This also cascades into `single_case_plots.py`: without the reV handoff,
-`outputs/df_sc_out_{upv,wind-ons,wind-ofs}_reduced.csv` never get written, so the
-supply-curve overlay on the VRE-sites maps (`map_VREsites-*`) fails with
-`FileNotFoundError` for each missing tech (each caught individually — the run and
-the rest of `single_case_plots.py` continue). Confirmed in
-`runs/20260821_USA_fasterish/gamslog.txt`.
+**Impact:** solve results are unaffected. The sets are only in
+`outputs/<set>.csv` (kept at CEPM's `cleanup_level=0`). The trap is silent:
+`reeds.io.read_output(case, '<set>')` returns an **empty** table instead of
+raising, so read the CSV instead.
 
-**Status:** environment issue, not a repo bug. Verify network/VPN access to
-`nrelnas01` before assuming this is a code problem.
+**Status:** not fixed.
 
-**Fixed upstream?** N/A — this isn't a code bug to begin with, just local
-network/VPN access to an RMI-internal share. Not something upstream code
-addresses either way.
+**Fixed upstream?** No at `2026.08.03`; fixed in `2026.09.08` (`038dd8ed`) —
+resolves at the next sync.
 
 ## `single_case_plots.py` diagnostic plots fail on single-region / reduced-hierarchy cases
 
@@ -867,8 +620,11 @@ traceback, during the final plotting stage — each is caught individually, so t
 completes and later plots still generate:
 - `map_translines_all`, `map_translines_vsc`, `map_net_imports`, `plot_max_imports` —
   `ValueError`/`IndexError` from empty-array or scalar-mismatch assumptions.
-- `plot_interreg_transfer_ratio`, `plot_interface_flows` — explicit
-  `NotImplementedError` ("only one region modeled" / "no interfaces to plot").
+- `plot_interreg_transfer_ratio`, `plot_interface_flows` — explicit guards
+  (expected).
+- `validate_regional_capacity` — `TypeError: cannot unpack non-iterable int object`.
+- `plot_neue_bylevel` — `ValueError: No objects to concatenate` (no PRAS outputs
+  to plot).
 - `plot_capacity_offline` — `KeyError` for a region name not present in the run's
   region set (e.g. `'AZ'`; also seen as `'CA'` on a `country/USA`/`z54` run — not
   single-region-specific, just needs the missing region to be absent from whatever
@@ -878,6 +634,10 @@ completes and later plots still generate:
 - `map_prm` — `TypeError: 'Axes' object is not subscriptable`, from
   `reedsplots.py`'s `map_prm()` indexing a `plt.subplots()` result that's a bare
   `Axes` (not an array) when only one year is being plotted.
+
+The same single-region runs also log `KeyError: 'res_marg_ann_flow'` from
+`retail_rate_calculations.py:111` (no inter-region flows to read) — not a
+`single_case_plots.py` failure, but the same missing-structure pattern.
 
 **Root cause:** these plotting functions assume the full national, multi-region,
 multi-year model structure (inter-regional transmission, multiple hierarchy levels,
@@ -890,9 +650,7 @@ unguarded code bugs that happen to only trigger in this configuration (`map_prm`
 **Impact:** the corresponding diagnostic maps/plots are missing from the run's
 `outputs` folder. Core solve outputs and CSV results are unaffected.
 
-**Status:** known, not fixed. See [SUBNATIONAL_REGION_SUPPORT.md](guidance/SUBNATIONAL_REGION_SUPPORT.md)
-for the broader audit of sub-national/reduced-region behavior in this repo,
-including a related single-year plotting NaN in `plot_stress_mix`.
+**Status:** known, not fixed.
 
 **Fixed upstream?** Mixed, checked individually against `reeds/reedsplots.py` at
 tag `2026.08.03`:
@@ -911,11 +669,7 @@ tag `2026.08.03`:
   live as `KeyError: 'CA'` in `runs/20260821_USA_fasterish/gamslog.txt` (a
   `country/USA`/`z54` run) — different region than the original `'AZ'` case,
   confirming it's this systemic region-list/column-set mismatch, not one bad
-  literal. `reedsplots.py`'s temperature/region-aggregation code has been
-  substantially rewritten between tag `2026.08.03` and our fork (different
-  intermediate variables, different level-mapping logic), so it's unconfirmed
-  whether upstream's version hits the identical failure, but the same underlying
-  pattern exists in both versions' structure. Fix would be intersecting `regions`
+  literal. Same code at `2026.08.03`. Fix would be intersecting `regions`
   with `capacity_offline.columns` before the plot loop; not yet implemented.
 - `map_translines_all`, `map_translines_vsc`, `map_net_imports`, `plot_max_imports`
   weren't individually diffed against the tag — unconfirmed either way.
@@ -928,17 +682,18 @@ Canadian Import/Pumped-hydro/Battery Storage Capacity (GW)", "Final Regional Ene
 Price ($/MWh)", etc. — is silently missing, each logged in `report.log` as
 `***Error in section N...` followed by:
 ```
-File ".../postprocessing/bokehpivot/core.py", line 1812, in create_map
+File ".../postprocessing/bokehpivot/core.py", line ..., in create_map
     height=int(height),
 ValueError: cannot convert float NaN to integer
 ```
-Non-map chart types (national bar/line totals) for the same underlying data render
+Post-sync runs also log `***Error, your y-axis is a string.` for some of the same
+sections (e.g. 39/40). Non-map chart types (national bar/line totals) for the same underlying data render
 fine — e.g. "Capacity (GW)" (national) succeeds while "Final Wind Capacity (GW)"
 (map) fails immediately after it. Confirmed in
 `runs/20260821_USA_fasterish/outputs/reeds-report/report.log` (sections 24, 36, 37,
 39–44), a `country/USA`/`z54`/`GSw_RegionResolution=aggreg` run.
 
-**Root cause:** `create_maps()` (`postprocessing/bokehpivot/core.py:1667-1680`) reads
+**Root cause:** `create_maps()` (`postprocessing/bokehpivot/core.py`) reads
 region boundary polygons from `postprocessing/bokehpivot/in/gis_rb.csv` — keyed to
 raw, un-aggregated BA IDs (`p1`, `p2`, ...) — then filters it to
 `region_boundaries['id'].isin(full_rgs)`, where `full_rgs` are the region labels
@@ -947,13 +702,9 @@ actually present in this run's output data. Under an aggregated zoneset
 labels are the zoneset's own aggregated zone names, not `p1`...`p134` — none of
 them match anything in `gis_rb.csv`, so the filter empties `region_boundaries`.
 `.max()`/`.min()` on the empty frame return `NaN`, which propagates through
-`aspect_ratio = (y_max-y_min)/(x_max-x_min)` into `height=int(height)` at
-`core.py:1812`, raising. Only `gis_rb.csv` (raw BA) and `gis_st.csv` (state) exist
+`aspect_ratio = (y_max-y_min)/(x_max-x_min)` into `height=int(height)` in
+`create_map()`, raising. Only `gis_rb.csv` (raw BA) and `gis_st.csv` (state) exist
 in `postprocessing/bokehpivot/in/` — no boundary file for any aggregated zoneset.
-Same underlying family as the aggregated-zoneset assumptions audited in
-[SUBNATIONAL_REGION_SUPPORT.md](guidance/SUBNATIONAL_REGION_SUPPORT.md) (e.g. the
-z134 `'ba'`-key bug above), but this specific bokehpivot map failure isn't covered
-there yet.
 
 **Impact:** every map-type section of the bokeh HTML/Excel report is missing for
 any aggregated-zoneset run — not just z54. Non-map (bar/line/national) sections in
@@ -967,7 +718,27 @@ zoneset's BA-to-zone membership), or have `create_maps()`/`create_map()` detect 
 empty `region_boundaries` after filtering and skip the map with a logged message
 instead of crashing on `NaN`.
 
-**Fixed upstream?** Not checked yet.
+**Fixed upstream?** No — bokehpivot is identical at `2026.08.03`.
+
+## Retail rate module: chained assignments are no-ops under pandas 3
+
+**Symptom:** `ChainedAssignmentError: A value is being set on a copy of a
+DataFrame or Series through chained assignment` (logged at ERROR level,
+non-fatal).
+
+**Root cause:** pandas 3 copy-on-write, introduced by the August 2026 sync.
+`df[col].fillna(..., inplace=True)` in `retail_rate_calculations.py` and two
+assignments in `ferc_distadmin.py` never update the original: eval/depreciation
+periods stay NaN, DC isn't mapped to MD, and negative extrapolation indices
+aren't clamped.
+
+**Impact:** retail-rate outputs may be off. Capacity and dispatch results are
+unaffected, and CEPM doesn't currently use the retail-rate postprocessor.
+
+**Status:** not fixed.
+
+**Fixed upstream?** No at `2026.08.03` or `2026.09.08`; fixed on `upstream/main`
+(`17054ae5`).
 
 ## `compare_cases.py` crashes when comparing cases via a shared-prefix glob (`TypeError` in `parse_caselist`) (FIXED)
 
@@ -1011,10 +782,33 @@ from `reeds/reedsplots.py`'s `plot_trans_diff()` (`tran_out[case].pivot(...)[sub
 
 **Fixed upstream?** No. `postprocessing/compare_cases.py` at tag `2026.08.03` has identical hardcoded `2020` literals at all five sites — same bug, inherited, not RMI-introduced. Doesn't surface upstream by default because upstream's own default `--startyear` is also 2020, so it only breaks for a start year other than 2020 — which is what every CEPM case uses.
 
+## `compare_cases.py` "Flexibly Sited Demand" slide calls the wrong module (FIXED)
+
+**Symptom:** the "Flexibly Sited Demand" slide is missing from the comparison
+`.pptx` for case pairs with load-site (data-center) demand enabled, with:
+```
+AttributeError: module 'reeds.results' has no attribute 'add_to_pptx'
+```
+Caught by the script's per-section `try`/`except`, so only that slide is dropped.
+
+**Root cause:** a typo in that one call site. `add_to_pptx` is defined only in
+`reeds/report_utils.py`, and every other slide already calls
+`reeds.report_utils.add_to_pptx(...)`.
+
+**Status:** fixed. See [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md).
+
+**Files changed:**
+- `postprocessing/compare_cases.py` — the slide's `reeds.results.add_to_pptx(...)`
+  call changed to `reeds.report_utils.add_to_pptx(...)`.
+
+**Fixed upstream?** No — `postprocessing/compare_cases.py` still calls
+`reeds.results.add_to_pptx` at `2026.08.03` and `2026.09.08`. Inherited (present
+since upstream's `2026.04.15` tag), not RMI-introduced.
+
 ## `runreeds.py` reports success on a failed case, and hangs on a multi-case `-s`
 
-Two separate behaviors, both of which break unattended/batch automation rather
-than any single run. Grouped because anyone scripting `runreeds.py` hits both.
+Three separate behaviors, all of which break unattended/batch automation rather
+than any single run. Grouped because anyone scripting `runreeds.py` hits them.
 
 **Symptom 1 — silent failure.** A case's solve aborts (infeasible year, GAMS
 `abort`, `3_solve_oneyear.gms` returning 3), yet `runreeds.py` prints
@@ -1027,25 +821,20 @@ guardrail (`runs/v20260902t5b_WECC-SW_limitre`).
 **Symptom 2 — interactive hang on the worker count.** With more than one case
 requested, `runreeds.py` calls
 `WORKERS = int(input('Number of simultaneous runs [positive integer]: '))`
-(`runreeds.py:987`) unless `--simult_runs`/`-r` was given. A single case
-short-circuits to `WORKERS = 1` with no prompt (`runreeds.py:979-981`), so this
+unless `--simult_runs`/`-r` was given. A single case
+short-circuits to `WORKERS = 1` with no prompt, so this
 only appears once a batch has two or more — where it blocks forever in a
 background, CI, or non-interactive shell with no visible prompt.
 
-**Symptom 3 — interactive hang on `cleanup_level`.** `runreeds.py:959-967`
+**Symptom 3 — interactive hang on `cleanup_level`.** `runreeds.py`
 prints an R2X warning and blocks on `input('\nProceed? y/[n]: ')` — defaulting
-to `n`, which `quit()`s — whenever **any** case has `cleanup_level >= 1` and
-`--skip_checks`/`-f` was not passed. Two details make this nastier than it
-looks: it fires at launch, before any run starts; and with `-s/--single` the
-ignored cases are **not** dropped from `df_cases` first
-(`runreeds.py:899-905`), so the check scans *every* column in the cases file,
-not just the ones being run. A single `cleanup_level=2` on an unrelated,
-ignored case therefore kills an otherwise valid batch. Note this is the
+to `n`, which `quit()`s — whenever **any** case being run has
+`cleanup_level >= 1` and `--skip_checks`/`-f` was not passed. Note this is the
 *launch-time* check only — the per-case cleanup that `runreeds.py` schedules at
 the end of a run passes `--force --quiet`, so `cleanup_files.py`'s own
 confirmation prompt never fires.
 
-**Root cause:** neither is a bug exactly — `runreeds.py` was written for
+**Root cause:** none is a bug exactly — `runreeds.py` was written for
 interactive use, where a failed case is visible in its own console window and a
 prompt is answerable. Both assumptions break under a wrapper.
 
@@ -1118,6 +907,23 @@ and the `report.gms` reconciliation are byte-identical at `upstream/main`
 (`1f73bd23`). The collision is specific to CEPM's short horizon and wide
 `startyear`→first-solve-year gap, which upstream's 2010-2050 runs do not have.
 
+## Operating reserves are effectively off under default switches
+
+**Symptom:** none at solve time. `eq_OpRes_requirement` and `eq_ORCap_*` have 0
+rows in every solve `.lst`, and `inputs_case/rep/opres_periods.csv` is
+header-only. The bokeh "Final OpRes by timeslice" section fails with
+`IndexError: list index out of range`.
+
+**Root cause:** `GSw_OpResPeriods=peakload` (the default) applies reserves only in
+peak-load periods, which exist only when `GSw_PRM_CapCredit=1`. Under the default
+stress-period method there are none. Upstream's model documentation: "operating
+reserves are typically turned off when using the stress periods formulation."
+
+**Status:** expected; CEPM keeps the defaults. To enforce reserves, set
+`GSw_OpResPeriods=representative`.
+
+**Fixed upstream?** N/A — same defaults at `2026.08.03` and `2026.09.08`.
+
 ## `reeds2pras` `BoundsError` for `hydud`/`hydund` hydro capacity — no monthly profile data
 
 **Symptom:** caught, non-fatal Julia errors during a solve year's `ReEDS2PRAS` step (visible in `gamslog.txt`, not `report.log`):
@@ -1129,13 +935,31 @@ repeated once per month for every affected (zone, tech) pair — e.g. 72 lines t
 
 **Root cause:** `process_hydro()` (`reeds/resource_adequacy/reeds2pras/src/utils/reeds_data_parsing.jl:485`) only runs this code path when `pras_hydro_energylim=1` — `cases.csv`'s own default, so this is the normal path for essentially every case, not an edge case. For each dispatchable-hydro (zone, tech) pair it has exogenous capacity for, it filters `hydcf.csv` (monthly hydro capacity factor) and `hydcapadj.csv` (monthly capacity adjustment) by month and indexes the first match with `[1]`. `hydud`/`hydund` (hydro-upgrade capacity categories, tied to `GSw_HydroCapEnerUpgradeType`/`hyd_add_upg_cap.csv`) have exogenous MW capacity in the run but **zero rows in `hydcf.csv`/`hydcapadj.csv` for any region** — confirmed directly against `inputs_case/hydcf.csv` and `inputs_case/hydcapadj.csv` in an affected run. The filter comes back empty, and indexing `[1]` throws `BoundsError`.
 
-Non-fatal by design, not by accident: `git blame` traces a small RMI patch to this exact function (`43bac52c`, "reeds_data_parsing.jl: more informative error"). Upstream's own original code already special-cased `BoundsError` here as an expected, tolerated failure (catch it and `@error`-log, but re-raise anything else) — RMI's patch just made every exception log the same way instead of singling out `BoundsError`. So this failure mode was anticipated by ReEDS's own maintainers before RMI ever touched the file; RMI's patch changed how it's logged, not whether it's tolerated.
+Non-fatal: `process_hydro()` wraps this in `catch e; @error ...` (upstream code,
+unchanged at `2026.08.03`).
 
 **Impact:** confined to the resource-adequacy diagnostic layer, not the GAMS capacity-expansion solve. All 12 months fail for each affected pair, so `monthly_energy`/`dispatch_limit`/`energy_cap`/`inflow`/`grid_inj_cap` for that hydro-upgrade unit stay at their pre-allocated `zeros()` for the entire year in PRAS's Monte Carlo simulation, instead of a real profile — a conservative understatement, not an overstatement, of that unit's reliability contribution. Doesn't touch investment, generation, system cost, or prices, which come from the GAMS LP and solve independently of this post-solve PRAS step. Confined to whichever zones actually carry `hydud`/`hydund` exogenous capacity (`p1`, `p2`, `p5`, `p6`, `p9` on the `cendiv/Pacific` case tested) — a case with no hydro-upgrade capacity never reaches this filter at all, which is presumably why it wasn't caught sooner.
 
-**Status:** not fixed — confirmed pre-existing, not sync-introduced: reproduces identically (same 6 pairs, same 72-line count) on the pre-`2026.08.03`-sync baseline (`ad0f56b0`). Undocumented until now. No known upstream issue or PR tracking it. Candidate fix: populate `hydcf.csv`/`hydcapadj.csv` for `hydud`/`hydund` from whatever process derives their exogenous capacity in the first place, or give `process_hydro()` an explicit fallback profile for hydro-upgrade categories instead of relying on the catch to zero them out silently.
+**Status:** not fixed. No known upstream issue or PR tracking it. Candidate fix: populate `hydcf.csv`/`hydcapadj.csv` for `hydud`/`hydund` from whatever process derives their exogenous capacity in the first place, or give `process_hydro()` an explicit fallback profile for hydro-upgrade categories instead of relying on the catch to zero them out silently.
 
-**Fixed upstream?** No. `reeds/resource_adequacy/reeds2pras/src/utils/reeds_data_parsing.jl` at tag `2026.08.03` has the same empty-filter code path (upstream's own version, pre-`43bac52c`, still narrows the catch to `BoundsError` specifically — meaning upstream already knows to expect exactly this failure). Not RMI-introduced.
+**Fixed upstream?** No — identical at `2026.08.03`.
+
+## PRAS crashes on single-zone regions (`BoundsError ... 0-element Vector{...Line}`)
+
+**Symptom:** after a successful LP solve, `run_pras.jl returned code 1` with
+`BoundsError: attempt to access 0-element Vector{Main.ReEDS2PRAS.Line} at index [1]`.
+
+**Root cause:** a region with one zone has no lines, but
+`make_pras_interfaces()` (`reeds2pras/src/models/utils.jl`) reads
+`first(sorted_lines).timesteps`.
+
+**Status:** not fixed. Workaround: pick a region with at least 2 zones. Fix
+candidate: pass `timesteps` (already a `create_pras_system()` argument) through
+both `make_pras_interfaces` methods instead of reading it from a line — a clean
+PR to upstream.
+
+**Fixed upstream?** No — identical at `2026.08.03`. Not in upstream's issue
+tracker. Inherited, not RMI-introduced.
 
 ## Cosmetic warnings safe to ignore
 
@@ -1146,6 +970,15 @@ Non-fatal by design, not by accident: `git blame` traces a small RMI patch to th
   `IndexError: index 0 is out of bounds for axis 0 with size 0`. Happens when a
   representative-period map has nothing to plot for the run's region set (e.g. a
   reduced-region case). Diagnostic image only; doesn't affect model results.
+- **`single_case_plots.py`** `map_VREsites-*` — `FileNotFoundError` on
+  `outputs/df_sc_out_{upv,wind-ons,wind-ofs}_reduced.csv`. Expected with
+  `reeds_to_rev=0` (every CEPM case), since that step writes these files; its
+  source supply-curve data is on NREL's `\\nrelnas01` share. Only the supply-curve
+  overlay maps are skipped.
+- **bokehpivot "Firm Capacity (GW)"** — `TypeError: '<' not supported between
+  instances of 'str' and 'float'`. `cap_firm` is empty when `GSw_PRM_CapCredit=0`,
+  and pandas 3 no longer tolerates the resulting mixed dtypes. No effect on
+  results.
 
 ## Related documents
 
@@ -1163,11 +996,6 @@ Non-fatal by design, not by accident: `git blame` traces a small RMI patch to th
   ceiling.
 - [interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
   — how the interconnection-queue ceiling and the prescribed-build floor are
-  sourced, wired and enforced, and why they collide in 2026. Covers the two
-  entries above on the queue penalty and on `startyear`, plus the 2032 blind spot
+  sourced, wired and enforced, and why they collide in 2026. Covers the
+  `startyear` and `z_rep` entries above, plus the 2032 blind spot
   (queue data ends in 2030, so the final CEPM year is interconnection-unconstrained).
-- [SUBNATIONAL_REGION_SUPPORT.md](guidance/SUBNATIONAL_REGION_SUPPORT.md) — audit of
-  `GSw_ZoneSet`/`GSw_Region` combinations, covering several zoneset-specific
-  failures (`techs_banned.csv` region matching, missing `hierarchy_from134.csv` for
-  z90, `writecapdat.py`'s missing `'ba'` key for z134, PRAS crashing on single-zone
-  regions, `cendivweights.csv` domain violations near census-division borders).
