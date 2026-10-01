@@ -17,7 +17,7 @@ was run and what it showed.
 Loosely inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## TEMPLATE Batch entry
-
+**## Author: Tyler Fitch`**
 **## Batch name: TEMPLATE `{Batch name here, e.g., v20260903}`**
 
 Summary: What'd we change, why, what'd we find, what's next
@@ -57,7 +57,56 @@ Summary: What'd we change, why, what'd we find, what's next
 - [ ] I edited LLM-generated text to keep this entry short and to the point
 
 ---
+##Batch entry
+**## Author: Gaby**
+**## Batch name: v20261001gt`**
 
+Summary:  Re-ran the st-AZNM baseline, limit-RE, and optimized cases to test a fix for a pandas 3.x issue that caused ReEDS to drop buildable onshore wind in landlocked regions. The fix ensures wind supply-curve bins retain the correct data type, preventing onshore wind from being removed during input processing. The corrected runs successfully restored onshore wind as a build option.
+
+### Batch details
+
+- **Built from:** 20260925-test
+- **Space and Time:** st/AZ.NM, 2026–2032 every 3 years
+- **Cases:** st-AZNM_baseline, st-AZNM_limitre, st-AZNM_optimized
+- **Run comments:** Successful run of all three cases on fix/wind-rsc-pandas3.
+
+### Change log
+
+- **ReEDS change:** Changed reeds/input_processing/writesupplycurves.py in agg_supplycurve() so an empty supply curve's bin column is explicitly assigned int64 rather than being created from a bare [].
+- **Reason for change:** Under pandas 3.x, an empty offshore-wind supply curve could cause the populated onshore-wind bin values to be upcast from integers to floats during pd.concat. This changed labels such as wsc1 to wsc1.0, causing ReEDS to silently drop the onshore-wind cap and cost rows. This was occurring for st/AZ.NM because the region has no offshore-wind resource while GSw_OfsWind=1.
+- **Case change :No substantive case-setting changes; this batch re-runs the existing AZNM baseline, limit-RE, and optimized cases with the wind supply-curve fix.
+
+### Results
+All three cases completed successfully.
+
+Compare-cases output:
+runs/v20261001gt_st-AZNM_baseline/outputs/comparisons/
+
+Onshore wind returned as a build option after the fix. Before the fix, all three AZNM cases remained at roughly 0.7 GW of existing onshore wind through 2032, with effectively no new wind builds.
+
+After the fix, substantial new onshore wind is built. By 2032, onshore wind capacity increases to roughly 11 GW in the baseline, 12 GW in limit-RE, and 20 GW in the optimized case.
+
+The effect is largest in the optimized case, where restoring the wind supply curve results in roughly 19 GW of additional onshore wind capacity by 2032 relative to the broken run.
+
+The corrected wind availability also changes the broader capacity mix, confirming that the pandas 3.x supply-curve bug was materially affecting the model's resource-selection results.
+
+### Documentation, decisions, next steps, & issues
+
+- **PROPOSED DECISION:** Merge fix into dev
+- **DOCUMENTATION:** The pandas 3.x wind supply-curve issue and fix are documented in CEPM/known-reeds-issues.md and CEPM/reeds-to-cepm-log.md.
+- **NEXT STEP:** Merge fix into dev
+- **ISSUE:** The underlying bug also exists upstream and can affect other landlocked regions when offshore wind is enabled but the offshore supply curve is empty.
+
+### Checklist
+
+- [X] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
+- [X] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
+- [X] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
+- [X] I moved batch results to the VM-Outputs folder
+- [X] I added any issues we found to the JIRA issues epic
+- [X] I edited LLM-generated text to keep this entry short and to the point
+
+---
 ## Batch name: `v20260903qoff` / `v20260903h2off` / `v20260903h2qoff`
 
 These three batches explore the impacts of the interconnection queue penalty
