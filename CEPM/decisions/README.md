@@ -17,10 +17,10 @@ Use numeric prefixes so records stay in chronological order:
 
 ## Process
 
-1. Copy `0000-decision-template.md` to a new file with the next number.
+1. Copy `202XXXXX-decision-template.md` to a new file with date and title.
 2. Fill in all relevant sections.
-3. Where appropriate Open a pull request with the ADR and any related implementation changes.
-4. If the decision changes later, add a new ADR instead of rewriting history.
+3. Link the decision in the batch-log entry.
+4. If the decision changes later, add a new decision record instead of rewriting history.
 
 ## Status values
 
@@ -28,7 +28,6 @@ Common status values:
 
 - Proposed
 - Accepted
-- Superseded
 - Deprecated
 
 ## Relationship to changelog

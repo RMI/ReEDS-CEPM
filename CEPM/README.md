@@ -54,6 +54,8 @@ investigations at the end.
 
 | File | Summary |
 |---|---|
+| [`guidance/running-test-scenarios.md`](guidance/running-test-scenarios.md) | Step-by-step process for testing switch changes against the core CEPM runs: branch, copy `cases_cepm.csv` to a `cases_{suffix}.csv`, run the two-step scenario with `run_cepm.ps1 -m ... -x`, share results via SharePoint and `batch-log.md`, then archive the cases file and open a pull request. |
+| [`guidance/fixing-reeds-issues.md`](guidance/fixing-reeds-issues.md) | Step-by-step process for fixing a bug in the ReEDS model code: branch from the working branch, record the issue in `known-reeds-issues.md`, fix and verify it, log any upstream-file changes in `reeds-to-cepm-log.md`, and open a pull request. Uses `fix/ra-plot-logging` as a worked example. |
 | [`guidance/reeds-data-sources.md`](guidance/reeds-data-sources.md) | How `runfiles.csv` and `copy_files.py` turn a switch value into an input file path, and why bespoke CEPM inputs belong in `inputs/` if we want to keep access to upstream defaults. |
 | [`guidance/tech-limit-options.md`](guidance/tech-limit-options.md) | The mechanisms available for restricting a technology's capacity — `ban`/`bannew`, resource supply curve edits, the interconnection-queue cumulative cap, growth-rate constraints, cost multipliers, and customizing `tg` — with the implications of each. |
 | [`guidance/interconnection-queue-and-prescribed-builds.md`](guidance/interconnection-queue-and-prescribed-builds.md) | How the interconnection-queue ceiling and the prescribed-build floor are sourced, wired and enforced — and why they contradict each other in 2026. Key finding: the queue cap is *soft*, priced at a flat **$10M/MW** recharged every modeled year, and CEPM's 2026 solve must place 33.0 GW of capacity against 11.8 GW of queue headroom because it absorbs **16 years** of accumulated prescriptions at once. The resulting penalty is **77% of the 2026 objective** and is excluded from reported `systemcost`. Measured with the new `GSw_CapPenaltyMult` switch, removing it shifts WECC-SW buildout by -15% PV / +13% onshore wind / +158% h2 and moves the two-step headline result from +33.4% to +43.4%. Also documents the 2032 blind spot (queue data ends in 2030, so the final CEPM year is interconnection-unconstrained) and what to do about 2026. |
@@ -97,7 +99,5 @@ structure.
 
 | File | Summary |
 | --- | --- |
-| [`decisions/202XXXXX-decisions_template.md`](decisions/202XXXXX-decisions_template.md) | Template for when we make decisions |
+| [`decisions/202XXXXX-decision_template.md`](decisions/202XXXXX-decision_template.md) | Template for when we make decisions |
 | [`decisions/README.md`](decisions/README.md) | Guidance for writing decisions |
-
-We don't actually have any decisions yet!

@@ -24,7 +24,7 @@ Summary: What'd we change, why, what'd we find, what's next
 
 ### Batch details
 
-- **Built from:** `{Previous batch, e.g., v20260903}`
+- **Built from:** `{Release tag, relevant batch name, or today's date}`
 - **Space and Time:** `{e.g., WECC-SW, 2026-2032 every 3 years}`
 - **Cases:** `{e.g., baseline, limitre, optimized}`
 - **Run comments:** Optional. How long did this take?
@@ -88,6 +88,7 @@ After the fix, substantial new onshore wind is built. By 2032, onshore wind capa
 
 The effect is largest in the optimized case, where restoring the wind supply curve results in roughly 19 GW of additional onshore wind capacity by 2032 relative to the broken run.
 
+
 The corrected wind availability also changes the broader capacity mix, confirming that the pandas 3.x supply-curve bug was materially affecting the model's resource-selection results.
 
 ### Documentation, decisions, next steps, & issues
@@ -96,6 +97,46 @@ The corrected wind availability also changes the broader capacity mix, confirmin
 - **DOCUMENTATION:** The pandas 3.x wind supply-curve issue and fix are documented in CEPM/known-reeds-issues.md and CEPM/reeds-to-cepm-log.md.
 - **NEXT STEP:** Merge fix into dev
 - **ISSUE:** The underlying bug also exists upstream and can affect other landlocked regions when offshore wind is enabled but the offshore supply curve is empty.
+### Checklist
+
+- [X] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
+- [X] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
+- [X] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
+- [X] I moved batch results to the VM-Outputs folder
+- [X] I added any issues we found to the JIRA issues epic
+- [X] I edited LLM-generated text to keep this entry short and to the point
+- 
+## Batch name: `v20260929_st-AZNM...`, `v20260929v2_st-MSALGA`, `v20260929v3_st-VA`
+
+This batch implements state-level regions (while still using z134 zones) to 
+align with our data center load forecasts. It also is the first to use the 
+underlying ReEDS repo synced with the August 2026 release. Finally, we also
+create a few additional testing geographies for st/MS.AL.GA and st/VA.
+
+### Batch details
+
+- **Built from:** n/a, new upstream sync
+- **Space and Time:** `st/AZ.NM, 2026-2032, every 3 years`
+- **Cases:** ` baseline, limitre, optimized`
+- **Run comments:** ~30 minutes per case~
+
+### Change log
+
+- **ReEDS change:** Underlying repo is synced with August ReEDS release
+- **Case change:** Changed `GSw_Region` to `st/AZ.NM`
+
+### Results
+
+- Where's the compare cases file
+- What changes does it show
+
+### Documentation, decisions, next steps, & issues
+
+- **DECISION:** Case regions will be defined at state boundaries moving forward. See [20260929-state-regions](/CEPM/decisions/20260929-state-regions.md).
+- **ISSUE**: An underlying ReEDS issue is causing onshore wind to not be selectable for the AZNM runs, which is distorting results.
+- **ISSUE**: An underlying ReEDS issue is causing the VA-limitre runs to be infeasible.
+- **ISSUE**: If you run several multistep CEPM runs with the same batch name, by default the run_cepm.ps1's will compare all of them instead of isolating comparisons to the thrhee youu're looking at.
+
 
 ### Checklist
 
