@@ -105,6 +105,8 @@ The corrected wind availability also changes the broader capacity mix, confirmin
 - [X] I moved batch results to the VM-Outputs folder
 - [X] I added any issues we found to the JIRA issues epic
 - [X] I edited LLM-generated text to keep this entry short and to the point
+- [X] Open a pull request and add results of a recent run as an attachment
+
 
 ---
 ## Batch name: `v20260903qoff` / `v20260903h2off` / `v20260903h2qoff`
