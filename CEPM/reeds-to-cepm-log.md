@@ -39,6 +39,8 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `postprocessing/compare_cases.py` | Modified | Wrong module in compare_cases.py's "Flexibly Sited Demand" slide |
 | `reeds/report_utils.py` | Modified | parse_caselist TypeError with a prefix-glob caselist |
 | `postprocessing/compare_cases.py` | Modified | compare_cases.py hardcodes 2020 instead of --startyear |
+| `runreeds.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
+| `reeds/resource_adequacy/diagnostic_plots.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
 | `cases_small.csv` | Modified | Minor and cosmetic |
 | `cases_test.csv` | Modified | Minor and cosmetic |
 | `CONTRIBUTING.md` | Modified | CEPM documentation |
@@ -267,6 +269,67 @@ started actually varying per batch (see `run_cepm.ps1`'s new
   `yearset` does not include 2020 after any rebase that touches these plotting
   functions, since upstream's own default `--startyear` is 2020 and won't
   exercise this path.
+
+## RA diagnostic plots block the solve loop on Windows and are never logged
+
+### Description of issue:
+
+Two independent problems with how `diagnostic_plots.py` is invoked after each
+solve year. Both are upstream bugs, present unchanged at tag `2026.08.03`, and
+neither is CEPM-specific — good candidates to contribute back.
+
+1. **The trailing `&` does not background anything on Windows.** `runreeds.py`
+   writes `python ... diagnostic_plots.py ... &` into the generated run script.
+   On Windows that script is a `.bat` run through `os.system('start /wait cmd ...')`,
+   and in `cmd.exe` `&` is a *command separator*, not a background operator — so
+   a trailing `&` is a no-op and the plots run **synchronously**, blocking the
+   solve loop after every solve year. Measured on a 4-solve-year WECC-SW case:
+   26 figures per solve year, ~30 s per year, **~2.0 min per run (~8.5% of wall
+   clock)**, taken from the mtimes of `outputs/figures/resource_adequacy/*.png`,
+   which cluster into four clean ~30 s bursts.
+
+2. **`diagnostic_plots.py` never calls `reeds.log.makelog`.** `gamslog.txt` is
+   written by each script's own `FileHandler` (see `reeds/log.py`), *not* by
+   shell redirection — the run script is launched with no stdout/stderr
+   redirection on Linux/macOS and via `start /wait cmd /c` on Windows. So a
+   script that skips `makelog` never appears in the run log on any platform,
+   including its tracebacks. In a completed run, 24 scripts appear in
+   `gamslog.txt` with their `makelog` prefixes; `diagnostic_plots.py` appears
+   zero times. Combined with the backgrounding and the unchecked exit code, any
+   failure inside it was completely silent.
+
+### Files changed:
+
+- `runreeds.py` — the RA plot invocation now picks its background mechanism from
+  the existing `LINUXORMAC` global: `start /b "" ` on Windows, the original
+  trailing ` &` on Linux/macOS. The `""` is a window-title placeholder that
+  `start` requires if the command is ever quoted.
+- `reeds/resource_adequacy/diagnostic_plots.py` — added the standard
+  `reeds.log.makelog(scriptname=__file__, logpath=os.path.join(casedir,'gamslog.txt'))`
+  in `__main__`, matching every other script in the repo.
+
+### Reference:
+
+Branch `fix/ra-plot-logging`. Upstream issue text drafted separately. Before
+this patch, both files were byte-identical to upstream tag `2026.08.03`, so it
+applies to that tag as-is; check it against the tip of upstream `main` before
+opening an upstream PR, since both files may have moved since the tag.
+Symptom-level entry in [`known-reeds-issues.md`](known-reeds-issues.md).
+
+### What to test in new releases:
+
+- Has upstream fixed either of these? If so, drop our patch and take theirs.
+- The insertion points both still existed at `2026.08.03` (`runreeds.py` lines
+  639-642; `casedir = args.casedir` / `sw = reeds.io.get_switches(casedir)` in
+  `diagnostic_plots.py`'s `__main__`), but line numbers move — re-locate by
+  content, not by line.
+- After any rebase, confirm `diagnostic_plots.py |` lines appear in a run's
+  `gamslog.txt`, and that the generated `.bat` contains `start /b` rather than a
+  trailing `&`.
+- Watch for a genuinely concurrent-write issue: with the process now actually
+  backgrounded *and* holding its own append handle on `gamslog.txt`, interleaved
+  lines are possible in principle. Not observed, but it is the one behaviour the
+  two fixes create together that neither creates alone.
 
 ## Minor and cosmetic
 
@@ -943,10 +1006,11 @@ techs, so `GSw_H2Combustionupgrade` needs no change. Measured effect on results:
 §4.6). It is an interpretability choice, not a modelling correction.
 
 **`cleanup_level` is deliberately 0 for every case — do not raise it.**
-`runreeds.py:959-967` blocks on `input('Proceed? y/[n]: ')` (defaulting to `n`,
-which quits) whenever **any** case in the file has `cleanup_level >= 1` and
-`--skip_checks` was not passed. The check runs at launch, and because `-s`
-leaves ignored cases in `df_cases` (`runreeds.py:899-905`) it scans *every*
+`runreeds.py`'s `#%% User warnings` block blocks on `input('Proceed? y/[n]: ')`
+(defaulting to `n`, which quits) whenever **any** case in the file has
+`cleanup_level >= 1` and `--skip_checks` was not passed. The check runs at
+launch, and because `-s` leaves ignored cases in `df_cases` (see the
+`# If no --single/-s, drop the ignored cases` block) it scans *every*
 column — not just the ones being run. So a single `cleanup_level=2` anywhere in
 this file hangs a background or CI run, including any `-m` batch, on a prompt
 that is never displayed.
