@@ -38,7 +38,7 @@ Use this file as the first stop for agent orientation. Deeper references:
   and defaults. Scenario files such as `cases_test.csv`, `cases_small.csv`,
   `cases_cepm.csv`, and study-specific `cases_{suffix}.csv` override defaults by
   case column. Keep `cases_test.csv` identical to upstream; RMI's test cases go
-  in `cases_RMI_test.csv` (`-c RMI_test`).
+  in `cases_RMI-test.csv` (`-c RMI-test`).
 - `reeds/`: the main Python package. Top-level modules include `reeds.io`,
   `reeds.inputs`, `reeds.spatial`, `reeds.techs`, `reeds.log`, `reeds.checks`,
   `reeds.financials`, `reeds.results`, `reeds.timeseries`, `reeds.units`,

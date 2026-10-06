@@ -8,7 +8,7 @@ through the upstream source tree, so that the fork's surface area stays easy to
 review against upstream.
 
 Some CEPM changes unavoidably live in upstream file locations (GAMS
-compatibility fixes, `cases_cepm.csv`, `cases_RMI_test.csv`, `pyproject.toml`, `run_cepm.ps1`, and
+compatibility fixes, `cases_cepm.csv`, `cases_RMI-test.csv`, `pyproject.toml`, `run_cepm.ps1`, and
 similar). Those are catalogued in
 [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) rather than moved here.
 

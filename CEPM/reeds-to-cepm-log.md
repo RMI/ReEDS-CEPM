@@ -42,8 +42,7 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `runreeds.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
 | `reeds/resource_adequacy/diagnostic_plots.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
 | `cases_small.csv` | Modified | Minor and cosmetic |
-| `cases_test.csv` | Modified | Minor and cosmetic |
-| `cases_RMI_test.csv` | Added | RMI test cases and upstream's cases_test.csv |
+| `cases_RMI-test.csv` | Added | RMI test cases |
 | `CONTRIBUTING.md` | Modified | CEPM documentation |
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/dollaryear.csv` | Modified | Updated CAPEX for gas resources |
@@ -345,13 +344,6 @@ Small changes with no effect on model results.
   after upstream relocated the vendored ReEDS2PRAS tree without updating its
   README.
 - `cases_small.csv` — `endyear` 2030 to 2029.
-- `cases_test.csv` — adds a `USA_fasterish` column (a faster national smoke-test
-  case: `country/USA`, `z54`, `2010..2050..10`) and flips `Pacific`'s `ignore`
-  from `0` to `1` so the default `-c test` batch runs `USA_fasterish` instead.
-  Used for `runs/20260821_USA_fasterish`. No effect on any CEPM case. These
-  edits are also carried in `cases_RMI_test.csv`, so this divergence can be
-  dropped without losing them — see
-  [RMI test cases and upstream's cases_test.csv](#rmi-test-cases-cases_rmi_testcsv-and-upstreams-cases_testcsv).
 
 ### Reference:
 
@@ -359,8 +351,6 @@ n/a
 
 ### What to test in new releases:
 
-- Take upstream's `cases_test.csv` whole and remove its bullet from "Files
-  changed" above; RMI's test edits live in `cases_RMI_test.csv`.
 - If upstream fixes its own reeds2pras README paths, drop our version to keep the
   vendored tree byte-identical to upstream. That tree is otherwise nearly
   pristine, which is what keeps future ReEDS2PRAS syncs cheap — see Issue 4 of
@@ -1043,96 +1033,41 @@ switch value becomes an input file path
   [`guidance/SUBNATIONAL_REGION_SUPPORT.md`](guidance/SUBNATIONAL_REGION_SUPPORT.md)
   for which `GSw_ZoneSet`/`GSw_Region` combinations are known to work.
 
-## RMI test cases (`cases_RMI_test.csv`) and upstream's `cases_test.csv`
+## RMI test cases (`cases_RMI-test.csv`)
 
 ### Description:
 
-**`cases_RMI_test.csv` is RMI's test-scenario file** (added 2026-10-06). It
-started as a copy of `dev`'s `cases_test.csv`: upstream `2026.08.03` plus RMI's
-edits (`USA_fasterish`; `ignore=1` on `Pacific` and `USA_fast`; `Simple`'s
-`GSw_ZoneSet` blanked). Run it with `-c RMI_test`. Like `cases_cepm.csv`, it
-needs no code change.
+**RMI scenario testing happens in `cases_RMI-test.csv`** (added 2026-10-06),
+run with `-c RMI-test`. Like `cases_cepm.csv`, it needs no code change. It holds
+only RMI's own test cases. Each one is built on upstream's test-case setup:
+switches left blank take the file's `Default Value` column, then `cases.csv`'s
+defaults. It currently has one case, `USA_fasterish`, a faster national smoke
+test (`country/USA`, `z54`, `2010..2050..10`).
 
-**Recommended practice:**
+`cases_test.csv` is identical to upstream. RMI's test cases and edits used to
+live in it; they moved here on 2026-10-06. Upstream's `Pacific` again runs by
+default under `-c test`. See [`sync-log.md`](sync-log.md) (Sync 1) for how the
+file was reconciled before that.
 
-- Keep `cases_test.csv` identical to upstream. At each sync, take the new tag's
-  version whole: `git show <tag>:cases_test.csv > cases_test.csv`.
-- Do RMI scenario testing in `cases_RMI_test.csv`. It is built on upstream's
-  test-case setup: it started as a copy of `cases_test.csv`, and every switch it
-  leaves blank takes its default from `cases.csv`. Add and edit RMI test cases
-  here, not in `cases_test.csv`. It does not pick up upstream's later changes to
-  `cases_test.csv`. If an upstream change breaks it, such as a renamed switch or
-  a value that is no longer valid, fix the affected cells.
-
-Until `cases_test.csv` is reset to upstream, the history below still describes
-it.
-
-Unlike `cases_cepm.csv` (entirely RMI-owned), `cases_test.csv` is upstream's own
-test-case matrix — both sides add and edit columns in it independently, so a
-sync has to reconcile two sets of changes rather than just re-checking ours.
-The August 2026 merge (PR #47) initially resolved this by keeping RMI's
-(`temp-dev`'s) version of the file wholesale, which correctly preserved RMI's
-own edits but silently dropped upstream's independent additions as a side
-effect — not a deliberate decision, just what "take one side" does to a file
-both sides touched.
-
-Reconciled by comparing all three points (the shared base at commit `62f6381e`,
-RMI's edits, and upstream's `2026.08.03` edits) with `pandas`, cell by cell,
-rather than trusting the raw text diff — the two sides inserted their new
-columns in different positions, which shifts every subsequent field and makes
-a plain line diff unreadable. That comparison found:
-
-- **RMI added** one column, `USA_fasterish` — kept.
-- **RMI edited** three cells: `Pacific`'s `ignore` (`0`→`1`), removed
-  `GSw_PRM_StressThresholdMetrics` (didn't exist at the base either — see next
-  point), and added `github_MA_county_CC`'s `pras_samples` (`10`) — kept.
-- **Upstream added** one column, `MultiMetricRA`, and one row,
-  `GSw_PRM_StressThresholdMetrics` (populated only for `MultiMetricRA`, value
-  `NEUE/LOLH/LOLE/LOLD/duration/depth` — the same switch-rename documented in
-  the "Updated CAPEX for gas resources"/`cases.csv` entries elsewhere in this
-  log) — both restored.
-- **Upstream edited** two pre-existing cells: `USA_fast`'s `yearset` (blank →
-  `2010..2050..5`) and `Simple`'s `GSw_ZoneSet` (blank → `z134`) — only the
-  first was restored.
-
-`Simple`'s `GSw_ZoneSet=z134` was deliberately **not** restored: z134 is Issue 3
-in [`SUBNATIONAL_REGION_SUPPORT.md`](guidance/SUBNATIONAL_REGION_SUPPORT.md) —
-a confirmed, currently-unfixed bug that crashes `writecapdat.py` for every z134
-case regardless of region selection. Restoring that cell would make `Simple`
-fail immediately rather than run.
-
-**`MultiMetricRA` itself has a live gap, inherited from upstream, not
-introduced by this reconciliation:** its `GSw_ZoneSet` cell is blank in
-upstream's own file too, which falls through to `cases.csv`'s file-level
-default — `z90`, which is Issue 2 in the same guidance doc (a missing
-`hierarchy_from134.csv` file, unrelated to z134). `MultiMetricRA` will fail to
-launch until that's fixed — see the note added to `known-issues.md`'s z90
-entry. This isn't a regression from the sync; a fresh upstream checkout hits
-the same thing.
+Add and edit RMI test cases here, not in `cases_test.csv`. This file does not
+pick up upstream's later changes to `cases_test.csv`. If an upstream change
+breaks it, such as a renamed switch or a value that is no longer valid, fix the
+affected cells.
 
 ### Files included:
 
-- `cases_RMI_test.csv`
-- `cases_test.csv`
+- `cases_RMI-test.csv`
 
 ### Reference:
 
-[`guidance/SUBNATIONAL_REGION_SUPPORT.md`](guidance/SUBNATIONAL_REGION_SUPPORT.md)
-(Issues 2 and 3), [`known-issues.md`](known-issues.md) (`z90`/`z134` entries)
+[`sync-log.md`](sync-log.md) (Sync 1)
 
 ### What to test in new releases:
 
-- Take the new tag's `cases_test.csv` whole (see above). Because RMI's edits now
-  live in `cases_RMI_test.csv`, the three-way reconciliation above is no longer
-  needed.
-- Dry-run `cases_RMI_test.csv` against the new switch set:
-  `uv run python runreeds.py -b synccheck -c RMI_test -t`. That catches renamed
+- Take the new tag's `cases_test.csv` whole:
+  `git show <tag>:cases_test.csv > cases_test.csv`.
+- Dry-run `cases_RMI-test.csv` against the new switch set:
+  `uv run python runreeds.py -b synccheck -c RMI-test -t`. That catches renamed
   or removed switches and values that are no longer valid. Fix only the cells
-  that break. Blank cells inherit `cases.csv` defaults, so an upstream default
-  change can also quietly change these cases.
-- Has `z134` (Issue 3) or `z90` (Issue 2) been fixed? If so, `Simple`'s
-  `GSw_ZoneSet=z134` can be safely restored, and `MultiMetricRA` will actually
-  be runnable rather than a known-broken placeholder.
-- Did upstream rename/retarget `GSw_PRM_StressThresholdMetrics` again, the way
-  it replaced `GSw_PRM_StressThreshold` this cycle? Check against `cases.csv`'s
-  current switch list before assuming the row is still valid.
+  that break. Blank cells inherit defaults, so an upstream default change can
+  also quietly change these cases.
