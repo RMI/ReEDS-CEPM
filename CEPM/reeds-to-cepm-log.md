@@ -43,6 +43,7 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `reeds/resource_adequacy/diagnostic_plots.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
 | `cases_small.csv` | Modified | Minor and cosmetic |
 | `cases_test.csv` | Modified | Minor and cosmetic |
+| `cases_RMI_test.csv` | Added | RMI test cases and upstream's cases_test.csv |
 | `CONTRIBUTING.md` | Modified | CEPM documentation |
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/dollaryear.csv` | Modified | Updated CAPEX for gas resources |
@@ -347,7 +348,10 @@ Small changes with no effect on model results.
 - `cases_test.csv` — adds a `USA_fasterish` column (a faster national smoke-test
   case: `country/USA`, `z54`, `2010..2050..10`) and flips `Pacific`'s `ignore`
   from `0` to `1` so the default `-c test` batch runs `USA_fasterish` instead.
-  Used for `runs/20260821_USA_fasterish`. No effect on any CEPM case.
+  Used for `runs/20260821_USA_fasterish`. No effect on any CEPM case. These
+  edits are also carried in `cases_RMI_test.csv`, so this divergence can be
+  dropped without losing them — see
+  [RMI test cases and upstream's cases_test.csv](#rmi-test-cases-cases_rmi_testcsv-and-upstreams-cases_testcsv).
 
 ### Reference:
 
@@ -355,9 +359,8 @@ n/a
 
 ### What to test in new releases:
 
-- Is `USA_fasterish` still needed, or has upstream added its own fast national
-  test case? If ours is redundant, take upstream's `cases_test.csv` whole and
-  drop the divergence.
+- Take upstream's `cases_test.csv` whole and remove its bullet from "Files
+  changed" above; RMI's test edits live in `cases_RMI_test.csv`.
 - If upstream fixes its own reeds2pras README paths, drop our version to keep the
   vendored tree byte-identical to upstream. That tree is otherwise nearly
   pristine, which is what keeps future ReEDS2PRAS syncs cheap — see Issue 4 of
@@ -1040,9 +1043,29 @@ switch value becomes an input file path
   [`guidance/SUBNATIONAL_REGION_SUPPORT.md`](guidance/SUBNATIONAL_REGION_SUPPORT.md)
   for which `GSw_ZoneSet`/`GSw_Region` combinations are known to work.
 
-## Custom test-case reconciliation with upstream (`cases_test.csv`)
+## RMI test cases (`cases_RMI_test.csv`) and upstream's `cases_test.csv`
 
 ### Description:
+
+**`cases_RMI_test.csv` is RMI's test-scenario file** (added 2026-10-06). It
+started as a copy of `dev`'s `cases_test.csv`: upstream `2026.08.03` plus RMI's
+edits (`USA_fasterish`; `ignore=1` on `Pacific` and `USA_fast`; `Simple`'s
+`GSw_ZoneSet` blanked). Run it with `-c RMI_test`. Like `cases_cepm.csv`, it
+needs no code change.
+
+**Recommended practice:**
+
+- Keep `cases_test.csv` identical to upstream. At each sync, take the new tag's
+  version whole: `git show <tag>:cases_test.csv > cases_test.csv`.
+- Do RMI scenario testing in `cases_RMI_test.csv`. It is built on upstream's
+  test-case setup: it started as a copy of `cases_test.csv`, and every switch it
+  leaves blank takes its default from `cases.csv`. Add and edit RMI test cases
+  here, not in `cases_test.csv`. It does not pick up upstream's later changes to
+  `cases_test.csv`. If an upstream change breaks it, such as a renamed switch or
+  a value that is no longer valid, fix the affected cells.
+
+Until `cases_test.csv` is reset to upstream, the history below still describes
+it.
 
 Unlike `cases_cepm.csv` (entirely RMI-owned), `cases_test.csv` is upstream's own
 test-case matrix — both sides add and edit columns in it independently, so a
@@ -1089,6 +1112,7 @@ the same thing.
 
 ### Files included:
 
+- `cases_RMI_test.csv`
 - `cases_test.csv`
 
 ### Reference:
@@ -1098,10 +1122,14 @@ the same thing.
 
 ### What to test in new releases:
 
-- Diff `cases_test.csv` against the new tag using the merge-base method above
-  (base vs. RMI, base vs. upstream, compared cell-by-cell with `pandas` — a raw
-  text diff hides changes under any column-position shift), not a plain file
-  diff or "just take one side."
+- Take the new tag's `cases_test.csv` whole (see above). Because RMI's edits now
+  live in `cases_RMI_test.csv`, the three-way reconciliation above is no longer
+  needed.
+- Dry-run `cases_RMI_test.csv` against the new switch set:
+  `uv run python runreeds.py -b synccheck -c RMI_test -t`. That catches renamed
+  or removed switches and values that are no longer valid. Fix only the cells
+  that break. Blank cells inherit `cases.csv` defaults, so an upstream default
+  change can also quietly change these cases.
 - Has `z134` (Issue 3) or `z90` (Issue 2) been fixed? If so, `Simple`'s
   `GSw_ZoneSet=z134` can be safely restored, and `MultiMetricRA` will actually
   be runnable rather than a known-broken placeholder.
