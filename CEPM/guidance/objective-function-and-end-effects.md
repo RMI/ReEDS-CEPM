@@ -1,4 +1,5 @@
 # What the ReEDS objective minimizes, and how it treats years after `endyear`
+Written Date: 2026-10-07
 
 **Scope:** which costs the ReEDS optimization minimizes, how they are discounted,
 and whether costs beyond the last year in `yearset` are counted. This covers
