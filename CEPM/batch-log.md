@@ -58,7 +58,7 @@ Summary: What'd we change, why, what'd we find, what's next
 - [ ] I opened a pull request and added results of a recent run as an attachment
 
 ---
-##Batch entry
+## Batch entry: `v20261001gt`
 **## Author: Gaby**
 **## Batch name: v20261001gt`**
 
