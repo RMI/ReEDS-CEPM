@@ -45,11 +45,14 @@ chasing a crash, start with them.
 | [Onshore wind supply curve dropped under pandas 3](#onshore-wind-supply-curve-silently-dropped-under-pandas-3-when-a-sibling-curve-is-empty) | Open — fix identified | **Silent.** A landlocked region with `GSw_OfsWind=1` builds zero new onshore wind, with no error. Live upstream too. Four runs affected and still recurring. |
 | [`startyear` must be ≤ 2022 for hydro CF data](#startyear-must-be-old-enough-for-historical-hydro-capacity-factor-data) | Worked around | A later `startyear` empties the historical hydro frame and dies at an unrelated `arange`. Trap is live for any new case. |
 | [`report_dump.py` crashes reading `df_capex_init.csv`](#postprocessing-report_dumppy-crashes-reading-df_capex_initcsv) | Open | Postprocessing ordering bug: the system-cost CSV is never written. Run itself unaffected. |
+| [Retail-rate module crashes on single-BA runs](#retail_rate_calculationspy-crashes-on-single-ba-runs-keyerror-res_marg_ann_flow) | Open — fix identified | `KeyError: 'res_marg_ann_flow'`; `retail_rate_components.csv` is never written. Multi-region runs unaffected. |
 | [`reeds_to_rev.py` can't reach supply curves on `nrelnas01`](#reeds_to_revpy-cant-reach-supply-curve-source-files-on-nrelnas01) | Environment | Not a repo bug — check VPN / share access. Breaks the reV handoff and the VRE-sites map overlays. |
 | [`single_case_plots.py` plots fail on reduced-region cases](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases) | Open — partly by design | Several diagnostic maps fail on single-region or reduced-hierarchy runs. Each is caught; core outputs unaffected. |
 | [bokehpivot: every map section fails on an aggregated zoneset](#bokehpivot-html-report-every-map-type-section-fails-on-an-aggregated-zoneset) | Open | No boundary file exists for aggregated zonesets, so all map sections of the HTML report are missing. |
+| [Operating-reserve outputs empty despite `GSw_OpRes=2`](#operating-reserve-outputs-are-empty-despite-gsw_opres2-and-the-opres-by-timeslice-report-section-fails) | Open — cause unknown | All three `opRes` output CSVs are header-only, which also breaks one bokehpivot section. Unknown whether the model procures no reserves or the report drops them. |
 | [`compare_cases.py` crashes on a shared-prefix glob](#compare_casespy-crashes-when-comparing-cases-via-a-shared-prefix-glob-typeerror-in-parse_caselist-fixed) | Fixed | `TypeError` in `parse_caselist()` blocked the comparison report entirely. |
 | [`compare_cases.py` hardcodes year 2020](#compare_casespy-hardcodes-year-2020-in-several-plots-instead-of-using---startyear-fixed) | Fixed | Five literal `2020`s broke slides for any batch whose years exclude 2020 — i.e. every CEPM case. |
+| [`timetype=int`/`win` call GAMS files that don't exist](#runreedspy-timetypeint-and-timetypewin-call-gams-solve-files-that-dont-exist) | Open — fix identified | `runreeds.py` points both solve calls at pre-restructure paths. `seq` (every CEPM case) is unaffected. |
 | [`runreeds.py` reports success on failure, hangs on multi-case `-s`](#runreedspy-reports-success-on-a-failed-case-and-hangs-on-a-multi-case--s) | Open — worked around | **Silent.** Exit code 0 despite an aborted solve; interactive prompts hang under a wrapper. Check for `outputs.h5`, not the exit code. |
 | [`z_rep` dominated by the interconnection-queue penalty](#z_rep-is-dominated-by-the-interconnection-queue-penalty-and-does-not-match-systemcostcsv) | Not a bug | `z_rep` is unusable as a cost figure and the penalty does shift buildout. Use `systemcost.csv`. |
 | [`reeds2pras` `BoundsError` for `hydud`/`hydund`](#reeds2pras-boundserror-for-hydudhydund-hydro-capacity--no-monthly-profile-data) | Open — non-fatal | Hydro-upgrade categories have no monthly profile data, so PRAS zeroes their contribution. Diagnostic layer only. |
@@ -800,12 +803,21 @@ raised from `reeds/results.py`'s `calc_systemcost()`, called from `report_dump.p
 `report_dump.py` — which needs that file for `calc_systemcost()` — runs *before*
 `retail_rate_calculations.py` in the postprocessing sequence.
 
-**Impact:** `postprocess_outputs()` aborts partway through, so the system-cost CSV
-output (and anything else queued after `calc_systemcost` in that function) is not
-written for the run. Earlier report_dump outputs (e.g. `error_check.csv`,
+**Impact:** `postprocess_outputs()` aborts partway through, so
+`outputs/post_systemcost_annualized.csv` (the `calc_systemcost()` output) and
+`outputs/post_tech_transmission.csv` (the next call in the same function) are not
+written for the run. The GAMS-reported `systemcost.csv` and `systemcost_ba.csv`
+come from `report.gms` and are unaffected. Earlier report_dump outputs (e.g. `error_check.csv`,
 `error_gen.csv`) are unaffected since they're saved before the crash. The rest of
 the postprocessing pipeline (retail rate calcs, health damage calcs, reV handoff,
 plotting) still runs — this doesn't stop the run overall.
+
+This hits **every** run, not just reduced-region cases. It was found on a single-BA
+run (`runs/v20260707_213749_ND_small`) and reproduced identically on an 11-BA
+multi-region run (`runs/v20260708_143931_Pacific`). In both logs the crash comes
+about 10 seconds before `calculate_historical_capex.py` reports writing
+`df_capex_init.csv`, and the file is present in `inputs_case/` once the run
+finishes. That is why inspecting the finished run folder doesn't reveal the problem.
 
 **Status:** not fixed. Fix would be reordering the postprocessing call sequence (run
 `retail_rate_calculations.py` before `report_dump.py`, or have `report_dump.py`
@@ -820,6 +832,48 @@ branch, past this tag, has since refactored that read to go through
 `reeds.io.read_input(case, 'df_capex_init')`, but that only changes the error
 message shape — the fallback path still looks for a CSV that hasn't been written
 yet, so the underlying ordering dependency remains unresolved even there.)
+
+## `retail_rate_calculations.py` crashes on single-BA runs (`KeyError: 'res_marg_ann_flow'`)
+
+**Symptom:**
+```
+retail_rate_calculations.py | ERROR | File ".../retail_rate_calculations.py", line 534, in main
+    interp_between_solve_years(
+retail_rate_calculations.py | ERROR | File ".../retail_rate_calculations.py", line 111, in interp_between_solve_years
+    df_pivot_solve_years.update(df.pivot(index='t', columns=region_type, values=value_name))
+retail_rate_calculations.py | ERROR | KeyError: 'res_marg_ann_flow'
+```
+logged in `gamslog.txt` during the retail-rate postprocessing step.
+
+**Root cause:** `main()` interpolates three inter-regional flow components between
+solve years. Two of the calls are guarded and one is not
+(`postprocessing/retail_rate_module/retail_rate_calculations.py:521-537`):
+
+- `oper_res_flow` — runs only `if 'oper_res_flow' in state_flow_expenditures`
+- `rps_flow` — runs only `if 'rps_flow' in state_flow_expenditures`
+- `res_marg_ann_flow` — called **unconditionally**
+
+`interp_between_solve_years()` returns early only when the whole frame is empty
+(line 107). A non-empty frame that lacks the requested column falls through to
+`df.pivot(..., values=value_name)` at line 111 and raises `KeyError`. A single-BA run
+has no inter-regional planning-reserve flows, so the `res_marg_ann_flow` column is
+never created. The crash itself shows the frame still had rows, so the early
+return didn't fire.
+
+**Impact:** the retail-rate module aborts, and `outputs/retail/retail_rate_components.csv`
+(and anything else the module writes after this point) is not produced. The solve
+and core outputs (`cap`, `gen`, `systemcost`, the bokehpivot report) are unaffected.
+
+Single-BA runs only. Seen on `runs/v20260707_213749_ND_small`. Did **not**
+reproduce on the 11-BA `runs/v20260708_143931_Pacific`, where the module logged
+`Finished retail_rate_calculations.py` and wrote `retail_rate_components.csv`.
+
+**Status:** not fixed. Fix: wrap the `res_marg_ann_flow` call in the same
+`if 'res_marg_ann_flow' in state_flow_expenditures:` guard as its two siblings.
+
+**Fixed upstream?** No. `retail_rate_calculations.py` at tag `2026.08.03` has the
+same two guards (lines 521 and 527), the same unguarded `res_marg_ann_flow` call
+(line 535), and the same `df.empty`-only early return (line 107). Not RMI-introduced.
 
 ## `reeds_to_rev.py` can't reach supply curve source files on `\\nrelnas01`
 
@@ -871,6 +925,18 @@ completes and later plots still generate:
 - `map_prm` — `TypeError: 'Axes' object is not subscriptable`, from
   `reedsplots.py`'s `map_prm()` indexing a `plt.subplots()` result that's a bare
   `Axes` (not an array) when only one year is being plotted.
+- Single-BA runs add their own variants, not yet traced to individual plot
+  functions: `TypeError: cannot unpack non-iterable int object`,
+  `ValueError: No objects to concatenate` (x2), and `KeyError: '<state>'` for the
+  run's own state (`'ND'` on a North Dakota run). Seen on
+  `runs/v20260707_213749_ND_small`. None recurred on the 11-BA
+  `runs/v20260708_143931_Pacific`.
+- **`ValueError: <case> has not solved year <year>` is misleading — the year did
+  solve.** The message comes from `reeds.io.get_last_iteration()`
+  (`reeds/io.py:1313`), which raises it when no `handoff/PRAS/PRAS_{year}i*.h5`
+  file matches. It means "no PRAS output for that year", not "the solve failed".
+  On the ND run it appeared for 2026 and 2029 while dozens of other 2029 plots
+  succeeded around it. Check `gamslog.txt` for `LP status` before believing it.
 
 **Root cause:** these plotting functions assume the full national, multi-region,
 multi-year model structure (inter-regional transmission, multiple hierarchy levels,
@@ -912,6 +978,10 @@ tag `2026.08.03`:
   with `capacity_offline.columns` before the plot loop; not yet implemented.
 - `map_translines_all`, `map_translines_vsc`, `map_net_imports`, `plot_max_imports`
   weren't individually diffed against the tag — unconfirmed either way.
+- `reeds.io.get_last_iteration()` raises the same misleading
+  `has not solved year` message at the tag (`reeds/io.py:1313`). The single-BA
+  `TypeError`/`ValueError`/`KeyError` variants haven't been traced to a function,
+  so they're unconfirmed either way.
 
 ## bokehpivot HTML report: every map-type section fails on an aggregated zoneset
 
@@ -961,6 +1031,70 @@ empty `region_boundaries` after filtering and skip the map with a logged message
 instead of crashing on `NaN`.
 
 **Fixed upstream?** Not checked yet.
+
+## Operating-reserve outputs are empty despite `GSw_OpRes=2`, and the "OpRes by timeslice" report section fails
+
+**Symptom:** the bokehpivot report section **"Final OpRes by timeslice (GW)"** is
+missing, logged in `outputs/reeds-report/report.log` as:
+```
+core.py:704   preset_wdg: wdg['x'].value = preset['x']        # x = 'timeslice'
+  -> update_wdg_col -> update_plots -> display_config
+core.py:2047  display_config: item_string += wdg[key].labels[i] + ', '
+IndexError: list index out of range
+```
+Behind it, all three operating-reserve outputs are **header-only, with 0 data
+rows**: `outputs/opRes_supply.csv`, `outputs/opRes_supply_h.csv` and
+`outputs/opres_trade.csv`. Seen on both a single-BA run
+(`runs/v20260707_213749_ND_small`) and an 11-BA run
+(`runs/v20260708_143931_Pacific`), both with `GSw_OpRes=2` and both solved
+optimally. So this is general, not region-driven. `GSw_OpRes=2` is the
+`cases.csv` default, and `cases_cepm.csv` doesn't override it, so CEPM runs are
+presumably affected too. That hasn't been checked on a CEPM run.
+
+**Root cause:** two layers. Only the first is understood.
+
+1. **bokehpivot can't handle an empty plotted dimension.** The section's preset
+   (`postprocessing/bokehpivot/reports/templates/reeds2/standard_report_expanded.py:13`,
+   `x='timeslice'`, sourced from `opRes_supply_h`) sets `x` to a dimension with no
+   values. The filter widget gets zero labels while its default active indices
+   point past the end, so `display_config()` raises. This alone explains the
+   missing section, whatever the data.
+2. **Why the outputs are empty is undiagnosed.** `report.gms:726-734` fills them:
+
+   ```gams
+   opres_supply_h(ortype,i,r,h,t)$[tmodel_new(t)$reserve_frac(i,ortype)] = sum{v, OPRES.l(ortype,i,v,r,h,t)} ;
+   opres_supply(ortype,i,r,t)$[tmodel_new(t)$reserve_frac(i,ortype)] = ... ;
+   opres_trade(ortype,r,rr,t)$[opres_routes(r,rr,t)$tmodel_new(t)] = ... OPRES_FLOW.l ... ;
+   ```
+
+   Candidates, none yet ruled out:
+   - (a) `OPRES.l` really is zero, i.e. the model procures no operating reserves;
+   - (b) the report-side `$reserve_frac(i,ortype)` condition is empty, which would
+     zero the outputs even when `OPRES.l > 0`;
+   - (c) a variable or domain renamed in the upstream restructure;
+   - (d) empty representative reserve periods. `AGENTS.md` points to
+     `inputs_case/rep/opres_periods.csv`, `opRes_supply_h.csv`, `Sw_OpRes`, and the
+     reserve equation counts in `lstfiles/1_Inputs.lst` as the first things to
+     check for OpRes report failures.
+
+   To decide, inspect `OPRES.l` and `reserve_frac` in the solved GDX, and the
+   `eq_OpRes_requirement` row count in the `.lst` files.
+
+**Impact:** one bokehpivot section is missing; the rest of the report builds. The
+bigger question is (a). If the model really procures no reserves under
+`GSw_OpRes=2`, that's a **silent** modelling gap that changes results without any
+error. If it's (b) or (c), only reporting is wrong. Until this is diagnosed, don't
+quote operating-reserve results from these runs, and don't assume reserves are
+shaping the dispatch.
+
+**Status:** not fixed, root cause unknown. The bokehpivot fix is independent:
+guard `display_config()` / the `x`-assignment path so a dimension with 0 labels is
+skipped instead of raising.
+
+**Fixed upstream?** No for the report code. `report.gms:726-734` and the
+bokehpivot lines (`core.py:704`, `core.py:2047`) are identical at tag
+`2026.08.03`. Since the underlying cause is unknown, whether upstream's runs
+produce empty `opRes` outputs too is unconfirmed.
 
 ## `compare_cases.py` crashes when comparing cases via a shared-prefix glob (`TypeError` in `parse_caselist`) (FIXED)
 
@@ -1038,6 +1172,42 @@ solve loop on Windows and are never logged") for the change and rebase checks.
 
 **Fixed upstream?** No. Both files at tag `2026.08.03` have the trailing `&`
 and no `makelog` call. Inherited, not RMI-introduced.
+
+## `runreeds.py`: `timetype=int` and `timetype=win` call GAMS solve files that don't exist
+
+**Symptom:** a case with `timetype=int` (intertemporal) or `timetype=win` (window)
+fails at its solve step: GAMS can't find the model file it was told to run. Check
+the generated `call_<case>.bat`/`.sh`. Its `gams` line references
+`reeds/core/3_solve_allyears.gms` or `reeds/core/3_solvewindow.gms`, and neither
+file exists.
+
+**Root cause:** the upstream restructure moved the solve drivers into
+`reeds/core/solve/`, but only the sequential path was updated:
+
+| `timetype` | Path `runreeds.py` builds | Actual file |
+| --- | --- | --- |
+| `seq` | `reeds/core/solve/3_solve_oneyear.gms` (built in `reeds/inputs.py:330`) | same — works |
+| `int` | `reeds/core/3_solve_allyears.gms` (`runreeds.py:687`) | `reeds/core/solve/3_solve_allyears.gms` |
+| `win` | `reeds/core/3_solvewindow.gms` (`runreeds.py:744`) | `reeds/core/solve/3_solve_window.gms` |
+
+The `win` path is wrong twice: it's missing the `solve/` folder, and the filename
+is missing an underscore (`solvewindow` vs `solve_window`).
+
+**Impact:** `int` and `win` runs can't solve at all. **CEPM is unaffected**: every
+CEPM case uses the `cases.csv` default `timetype=seq`, and `cases_cepm.csv` doesn't
+override it. If you switch a case to `int` or `win`, don't rely on the exit code to
+tell you it failed. See the
+[silent-failure entry below](#runreedspy-reports-success-on-a-failed-case-and-hangs-on-a-multi-case--s).
+
+**Status:** not fixed. Found by reading the code; not yet reproduced by a run. Fix:
+change the two `Path(...)` calls to
+`Path('reeds','core','solve','3_solve_allyears.gms')` and
+`Path('reeds','core','solve','3_solve_window.gms')`.
+
+**Fixed upstream?** No. `runreeds.py` at tag `2026.08.03` builds the same two broken
+paths (lines 678 and 735 there). The tag's actual files are under
+`reeds/core/solve/`. The bug came in with the upstream restructure and is not
+RMI-introduced.
 
 ## `runreeds.py` reports success on a failed case, and hangs on a multi-case `-s`
 
@@ -1176,6 +1346,9 @@ Non-fatal by design, not by accident: `git blame` traces a small RMI patch to th
   `IndexError: index 0 is out of bounds for axis 0 with size 0`. Happens when a
   representative-period map has nothing to plot for the run's region set (e.g. a
   reduced-region case). Diagnostic image only; doesn't affect model results.
+  On a single-BA run it appears (warning x3) during stress-period setup, from
+  `hourly_plots.py:335`/`:351`; "Writing seed stress periods" follows immediately
+  and the seed stress periods are still produced.
 
 ## Related documents
 
