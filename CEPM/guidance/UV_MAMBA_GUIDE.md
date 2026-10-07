@@ -1,4 +1,5 @@
 # Translating between `environment.yml` (mamba/conda) and `pyproject.toml`/`uv.lock` (uv)
+Written Date: 2026-09-10
 
 This repo keeps both, per the decision to keep `environment.yml` as the
 upstream-compatible fallback and `pyproject.toml`/`uv.lock` as RMI's primary

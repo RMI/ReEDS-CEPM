@@ -1,4 +1,5 @@
 # GAMS Error 579 in the h5-to-gdx input pipeline
+Written Date: 2026-08-18
 
 **Status:** Fixed on `fix/GAMS-h5-bugfix`
 **Affected versions:** GAMS 44.4.0 (this repo's pinned version)

@@ -1,4 +1,5 @@
 # Options for restricting a technology's capacity in ReEDS
+Written Date: 2026-09-04
 
 **Scope:** the range of mechanisms available for constraining a single
 technology (e.g. biopower, solar, wind) in a ReEDS run — from a full ban, to a
