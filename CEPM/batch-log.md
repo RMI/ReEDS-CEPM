@@ -93,7 +93,6 @@ The corrected wind availability also changes the broader capacity mix, confirmin
 
 ### Documentation, decisions, next steps, & issues
 
-- **PROPOSED DECISION:** Merge fix into dev
 - **DOCUMENTATION:** The pandas 3.x wind supply-curve issue and fix are documented in CEPM/known-reeds-issues.md and CEPM/reeds-to-cepm-log.md.
 - **NEXT STEP:** Merge fix into dev
 - **ISSUE:** The underlying bug also exists upstream and can affect other landlocked regions when offshore wind is enabled but the offshore supply curve is empty.
