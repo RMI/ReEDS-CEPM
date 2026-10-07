@@ -41,7 +41,6 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `postprocessing/compare_cases.py` | Modified | compare_cases.py hardcodes 2020 instead of --startyear |
 | `runreeds.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
 | `reeds/resource_adequacy/diagnostic_plots.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
-| `cases_small.csv` | Modified | Minor and cosmetic |
 | `cases_RMI-test.csv` | Added | RMI test cases |
 | `CONTRIBUTING.md` | Modified | CEPM documentation |
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
@@ -343,7 +342,6 @@ Small changes with no effect on model results.
   (`ReEDS/reeds2pras/test` to `ReEDS/reeds/resource_adequacy/reeds2pras/test`)
   after upstream relocated the vendored ReEDS2PRAS tree without updating its
   README.
-- `cases_small.csv` — `endyear` 2030 to 2029.
 
 ### Reference:
 
