@@ -18,7 +18,6 @@ Loosely inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## TEMPLATE Batch entry: `{Batch name here, e.g., v20260903}**
 **## Author: Tyler Fitch`**
-**## Batch name: TEMPLATE `{Batch name here, e.g., v20260903}`**
 
 Summary: What'd we change, why, what'd we find, what's next
 
