@@ -83,5 +83,6 @@ GSw_MGA_CostDelta,,,,,,,,,,
 GSw_MGA_Objective,,,,,,,,,,
 reeds_to_rev,0,,,,,,,,,
 cleanup_level,0,0,0,0,0,0,0,0,0,0
+GSw_CapPenaltyMult,0.000001,,,,,,,,,
 GSw_CEPM_TgCap,,,1,,,1,,,1,
 cepmtgcapscen,,,none,,,none,,,none,
