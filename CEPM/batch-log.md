@@ -55,6 +55,7 @@ Summary: What'd we change, why, what'd we find, what's next
 - [ ] I moved batch results to the VM-Outputs folder
 - [ ] I added any issues we found to the JIRA issues epic
 - [ ] I edited LLM-generated text to keep this entry short and to the point
+- [ ] I opened a pull request and added results of a recent run as an attachment
 
 ---
 ##Batch entry
