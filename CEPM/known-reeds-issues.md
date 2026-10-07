@@ -35,7 +35,8 @@ chasing a crash, start with them.
 |---|---|---|
 | [GAMS 44.4.0: `Error 579` on model compile](#gams-4440-compile-failure-error-579-in-autocodeb_load_setsgms-fixed) | Fixed | Blocked every run at model compile on our pinned GAMS. Fixed in `h5_to_gdx.py`. |
 | [`GSw_GrowthAbsCon=1`: final solve year infeasible](#gsw_growthabscon1-makes-the-final-solve-year-infeasible-eq_growthlimit_absolute) | Open — workaround | Last modeled year goes infeasible from a year-gap sign error. Use a sacrificial final year, or the cumulative caps instead. |
-| [`GSw_CEPM_TgCap=1`: Virginia 2029 infeasible](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found) | Open — cause unknown | VA `limitre` dies at 2029 with 1665 infeasible rows. Cap is the trigger; the colliding constraint is not yet identified. Disabling the RPS is **not** expected to help. |
+| [`GSw_CEPM_TgCap=1`: Virginia 2029 infeasible](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found) | Open — cause unknown | VA `limitre` dies at 2029 with 1665 infeasible rows. Cap is the trigger; the colliding constraint is not yet identified. The 2026 solve spent the whole wind budget, the leading suspect. Disabling the RPS is **not** expected to help. |
+| [`GSw_CEPM_TgCap` caps only the horizon total](#gsw_cepm_tgcap-caps-the-horizon-total-so-a-capped-run-can-spend-it-all-in-the-first-solve-year) | Fixed — opt-in | **Silent.** A capped run can spend its whole 2026-2032 budget in the first solve year. `GSw_CEPM_TgCapByYear=1` holds it to the baseline's year-by-year path. |
 | [H2 infeasibility with `GSw_H2=2` (unverified)](#possible-h2-infeasibility-with-gsw_h22-in-national-runs-unverified) | Open — untested | A 2026-07 national run went infeasible in DE. Root cause never traced; every CEPM case sets `GSw_H2=0`. |
 | [`cendivweights.csv` domain violation at cendiv borders](#cendivweightscsv-domain-violation-near-census-division-borders-fixed) | Fixed — not on `main` | Sub-national runs near a census-division border fail GAMS compile. Fixed on `dev`; `main` still has it. |
 | [`recf.py` crashes when offshore wind is disabled](#recfpy-crashes-when-offshore-wind-is-disabled-fixed) | Fixed | `GSw_OfsWind=0` left `df_windofs` undefined before a concat. |
@@ -234,11 +235,32 @@ primal, not a numerical or scaling problem.
   load (`GSw_LoadSiteTrajectory=st_epri_medium_extended_to_2032`,
   `GSw_LoadSiteCF=1`, `GSw_LoadSiteRA=1`) and solves through 2032 cleanly. So the
   infeasibility is created by `eq_cepm_tg_cap_sys`, not by the load scenario.
+- **The 2026 solve spent the entire onshore and offshore wind budget.** The cap
+  covers the 2026-2032 total, and nothing stops a sequential solve from using all of
+  it at once (see the
+  [horizon-total entry below](#gsw_cepm_tgcap-caps-the-horizon-total-so-a-capped-run-can-spend-it-all-in-the-first-solve-year)).
+  From `inv_ivrt` in `handoff/reeds_data/reeds_data_2026.gdx` (MW_ac):
+
+  | tech group | cap (2026-2032) | `VA_limitre` 2026 | `VA_baseline` 2026 | left for 2029-2032 |
+  | --- | ---: | ---: | ---: | ---: |
+  | wind-ons | 11,866.4 | 11,866.4 | 78.0 | **0** |
+  | wind-ofs | 3,949.7 | 3,949.7 | 2,599.0 | **0** |
+  | pv | 23,976.6 | 10,798.1 | 6,700.7 | 13,178.5 |
+  | battery | 2,980.2 | 321.9 | 275.0 | 2,658.3 |
+
+  So the 2029 solve could add no wind at all while data-center load kept growing.
+  This is the leading suspect, but it isn't shown to cause the infeasibility: gas is
+  uncapped, so on the face of it the model should still be able to meet load. The
+  direct test is to re-run with `GSw_CEPM_TgCapByYear=1`, which holds each solve
+  year to the baseline's cumulative path.
 - **Not a prescribed-build collision.** The obvious failure mode for a cumulative
-  investment cap is a forced build that exceeds it, but prescribed capacity from 2026
-  on fits comfortably inside every cap: wind-ofs 2,640 MW against a 3,949.7 MW cap
-  (the CVOW build in 2027), upv 1,465.6 against 23,976.6, wind-ons 78.0 against
-  11,866.4. Ruled out.
+  investment cap is a forced build that exceeds it. The prescriptions that apply
+  from 2026 on fit inside every cap: upv 1,465.6 against 23,976.6, wind-ons 78.0
+  against 11,866.4. Ruled out. (An earlier version of this bullet also cited a
+  2,640 MW wind-ofs prescription for 2027 in `p124`. That row of
+  `prescribed_rsc.csv` never takes effect. `b_inputs.gms:1356-1378` overwrites the
+  wind rows with the hourlize prescription files, whose only offshore entry for VA
+  is 12 MW in `p99` in 2021.)
 - **Not the state RPS.** This was the first hypothesis and it does not hold up. VA's
   RPS rises 14.5% (2026) → 19.7% (2029) → 25.8% (2032), so capping RE while
   data-center load grows does make it harder to meet — but `eq_REC_Requirement`
@@ -276,7 +298,10 @@ below: the batch still reports success. Check for `outputs/cap.csv` and
 specifically, the intuitive one (disable the state RPS) is expected not to work, per
 above. Until the conflict refiner is run, the honest summary is: the cumulative cap
 makes VA's 2029 LP infeasible and we do not yet know which constraint it collides
-with.
+with. Two next steps, either of which would narrow it: the refiner re-solve
+described above, and a `VA_limitre` re-run with `GSw_CEPM_TgCapByYear=1` (and
+`--scope region` in `make_tg_cap.py`), which removes the 2026 front-loading. If the
+re-run solves, front-loading was at least a necessary ingredient.
 
 Worth checking once the refiner names the rows: whether this is specific to VA's
 cap *values* (harvested from `VA_baseline` by `CEPM/scripts/make_tg_cap.py`) or a
@@ -290,6 +315,66 @@ RMI-fork-only additions (see the "Cumulative tech-group investment caps" entry i
 [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md)); there is no upstream equivalent to
 compare against. If the refiner turns out to implicate a stock ReEDS equation rather
 than the cap itself, that part should be re-checked against upstream.
+
+## `GSw_CEPM_TgCap` caps the horizon total, so a capped run can spend it all in the first solve year
+
+**Symptom:** a `_limitre` run's year-by-year buildout looks nothing like its
+baseline's, even though its 2026-2032 total for each capped tech group matches.
+Typically the capped run builds far more of a group in its first capped solve
+year, then little or none of it later. There is no error, and the totals in
+`cap_new_out` look exactly as intended. The clearest case is `VA_limitre`, which
+built 100% of its onshore and offshore wind budgets in 2026, against 0.7% and 66%
+for `VA_baseline` (table in the
+[Virginia entry above](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found)).
+
+**Root cause:** by design, not a code bug. `eq_cepm_tg_cap_sys(tg)` and
+`eq_cepm_tg_cap_reg(tg,r)` have no year index, and each ceiling is the baseline's
+total new capacity over 2026-2032 (`make_tg_cap.py`). The equations are generated
+in every solve year and count cumulative investment to date, so each solve can use
+whatever budget is left. ReEDS solves sequentially and each year is myopic, so the
+2026 solve has no reason to save budget for 2029 or 2032. When the capped case's
+load is higher than the baseline's, as in every `_limitre` case, building early is
+cheap, and the first capped year takes as much as it can.
+
+**Impact:**
+
+- The capped case follows a different path from the baseline. Comparisons of
+  `_limitre` with `_baseline` or `_optimized` in any single year before the last
+  reflect timing, not just the ceiling.
+- Later solve years can be left with no budget for a group at all. Nothing then
+  lets them add that technology, however much load grows. This may be what makes
+  the Virginia 2029 solve infeasible; that hasn't been tested.
+
+**Status:** fixed, opt-in. `GSw_CEPM_TgCapByYear=1` adds `eq_cepm_tg_cap_sys_t` and
+`eq_cepm_tg_cap_reg_t`, which also cap cumulative investment at each solve year at
+the baseline's cumulative investment through that year. `make_tg_cap.py` always
+writes the matching `cepm_tg_cap_{sys,reg}_yr_<token>.csv` files, so `run_cepm.ps1
+-m` needs no extra steps: set the switch on the `_limitre` column. The default is
+0, which keeps the horizon-total behavior described above. No `cases_cepm.csv`
+case sets it yet. Compiled and run through model setup (`a_createmodel.gms`)
+against the `VA_limitre` inputs; **not yet tested in a full solve.**
+
+Three things to know when turning it on:
+
+- **Use `--scope region` in `make_tg_cap.py`.** A system-wide path still lets a solve
+  year put its share of a group's builds in any region. A later prescribed build in
+  a region those builds didn't cover can then push the group over the path, and the
+  cap has no slack, so the solve is infeasible. A regional path at `--headroom` ≥ 1
+  avoids this, because the baseline's own buildout met every regional prescription
+  in every solve year. `--scope both` doesn't get that guarantee: regions where the
+  baseline built nothing have no regional path, and builds there still count
+  against the system path.
+- **The capped run's `yearset` must match the baseline's.** The path has a value
+  only for the baseline's solve years. If a capped run's modeled year is missing
+  from the path (up to the path's last year), `b_inputs.gms` aborts with a CEPM
+  message instead of leaving that year uncapped. Years after the path's last year
+  are left to the horizon totals.
+- **Regions with no baseline builds stay uncapped by the regional path**, as they
+  already are under the regional horizon totals.
+
+**Fixed upstream?** N/A. `GSw_CEPM_TgCap` and both sets of equations are
+RMI-fork-only additions; see "Cumulative tech-group investment caps" in
+[`reeds-to-cepm-log.md`](reeds-to-cepm-log.md).
 
 ## Possible H2 infeasibility with `GSw_H2=2` in national runs (unverified)
 
