@@ -60,7 +60,6 @@ Summary: What'd we change, why, what'd we find, what's next
 ---
 ## Batch entry: `v20261001gt`
 **## Author: Gaby**
-**## Batch name: v20261001gt`**
 
 Summary:  Re-ran the st-AZNM baseline, limit-RE, and optimized cases to test a fix for a pandas 3.x issue that caused ReEDS to drop buildable onshore wind in landlocked regions. The fix ensures wind supply-curve bins retain the correct data type, preventing onshore wind from being removed during input processing. The corrected runs successfully restored onshore wind as a build option.
 
