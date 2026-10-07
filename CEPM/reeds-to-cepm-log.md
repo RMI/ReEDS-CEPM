@@ -60,6 +60,7 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `reeds/core/setup/b_inputs.gms` | Modified | Interconnection-queue penalty multiplier |
 | `cases.csv` | Modified | Interconnection-queue penalty multiplier |
 | `inputs/growth_constraints/cepm_tg_cap_{sys,reg}_none.csv` | Added | Cumulative tech-group investment caps |
+| `inputs/growth_constraints/cepm_tg_cap_{sys,reg}_yr_none.csv` | Added | Cumulative tech-group investment caps |
 
 # Changes to base ReEDS files
 
@@ -582,22 +583,71 @@ run.
 
 - `inputs/growth_constraints/cepm_tg_cap_sys_none.csv` — header-only (`*tg,MW`)
 - `inputs/growth_constraints/cepm_tg_cap_reg_none.csv` — header-only (`*tg,r,MW`)
+- `inputs/growth_constraints/cepm_tg_cap_sys_yr_none.csv` — header-only (`*tg,t,MW`)
+- `inputs/growth_constraints/cepm_tg_cap_reg_yr_none.csv` — header-only (`*tg,r,t,MW`)
 
-`none` is the default `cepmtgcapscen` and the pair every non-capped case uses.
+`none` is the default `cepmtgcapscen` and the set every non-capped case uses.
 Real ceilings are **generated per batch** by
 [`scripts/make_tg_cap.py`](scripts/make_tg_cap.py) from a completed reference run
 and deleted afterwards, so they are deliberately not committed.
 
 ### Underlying ReEDS files changed:
 
-- `reeds/core/setup/c_model.gms` — +2 equation declarations (near line 176) and
-  one equation-definition block immediately after `eq_interconnection_queues`.
-- `reeds/core/setup/b_inputs.gms` — +2 `$onempty` parameter blocks next to the
-  existing growth limits, plus the two guardrail `abort`s described above.
-- `reeds/input_processing/runfiles.csv` — +2 rows staging
-  `cepm_tg_cap_{sys,reg}_{cepmtgcapscen}.csv` into `inputs_case/`.
-- `cases.csv` — +3 rows: `cepmtgcapscen` (default `none`), `GSw_CEPM_TgCap`
-  (default `0`), `GSw_CEPM_TgCapStartYear` (default `2026`).
+- `reeds/core/setup/c_model.gms` — +4 equation declarations (near line 176) and
+  two equation-definition blocks immediately after `eq_interconnection_queues`:
+  the totals, then the per-year path.
+- `reeds/core/setup/b_inputs.gms` — +4 `$onempty` parameter blocks next to the
+  existing growth limits, plus four guardrail `abort`s: the two described above,
+  and the two per-year ones described below.
+- `reeds/input_processing/runfiles.csv` — +4 rows staging
+  `cepm_tg_cap_{sys,reg}_{cepmtgcapscen}.csv` and
+  `cepm_tg_cap_{sys,reg}_yr_{cepmtgcapscen}.csv` into `inputs_case/`.
+- `cases.csv` — +4 rows: `cepmtgcapscen` (default `none`), `GSw_CEPM_TgCap`
+  (default `0`), `GSw_CEPM_TgCapStartYear` (default `2026`),
+  `GSw_CEPM_TgCapByYear` (default `0`).
+
+### Per-year path (`GSw_CEPM_TgCapByYear`)
+
+Added 2026-10-07. The totals above cap only the 2026-2032 sum. Each is generated
+in every solve year, so a myopic sequential solve can spend the whole budget in
+its first capped year. `VA_limitre` did exactly that: it built 100% of its
+onshore and offshore wind budgets in 2026, leaving 2029 and 2032 unable to add
+any wind (see [`known-reeds-issues.md`](known-reeds-issues.md)).
+
+With `GSw_CEPM_TgCapByYear=1`, `eq_cepm_tg_cap_sys_t(tg,t)` and
+`eq_cepm_tg_cap_reg_t(tg,r,t)` also cap cumulative investment through each
+modeled year `t` at the reference run's cumulative investment through `t`. They
+have the same terms as the totals, plus `yeart(tt) <= yeart(t)` so an
+intertemporal solve counts each year's constraint correctly. The path's last
+value equals the horizon total, so the two sets never conflict. The default of 0
+leaves every existing case unchanged; no `cases_cepm.csv` case turns it on yet.
+
+`make_tg_cap.py` always writes the per-year pair alongside the totals, from the
+reference run's own solve years (`modeledyears.csv`). Each value is floored at
+`--zero-floor` and kept non-decreasing. `run_cepm.ps1 -m` checks for and deletes
+all four files, and `multistep_cases.py` ignores the switch when comparing
+`_limitre` with `_optimized`. `.gitignore` already ignored per-batch
+`cepm_tg_cap_{sys,reg}_*.csv` files, which covers the per-year ones; it gained
+two exceptions so the `_yr_none` files are committed.
+
+Two more guardrails in `b_inputs.gms`, active only with both switches on: one
+for "both per-year files empty", and one for a modeled year from
+`Sw_CEPM_TgCapStartYear` through the path's last year that has no value. The
+second is what a `_limitre` `yearset` that differs from the baseline's looks
+like, and without it that year would solve uncapped by the path.
+
+Prefer `--scope region` with the per-year path. A system-wide path can still be
+infeasible: a solve year can put its share of a group's builds in a region where
+a later prescription doesn't need them, and meeting that prescription then
+exceeds the path. A regional path at `--headroom` ≥ 1 can't, since the reference
+run met every regional prescription in every solve year.
+
+Tested by compiling and running `a_createmodel.gms` on a copy of the
+`v20260925_VA_limitre` inputs. With a real harvest, both switches on: normal
+completion, and 18 system and 39 regional per-year values loaded, each path
+ending at its horizon total. Empty per-year files and a path missing 2029 each
+hit their guardrail; switch off with the `none` files completed normally. **Not
+yet tested in a full solve.**
 
 No `copy_files.py` hook, deliberately: `runfiles.csv` changes by *added rows*
 across releases, while `copy_files.py` is the most-churned file in the tree.
@@ -675,6 +725,12 @@ existing mechanisms don't fit), [`known-reeds-issues.md`](known-reeds-issues.md)
   cheap one and catches any accidental coupling. T3 — a run capped at its own
   harvested buildout must reproduce itself — is the one that proves units,
   tech-group mapping and upgrade inheritance all still line up.
+- **Repeat T3 with `GSw_CEPM_TgCapByYear=1`.** A run capped at its own per-year
+  path must also reproduce itself. That checks the `yeart(tt) <= yeart(t)` bound
+  and the harvest's year alignment.
+- **Is `reeds.io.get_years()` still reading `modeledyears.csv`?** The per-year
+  harvest takes its solve years from it, and the missing-year guardrail assumes
+  those match the capped run's `tmodel_new`.
 
 ## Interconnection-queue penalty multiplier (`GSw_CapPenaltyMult`)
 

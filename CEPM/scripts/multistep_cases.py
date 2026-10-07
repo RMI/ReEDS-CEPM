@@ -127,7 +127,7 @@ def validate(cases_filename, stem):
 
     # Advisory only: the two load cases should agree on everything but the ceiling.
     # A mismatch is not necessarily wrong (someone may be testing something), so warn.
-    ignore_rows = {'GSw_CEPM_TgCap', 'cepmtgcapscen', 'ignore'}
+    ignore_rows = {'GSw_CEPM_TgCap', 'GSw_CEPM_TgCapByYear', 'cepmtgcapscen', 'ignore'}
     differing = [
         switch
         for switch in df.index

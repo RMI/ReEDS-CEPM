@@ -94,6 +94,7 @@ GSw_CarbTaxOption,Choose the co2_tax input csv file (see inputs\emission_constra
 GSw_CEPM_QueueExempt,"CEPM: prescribed capacity exempted from the interconnection-queue limit (eq_interconnection_queues). 0 = none (upstream); 1 = prescriptions online before interconnection_start, counted by online year rather than solve year; 2 = all prescriptions, so the queue limits only endogenous builds; 3 = mode 1 plus 2025+ prescriptions only where they exceed the queue limit",0; 1; 2; 3,0,
 GSw_CEPM_TgCap,CEPM: turn on/off the cumulative tech-group investment caps (eq_cepm_tg_cap_sys/_reg),0; 1,0,
 GSw_CEPM_TgCapStartYear,CEPM: first solve year whose investment counts against the GSw_CEPM_TgCap caps,int,2026,
+GSw_CEPM_TgCapByYear,"CEPM: 0 = GSw_CEPM_TgCap caps only cumulative investment over the whole horizon; 1 = also cap cumulative investment at each modeled year at the reference run's cumulative path (eq_cepm_tg_cap_sys_t/_reg_t, from cepm_tg_cap_{sys,reg}_yr_{cepmtgcapscen}.csv). Only used if GSw_CEPM_TgCap=1",0; 1,0,
 GSw_CCS,Turn on/off all inflexible CCS,0; 1,1,
 GSw_CCS_NotRecTech,Turn on/off removal of CCS techs from CES eligibility,0; 1,0,
 GSw_CCS_Rate_New_mod,fractional CO2 capture rate of new CCS_mod capacity,float,0.95,

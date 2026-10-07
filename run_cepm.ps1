@@ -690,11 +690,15 @@ if ([string]::IsNullOrWhiteSpace($m)) {
     }
 
     # --- Step 8m.3: harvest the ceiling from phase A.
-    # Written to inputs/growth_constraints/cepm_tg_cap_{sys,reg}_<BatchName>.csv, and
-    # removed again in the finally block at the bottom of this script.
+    # Written to inputs/growth_constraints/cepm_tg_cap_{sys,reg}_<BatchName>.csv plus
+    # the per-year cepm_tg_cap_{sys,reg}_yr_<BatchName>.csv (used only when the
+    # _limitre case sets GSw_CEPM_TgCapByYear=1), and removed again in the finally
+    # block at the bottom of this script.
     $MultistepCapToken = $BatchName
     $capSysPath = Join-Path $repoRoot "inputs\growth_constraints\cepm_tg_cap_sys_${MultistepCapToken}.csv"
     $capRegPath = Join-Path $repoRoot "inputs\growth_constraints\cepm_tg_cap_reg_${MultistepCapToken}.csv"
+    $capSysYrPath = Join-Path $repoRoot "inputs\growth_constraints\cepm_tg_cap_sys_yr_${MultistepCapToken}.csv"
+    $capRegYrPath = Join-Path $repoRoot "inputs\growth_constraints\cepm_tg_cap_reg_yr_${MultistepCapToken}.csv"
     if ($isMultistepDryRun) {
         Write-Host "[note] --dryrun: skipping the harvest (no phase A outputs to read)."
     } else {
@@ -709,11 +713,14 @@ if ([string]::IsNullOrWhiteSpace($m)) {
         if ($LASTEXITCODE -ne 0) {
             throw "make_tg_cap.py failed while harvesting the ceiling from $caseBaseline."
         }
-        if (-not (Test-Path $capSysPath) -or -not (Test-Path $capRegPath)) {
-            throw ("make_tg_cap.py reported success but did not write both cap files " +
-                   "($capSysPath, $capRegPath). Phase B would run silently uncapped.")
+        $missingCaps = @($capSysPath, $capRegPath, $capSysYrPath, $capRegYrPath) |
+            Where-Object { -not (Test-Path $_) }
+        if ($missingCaps) {
+            throw ("make_tg_cap.py reported success but did not write every cap file " +
+                   "(missing: $($missingCaps -join ', ')). Phase B would fail to stage " +
+                   "its inputs or run silently uncapped.")
         }
-        Write-Host "[ok] Ceiling harvested to cepm_tg_cap_{sys,reg}_${MultistepCapToken}.csv"
+        Write-Host "[ok] Ceiling harvested to cepm_tg_cap_{sys,reg}[_yr]_${MultistepCapToken}.csv"
     }
 
     # --- Step 8m.4: generate the per-batch cases file pointing _limitre at that ceiling.
@@ -919,7 +926,7 @@ if (-not $q) {
     # design: a cleanup problem is warned, never thrown, so it can't mask the real
     # failure that got us here.
     if (-not [string]::IsNullOrWhiteSpace($m)) {
-        foreach ($generated in @($capSysPath, $capRegPath, $MultistepCasesPath)) {
+        foreach ($generated in @($capSysPath, $capRegPath, $capSysYrPath, $capRegYrPath, $MultistepCasesPath)) {
             if ($generated -and (Test-Path $generated)) {
                 try {
                     Remove-Item -Path $generated -Force

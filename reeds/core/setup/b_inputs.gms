@@ -4999,6 +4999,64 @@ abort$[Sw_CEPM_TgCap$(not [sum{tg, cepm_tg_cap_sys(tg) }
     "CEPM: GSw_CEPM_TgCap=1 but both cepm_tg_cap_sys.csv and cepm_tg_cap_reg.csv are empty, so nothing would be capped. Check cepmtgcapscen and that make_tg_cap.py actually ran." ;
 $offImplicitAssign
 
+*---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+* Per-year cumulative ceilings, consumed by eq_cepm_tg_cap_sys_t /
+* eq_cepm_tg_cap_reg_t in c_model.gms when GSw_CEPM_TgCapByYear=1. The value at
+* year t is the reference run's cumulative new capacity from
+* Sw_CEPM_TgCapStartYear through t. The totals above cap only the horizon sum,
+* which a myopic sequential solve can spend in its first capped year; this path
+* also holds the reference run's pace. Units MW_ac, and 0 means "no cap", as
+* above. Indexed over allt like other year-indexed inputs.
+* See CEPM/guidance/two-step-re-limited-runs.md.
+*---------------------------------------------------------------------------
+$onempty
+parameter cepm_tg_cap_sys_t(tg,allt) "--MW_ac-- CEPM system-wide cap on cumulative new investment by technology group through year t"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%cepm_tg_cap_sys_yr.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter cepm_tg_cap_reg_t(tg,r,allt) "--MW_ac-- CEPM regional cap on cumulative new investment by technology group through year t"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%cepm_tg_cap_reg_yr.csv
+$offdelim
+$onlisting
+/ ;
+$offempty
+
+* Guardrails, both only when the per-year path is switched on:
+*   1. Both files empty -- the same silent-uncapped failure as above.
+*   2. A modeled year from Sw_CEPM_TgCapStartYear through the path's last year
+*      has no value at all. That year would be uncapped by the path, which is
+*      what happens when this run's yearset differs from the reference run's.
+*      Years after the path's last year are left to the horizon totals.
+$onImplicitAssign
+abort$[Sw_CEPM_TgCap$Sw_CEPM_TgCapByYear
+       $(not [sum{(tg,t), cepm_tg_cap_sys_t(tg,t) }
+              + sum{(tg,r,t), cepm_tg_cap_reg_t(tg,r,t) }])]
+    "CEPM: GSw_CEPM_TgCapByYear=1 but both cepm_tg_cap_sys_yr.csv and cepm_tg_cap_reg_yr.csv are empty, so no year would be capped. Check cepmtgcapscen and that make_tg_cap.py actually ran." ;
+
+scalar cepm_tg_cap_t_last "--year-- last year with a per-year CEPM cap value" ;
+cepm_tg_cap_t_last = smax{t$[sum{tg, cepm_tg_cap_sys_t(tg,t) }
+                             + sum{(tg,r), cepm_tg_cap_reg_t(tg,r,t) }], yeart(t) } ;
+parameter cepm_tg_cap_t_missing(t) "--unitless-- modeled years with no per-year CEPM cap value (must always be empty)" ;
+cepm_tg_cap_t_missing(t) = 0 ;
+cepm_tg_cap_t_missing(t)$[tmodel_new(t)
+                          $(yeart(t)>=Sw_CEPM_TgCapStartYear)
+                          $(yeart(t)<=cepm_tg_cap_t_last)
+                          $(not [sum{tg, cepm_tg_cap_sys_t(tg,t) }
+                                 + sum{(tg,r), cepm_tg_cap_reg_t(tg,r,t) }])] = 1 ;
+abort$[Sw_CEPM_TgCap$Sw_CEPM_TgCapByYear$sum{t, cepm_tg_cap_t_missing(t) }]
+    "CEPM: GSw_CEPM_TgCapByYear=1 but the per-year cap has no value for one or more modeled years, which would leave them uncapped. The capped run's yearset must match the reference run's. See CEPM/guidance/two-step-re-limited-runs.md.",
+    cepm_tg_cap_t_missing ;
+$offImplicitAssign
+
 * gbin_min is based on the representative plant size for a single plant in that tech group
 parameter gbin_min(tg) "--MW-- minimum size of the first (zero cost) growth bin"
 /

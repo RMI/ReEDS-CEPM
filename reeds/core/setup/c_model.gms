@@ -178,6 +178,8 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
 * CEPM: cumulative new-investment caps by tech group (see CEPM/guidance/two-step-re-limited-runs.md)
  eq_cepm_tg_cap_sys(tg)                   "--MW_ac-- CEPM: cumulative system-wide cap on new investment by tech group"
  eq_cepm_tg_cap_reg(tg,r)                 "--MW_ac-- CEPM: cumulative regional cap on new investment by tech group"
+ eq_cepm_tg_cap_sys_t(tg,t)               "--MW_ac-- CEPM: system-wide cap on new investment by tech group, cumulative through year t"
+ eq_cepm_tg_cap_reg_t(tg,r,t)             "--MW_ac-- CEPM: regional cap on new investment by tech group, cumulative through year t"
 
 * storage capacity credit supply curves
  eq_cap_sdbin_balance(i,v,r,ccseason,t)             "--MW-- total binned storage power capacity must be greater than total storage capacity"
@@ -1476,6 +1478,76 @@ eq_cepm_tg_cap_reg(tg,r)$[cepm_tg_cap_reg(tg,r)$Sw_CEPM_TgCap$(not Sw_PCM)]..
 * [plus] capacity arriving by upgrade rather than new build, matching cap_new_out
     + sum{(i,v,tt)$[valcap(i,v,r,tt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
                                     $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(tmodel(tt) or tfix(tt))],
+        (1 - upgrade_derate(i,v,r,tt))
+        * [UPGRADES(i,v,r,tt) - UPGRADES_RETIRE(i,v,r,tt)]
+        / ilr(i) }
+;
+
+* ---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+*
+* Per-year versions of the two caps above, active only with
+* GSw_CEPM_TgCapByYear=1. The totals cap the horizon sum, and nothing stops a
+* sequential solve from spending all of it in the first capped year. These
+* equations also cap cumulative investment at each modeled year t at the
+* reference run's cumulative investment through t, so the capped run follows
+* the reference run's pace and not just its total.
+*
+* Same terms as the totals, with one addition: tt is also bounded by t, so in
+* an intertemporal solve each year's constraint counts only investment up to
+* that year. In the sequential solve that bound changes nothing, since later
+* years are in neither tmodel nor tfix.
+*
+* The path's last value equals the horizon total, so both sets can be active
+* together without conflict.
+* ---------------------------------------------------------------------------
+
+eq_cepm_tg_cap_sys_t(tg,t)
+    $[tmodel(t)$cepm_tg_cap_sys_t(tg,t)$Sw_CEPM_TgCap$Sw_CEPM_TgCapByYear$(not Sw_PCM)]..
+
+* the system-wide ceiling on investment in this tech group through year t
+    cepm_tg_cap_sys_t(tg,t)
+
+    =g=
+
+* must be greater than new investment in the group, in MW_ac, from the start year through t
+    sum{(i,newv,r,tt)$[valinv(i,newv,r,tt)$tg_i(tg,i)
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(tt)<=yeart(t))
+                                    $(tmodel(tt) or tfix(tt))],
+        [INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+* [plus] capacity arriving by upgrade rather than new build, matching cap_new_out
+    + sum{(i,v,r,tt)$[valcap(i,v,r,tt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(tt)<=yeart(t))
+                                    $(tmodel(tt) or tfix(tt))],
+        (1 - upgrade_derate(i,v,r,tt))
+        * [UPGRADES(i,v,r,tt) - UPGRADES_RETIRE(i,v,r,tt)]
+        / ilr(i) }
+;
+
+eq_cepm_tg_cap_reg_t(tg,r,t)
+    $[tmodel(t)$cepm_tg_cap_reg_t(tg,r,t)$Sw_CEPM_TgCap$Sw_CEPM_TgCapByYear$(not Sw_PCM)]..
+
+* the regional ceiling on investment in this tech group through year t
+    cepm_tg_cap_reg_t(tg,r,t)
+
+    =g=
+
+    sum{(i,newv,tt)$[valinv(i,newv,r,tt)$tg_i(tg,i)
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(tt)<=yeart(t))
+                                    $(tmodel(tt) or tfix(tt))],
+        [INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+* [plus] capacity arriving by upgrade rather than new build, matching cap_new_out
+    + sum{(i,v,tt)$[valcap(i,v,r,tt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(tt)<=yeart(t))
                                     $(tmodel(tt) or tfix(tt))],
         (1 - upgrade_derate(i,v,r,tt))
         * [UPGRADES(i,v,r,tt) - UPGRADES_RETIRE(i,v,r,tt)]
