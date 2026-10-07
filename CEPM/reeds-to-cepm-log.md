@@ -35,6 +35,7 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `reeds/core/setup/b_inputs.gms` | Modified | GAMS compatibility |
 | `reeds/input_processing/fuelcostprep.py` | Modified | Census divisions in fuelcostprep.py |
 | `reeds/input_processing/recf.py` | Modified | recf.py when offshore wind is disabled |
+| `reeds/input_processing/writesupplycurves.py` | Modified | Empty supply curve drops onshore wind under pandas 3 |
 | `reeds/resource_adequacy/reeds2pras/README.md` | Modified | Minor and cosmetic |
 | `postprocessing/compare_cases.py` | Modified | Wrong module in compare_cases.py's "Flexibly Sited Demand" slide |
 | `reeds/report_utils.py` | Modified | parse_caselist TypeError with a prefix-glob caselist |
@@ -168,6 +169,71 @@ input file.
 - Note the related trap in [`known-reeds-issues.md`](known-reeds-issues.md): disabling
   offshore wind via `techs_banned` instead of `GSw_OfsWind = 0` leaves the
   `eq_RPS_OFSWind` state mandate active and the model infeasible.
+
+## Empty supply curve drops onshore wind under pandas 3 (writesupplycurves.py)
+
+### Description of issue:
+
+Runs completed cleanly but built **no new onshore wind**, because
+`inputs_case/rsc_combined.csv` was written with only `cost_cap`/`cost_trans` rows for
+`wind-ons` and no `cap`/`cost` rows — leaving the model with zero buildable wind
+resource. No error, no warning; `writesupplycurves.py` logged `Finished` normally.
+Caught 2026-09-24 on `runs/v20260924fix_st-AZNM_*` (0.7 GW of wind in 2032, all of it
+pre-existing) against `runs/v20260916v4_st-AZNM_*` (14.2-15.8 GW) with identical
+switches.
+
+`agg_supplycurve()` assigned `dfin['bin'] = []` for an empty input supply curve, which
+pandas types as float64. `st-AZNM` is landlocked, so its offshore curve is header-only
+while `GSw_OfsWind=1` still processes it. pandas 3.0 stopped excluding empty frames from
+dtype resolution in `pd.concat`, so stacking the onshore and offshore frames upcast the
+`bin` index level to float64, `"wsc" + bin.astype(str)` yielded `wsc1.0` instead of
+`wsc1`, and the `{"wsc1": "bin1", ...}` rename matched nothing. The downstream pivot
+selects value columns with `startswith("bin")` and silently dropped every wind row.
+
+The repo's pandas pin moved to `pandas==3.0.*` in `129ecdbc` (2026-09-10, Python 3.14
+bump); the local venv was rebuilt to 3.0.5 on 2026-09-24, 21 minutes before the first
+affected run. This is a latent upstream bug the upgrade activated — not a reason to
+un-pin pandas.
+
+### Files changed:
+
+- `reeds/input_processing/writesupplycurves.py` — in `agg_supplycurve()`, the
+  `if dfin.empty:` branch now assigns `pd.Series([], dtype='int64')` instead of `[]`,
+  matching the int64 `reeds.inputs.get_bin` produces in the non-empty branch, so the
+  `bin` level never upcasts through `pd.concat`. Fixed at the dtype source rather than
+  at the `.astype(str)` call: the same trap sits one line below on `class`, and
+  `agg_supplycurve()` also feeds the geothermal `pd.concat(geo, axis=0)`, which is one
+  switch change away from failing the same way. (UPV and CSP cannot hit it — they call
+  `agg_supplycurve()` standalone, with no populated sibling for an empty frame to
+  corrupt.)
+
+### Reference: [`known-reeds-issues.md`](known-reeds-issues.md)
+
+### What to test in new releases:
+
+- Does upstream still assign a bare `dfin['bin'] = []` in `agg_supplycurve()`'s empty
+  branch? It does at tag `2026.08.03` (line 105) and on `upstream/main` (line 121).
+  Note that upstream has pinned `pandas=3.0` since 2026-05-08 (`2ff493b5`) — four months
+  before this fork did — so **the bug is live upstream, not latent**. They have not hit
+  it only because their default and test cases (`cendiv/Pacific`, `country/USA`) are
+  coastal or national and always have a populated offshore curve. Not raised on their
+  issue tracker as of 2026-09-25 (all 86 issues searched). Worth reporting and
+  contributing back; it is a one-line dtype correction that is a no-op under pandas 2.
+  If they fix it themselves, drop this patch rather than merging it.
+- Has upstream changed how `windall` is assembled, or how the `wsc{bin}` -> `bin{bin}`
+  rename is applied? Both sit within a few lines of the fix and either would change what
+  the patch needs to guarantee.
+- After any pandas major-version bump, re-run one **landlocked** case with
+  `GSw_OfsWind=1` (an `st/AZ.NM`-style selection) and check that `rsc_combined.csv` has
+  all four `sc_cat` categories for `wind-ons` with equal row counts:
+  `awk -F, 'NR>1{split($1,a,"_"); print a[1]"|"$3}' inputs_case/rsc_combined.csv | sort | uniq -c | grep wind`.
+  A coastal case cannot surface this bug — its offshore curve is non-empty, so nothing
+  upcasts.
+- More generally, this is the second empty-frame-into-`concat` bug in the input
+  processing chain (see *Resolving recf.py when offshore wind is disabled*). That
+  pattern is safe on `axis=1` (column-wise, dtypes stay per-column) and dangerous on
+  `axis=0` (the empty frame's dtypes participate). Check new upstream `pd.concat` calls
+  against that distinction.
 
 ## Wrong module in compare_cases.py's "Flexibly Sited Demand" slide
 
