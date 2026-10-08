@@ -55,7 +55,46 @@ Summary: What'd we change, why, what'd we find, what's next
 - [ ] I moved batch results to the VM-Outputs folder
 - [ ] I added any issues we found to the JIRA issues epic
 - [ ] I edited LLM-generated text to keep this entry short and to the point
+- [ ] Open a pull request and add results of a recent run as an attachment
 
+**## Author: Gaby`**
+**## Batch name: TEMPLATE `v20261006gt_AEO`**
+
+Summary: Ran the st-AZNM baseline, limit-RE, and optimized cases using the AEO case assumptions to compare results against the previous AZNM runs. This batch is intended to isolate the impact of the AEO assumptions while keeping the existing baseline/limit-RE/optimized case structure consistent.
+
+### Batch details
+
+- **Built from:**  v20261001gt`
+- **Space and Time:** `{e.g., WECC-SW, 2026-2032 every 3 years}`
+- **Cases:** st/AZ.NM`, 2026–2032 every 3 years
+- **Run comments:** 
+
+### Change log
+
+- **ReEDS change:** No ReEDS code changes.
+- **Case change:** Added `st-AZNM_AEO_baseline`, `st-AZNM_AEO_limitre`, and `st-AZNM_AEO_optimized`to use AEO gas assumptions
+- **Case change:** Added `{Case}`
+
+### Results
+When compared to previous results that use Anna's capex calculations, this run has much more gas build out and more wind retirements
+
+
+### Documentation, decisions, next steps, & issues
+
+- **PROPOSED DECISION:** We continue using Anna's Capex calculations
+- **DOCUMENTATION:** no need, just probing two capex numbers
+- **NEXT STEP:** We continue using Anna's Capex calculations
+- **ISSUE:** no need, just probing two capex numbers
+
+### Checklist
+
+- [X] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
+- [X] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
+- [X] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
+- [X] I moved batch results to the VM-Outputs folder
+- [X] I added any issues we found to the JIRA issues epic
+- [X] I edited LLM-generated text to keep this entry short and to the point
+- [X] Open a pull request and add results of a recent run as an attachment
 ---
 ##Batch entry
 **## Author: Gaby**
