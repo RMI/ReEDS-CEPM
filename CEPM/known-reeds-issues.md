@@ -39,9 +39,10 @@ chasing a crash, start with them.
 | [H2 infeasibility with `GSw_H2=2` (unverified)](#possible-h2-infeasibility-with-gsw_h22-in-national-runs-unverified) | Open — untested | A 2026-07 national run went infeasible in DE. Root cause never traced; every CEPM case sets `GSw_H2=0`. |
 | [`cendivweights.csv` domain violation at cendiv borders](#cendivweightscsv-domain-violation-near-census-division-borders-fixed) | Fixed — not on `main` | Sub-national runs near a census-division border fail GAMS compile. Fixed on `dev`; `main` still has it. |
 | [`recf.py` crashes when offshore wind is disabled](#recfpy-crashes-when-offshore-wind-is-disabled-fixed) | Fixed | `GSw_OfsWind=0` left `df_windofs` undefined before a concat. |
-| [Onshore wind supply curve dropped under pandas 3](#onshore-wind-supply-curve-silently-dropped-under-pandas-3-when-a-sibling-curve-is-empty) | Open — fix identified | **Silent.** A landlocked region with `GSw_OfsWind=1` builds zero new onshore wind, with no error. Live upstream too. Four runs affected and still recurring. |
+| [Onshore wind supply curve dropped under pandas 3](#onshore-wind-supply-curve-silently-dropped-under-pandas-3x-when-a-sibling-supply-curve-is-empty-fixed) | Fixed | **Silent.** A landlocked region with `GSw_OfsWind=1` builds zero new onshore wind, with no error. Live upstream too. Four runs affected and still recurring. |
 | [`startyear` > 2022 crashes `hydcf.py`](#startyear--2022-crashes-hydcfpy-arange-cannot-compute-length) | Open — fixed in `2026.09.08` | A later `startyear` empties the historical hydro frame and dies at an unrelated `arange`. Resolves at the next sync. |
 | [`report_dump.py` crashes reading `df_capex_init.csv`](#postprocessing-report_dumppy-crashes-reading-df_capex_initcsv) | Open — fixed in `2026.09.08` | Postprocessing ordering bug: the system-cost CSV is never written. Run itself unaffected. |
+| [Retail-rate module crashes on single-BA runs](#retail_rate_calculationspy-crashes-on-single-ba-runs-keyerror-res_marg_ann_flow) | Open — fix identified | `KeyError: 'res_marg_ann_flow'`; `retail_rate_components.csv` is never written. Multi-region runs unaffected. |
 | [`report_dump.py` leaves GAMS sets out of `outputs.h5`](#report_dumppy-leaves-gams-sets-out-of-outputsh5-could-not-convert-string-to-float-) | Open — fixed in `2026.09.08` | **Silent.** `read_output()` returns an empty table for sets such as `hierarchy`; read `outputs/<set>.csv`. Solve unaffected. |
 | [`single_case_plots.py` plots fail on reduced-region cases](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases) | Open — partly by design | Several diagnostic maps fail on single-region or reduced-hierarchy runs. Each is caught; core outputs unaffected. |
 | [bokehpivot: every map section fails on an aggregated zoneset](#bokehpivot-html-report-every-map-type-section-fails-on-an-aggregated-zoneset) | Open | No boundary file exists for aggregated zonesets, so all map sections of the HTML report are missing. |
@@ -49,9 +50,10 @@ chasing a crash, start with them.
 | [`compare_cases.py` crashes on a shared-prefix glob](#compare_casespy-crashes-when-comparing-cases-via-a-shared-prefix-glob-typeerror-in-parse_caselist-fixed) | Fixed | `TypeError` in `parse_caselist()` blocked the comparison report entirely. |
 | [`compare_cases.py` hardcodes year 2020](#compare_casespy-hardcodes-year-2020-in-several-plots-instead-of-using---startyear-fixed) | Fixed | Five literal `2020`s broke slides for any batch whose years exclude 2020 — i.e. every CEPM case. |
 | [`compare_cases.py` "Flexibly Sited Demand" slide](#compare_casespy-flexibly-sited-demand-slide-calls-the-wrong-module-fixed) | Fixed | Called `add_to_pptx` from the wrong module, dropping the slide. |
+| [`timetype=int`/`win` call GAMS files that don't exist](#runreedspy-timetypeint-and-timetypewin-call-gams-solve-files-that-dont-exist) | Open — fix identified | `runreeds.py` points both solve calls at pre-restructure paths. `seq` (every CEPM case) is unaffected. |
 | [`runreeds.py` reports success on failure, hangs on multi-case `-s`](#runreedspy-reports-success-on-a-failed-case-and-hangs-on-a-multi-case--s) | Open — worked around | **Silent.** Exit code 0 despite an aborted solve; interactive prompts hang under a wrapper. Check for `outputs.h5`, not the exit code. |
 | [`z_rep` dominated by the interconnection-queue penalty](#z_rep-is-dominated-by-the-interconnection-queue-penalty-and-does-not-match-systemcostcsv) | Not a bug | `z_rep` is unusable as a cost figure and the penalty does shift buildout. Use `systemcost.csv`. |
-| [Operating reserves effectively off by default](#operating-reserves-are-effectively-off-under-default-switches) | Expected | Reserve constraints have 0 rows under default switches (upstream design with stress periods). |
+| [Operating reserves effectively off by default](#operating-reserves-are-effectively-off-under-default-switches) | Expected | Reserve constraints have 0 rows under default switches (upstream design with stress periods), so the `opRes` outputs are empty and one bokehpivot section fails. |
 | [`reeds2pras` `BoundsError` for `hydud`/`hydund`](#reeds2pras-boundserror-for-hydudhydund-hydro-capacity--no-monthly-profile-data) | Open — non-fatal | Hydro-upgrade categories have no monthly profile data, so PRAS zeroes their contribution. Diagnostic layer only. |
 | [PRAS crashes on single-zone regions](#pras-crashes-on-single-zone-regions-boundserror--0-element-vectorline) | Open | A one-zone region has no lines, so `make_pras_interfaces()` throws after the solve. Use ≥ 2 zones. |
 | [Cosmetic warnings safe to ignore](#cosmetic-warnings-safe-to-ignore) | Informational | Known-harmless warnings from `copy_files.py`, `hourly_repperiods.py`, the VRE-sites maps and bokeh "Firm Capacity". |
@@ -378,14 +380,14 @@ same crash if run with `GSw_OfsWind=0`. Good candidate to contribute back, since
 it's the same fix pattern upstream already uses for `GSw_distpv`/`GSw_CSP` a few
 lines below.
 
-## Onshore wind supply curve silently dropped under pandas 3 when a sibling curve is empty
+## Onshore wind supply curve silently dropped under pandas 3.x when a sibling supply curve is empty (FIXED)
 
-**Symptom:** a run completes normally — no error, no warning, `writesupplycurves.py`
-logs `Starting`/`Finished` as usual — but builds **no new onshore wind at all**.
-Total `wind-ons` capacity sits flat at the existing fleet for every solve year. The
-tell is in `inputs_case/rsc_combined.csv`: `wind-ons` has only `cost_cap` and
-`cost_trans` rows, and no `cap` or `cost` rows, so the model is handed zero buildable
-wind resource. To check any run:
+**Symptom:** a run completes normally, with no error or warning, but builds **no new
+onshore wind at all** — total `wind-ons` capacity stays flat at its existing value for
+every solve year. `writesupplycurves.py` logs `Starting`/`Finished` as usual. The tell
+is in `inputs_case/rsc_combined.csv`: `wind-ons` has only `cost_cap` and `cost_trans`
+rows, and no `cap` or `cost` rows at all, so the model is handed zero buildable wind
+resource. To check any run:
 
 ```bash
 awk -F, 'NR>1{split($1,a,"_"); print a[1]"|"$3}' inputs_case/rsc_combined.csv \
@@ -393,32 +395,26 @@ awk -F, 'NR>1{split($1,a,"_"); print a[1]"|"$3}' inputs_case/rsc_combined.csv \
 ```
 
 A healthy run shows four categories (`cap`, `cost`, `cost_cap`, `cost_trans`) with
-equal row counts. An affected run is missing `cap` and `cost` entirely:
+equal row counts; an affected run is missing `cap` and `cost`.
 
-```
-  377 cap   377 cost   377 cost_cap   377 cost_trans     <- healthy (v20260916v4_st-AZNM_baseline)
-                       377 cost_cap   377 cost_trans     <- broken  (v20260924fix_st-AZNM_baseline)
-```
-
-First surfaced 2026-09-24 on `runs/v20260924fix_st-AZNM_*`, which built 0.7 GW of wind
-in 2032 (the existing fleet, nothing new) against 14.2 GW (`baseline`/`limitre`) and
-15.8 GW (`optimized`) in the otherwise-comparable `runs/v20260916v4_st-AZNM_*` eight
-days earlier. Switches, `numbins_*` and siting scenarios were identical between the
-two.
+Surfaced 2026-09-24 on `runs/v20260924fix_st-AZNM_*`, which built 0.7 GW of wind (the
+existing fleet, nothing new) in 2032 against 14.2 GW (`baseline`/`limitre`) and 15.8 GW
+(`optimized`) in the otherwise-comparable `runs/v20260916v4_st-AZNM_*` eight days
+earlier. Switches, `numbins_*`, and siting scenarios were identical between the two.
 
 **Root cause:** a dtype bug in `agg_supplycurve()`
 (`reeds/input_processing/writesupplycurves.py`) that only became live with pandas 3.0.
 
 `st-AZNM` is landlocked, so its `supplycurve_wind-ofs.csv` is header-only — but
 `GSw_OfsWind=1`, so offshore wind is still processed. For an empty input,
-`agg_supplycurve()` takes its `if dfin.empty:` branch and assigns `dfin['bin'] = []`,
-which pandas types as **float64**. pandas 3.0 stopped excluding empty frames from
-dtype resolution in `pd.concat`, so `windall = pd.concat(wind, axis=0)` — which stacks
-the onshore and offshore frames row-wise into a MultiIndex — upcasts the `bin` level
-from int64 to float64. The next line,
-`windall["bin"] = "wsc" + windall["bin"].astype(str)`, then produces `wsc1.0` instead
-of `wsc1`, so the rename map `{"wsc1": "bin1", ...}` matches nothing and the wind bin
-columns keep their `wsc*.0` names.
+`agg_supplycurve()` took its `if dfin.empty:` branch and assigned `dfin['bin'] = []`,
+which pandas types as **float64**. pandas 3.0 stopped excluding empty frames from dtype
+resolution in `pd.concat`, so `windall = pd.concat(wind, axis=0)` — which stacks the
+onshore and offshore frames row-wise into a MultiIndex — upcast the `bin` level from
+int64 to float64. The next line,
+`windall["bin"] = "wsc" + windall["bin"].astype(str)`, then produced `wsc1.0` instead
+of `wsc1`, so the rename map `{"wsc1": "bin1", ...}` matched nothing and the wind bin
+columns kept their `wsc*.0` names.
 
 From there the loss is silent by construction: `alloutcap.pivot(...)` selects its value
 columns with `[c for c in alloutcap.columns if c.startswith("bin")]`, which wind no
@@ -427,46 +423,47 @@ longer has, so all wind capacity is dropped without complaint. The final
 rows too. Only `cost_cap`/`cost_trans` survive, because those are concatenated on
 *after* that pivot.
 
-UPV, CSP, geohydro and EGS escape only incidentally — see Scope. `class` escapes for a
-similar accidental reason: it is read from the CSV, which pandas types as object for an
-empty file, rather than being assigned a bare `[]`.
+UPV, CSP, geohydro and EGS escaped only incidentally: UPV is never concatenated with an
+empty frame, so its `bin` stays int64. `class` escaped for a similar accidental reason —
+it is read from the CSV, which pandas types as object for an empty file, rather than
+being assigned a bare `[]`.
 
-**Trigger:** this fork's pandas pin moved to `pandas==3.0.*` on 2026-09-10 (`129ecdbc`,
+**Trigger:** the repo's pandas pin moved to `pandas==3.0.*` on 2026-09-10 (`129ecdbc`,
 "Bump Python to 3.14, realign packages with environment.yml"), and the local venv was
 rebuilt to pandas 3.0.5 on 2026-09-24 at 20:24 — 21 minutes before the first affected
 run started. `uv.lock` carried `pandas 2.0.3` from 2026-05-05 until that bump, so every
 run before 2026-09-24 was unaffected with identical inputs and switches. This is a
-pre-existing upstream bug that the pandas upgrade activated, not a regression
-introduced by the pin — and note upstream pinned `pandas=3.0` four months before we did
-(see **Fixed upstream?** below). Do not "fix" it by pinning pandas back.
+pre-existing upstream bug that the pandas upgrade activated, not a regression introduced
+by the pin — and note upstream pinned `pandas=3.0` four months before we did (see
+**Fixed upstream?** below). Do not "fix" it by pinning pandas back.
 
 **Scope — all four conditions must hold at once:**
 
 1. **pandas >= 3.0.** The concat dtype-resolution change is what makes the latent bug
    live. Confirmed on 3.0.5: concatenating a populated int64-`bin` frame with an empty
-   float64-`bin` one yields `['wsc1.0', 'wsc2.0', ...]`; the populated frame alone
-   yields `['wsc1', 'wsc2', ...]`.
+   float64-`bin` one yields `['wsc1.0', 'wsc2.0', ...]`; the populated frame alone yields
+   `['wsc1', 'wsc2', ...]`.
 2. **The code path stacks sub-techs with `pd.concat(dict, axis=0)` and then does
    `.astype(str)` on the `bin` level.** Only two sites qualify: wind
    (`pd.concat(wind, axis=0)` over `ons`/`ofs`, then `"wsc" + bin.astype(str)`) and
    geothermal (`pd.concat(geo, axis=0)` over `geohydro`/`egs`, then
    `"geosc" + bin.astype(str)`). **UPV and CSP cannot hit this** — they call
-   `agg_supplycurve()` standalone, so an empty result just stays empty with no
-   populated sibling to corrupt.
-3. **One member of that dict is empty and the other is not.** Both populated, no
-   upcast; both empty, nothing to lose. Only the *mixed* case does damage, because the
-   empty frame's float64 silently rewrites the populated frame's bin labels.
+   `agg_supplycurve()` standalone, so an empty result just stays empty with no populated
+   sibling to corrupt.
+3. **One member of that dict is empty and the other is not.** Both populated, no upcast;
+   both empty, nothing to lose. Only the *mixed* case does damage, because the empty
+   frame's float64 silently rewrites the populated frame's bin labels.
 4. **The empty member is still being processed** — its switch is on, so it reaches the
    concat even though it has no resource.
 
 For wind that reduces to: **offshore wind enabled in a region with no offshore
-resource.** Verified against the affected `st-AZNM` inputs — `GSw_OfsWind=1` yields
-0 `cap`/0 `cost` wind rows, `GSw_OfsWind=0` yields 1640/1640. It is leaving the switch
-*on* over an empty curve that bites; turning it *off* is safe.
+resource.** Verified against the unfixed code on the same `st-AZNM` inputs —
+`GSw_OfsWind=1` gives 0 `cap`/0 `cost` wind rows, `GSw_OfsWind=0` gives 1640/1640. It is
+leaving the switch *on* over an empty curve that bites; turning it *off* is safe.
 
 `GSw_OfsWind` defaults to **1** in `cases.csv`, so every case satisfies condition 4
 unless it explicitly opts out. Which regions satisfy condition 3, measured by offshore
-supply curve rows across existing runs:
+supply curve rows in existing runs:
 
 | Region | offshore rows | exposed? |
 |---|---|---|
@@ -477,73 +474,71 @@ supply curve rows across existing runs:
 | `transreg/SERTP` | 2848 | no |
 | `country/USA` | 16191 | no |
 
-**`nercr/WECC_SW` is exposed and has not been re-run since the pandas upgrade** — its
-existing runs predate it and are clean, but the next WECC-SW run will lose its wind the
-same way.
+**`nercr/WECC_SW` is exposed and had not been re-run since the pandas upgrade** — its
+existing runs predate it and are clean, but the next WECC-SW run on unfixed code would
+have lost its wind the same way. A sweep of every run under `runs/` found only the three
+`v20260924fix_st-AZNM_*` cases actually affected; `v20260925_SERTP_*` and
+`v20260925_VA_*` also post-date the upgrade but have non-empty offshore curves, so their
+wind `cap` rows are intact.
 
-**The geothermal site is latent, not live.** `geoall = pd.concat(geo, axis=0)` followed
-by `"geosc" + geoall["bin"].astype(str)` is the same construct, and fails condition 3
-only by accident: `rev_geo_types` is built from whichever of `geohydrosupplycurve` /
+**The geothermal site is latent, not live.** `geoall = pd.concat(geo, axis=0)` followed by
+`"geosc" + geoall["bin"].astype(str)` is the same construct, and fails condition 3 only by
+accident: `rev_geo_types` is built from whichever of `geohydrosupplycurve` /
 `egssupplycurve` equals `reV`, and current switches set `egssupplycurve=reV` with
 `geohydrosupplycurve=ATB_2023`, leaving a single-element dict with nothing to concat
 against. Set both to `reV` in a region where one is empty and it would bite identically.
+The fix covers it, being at the shared source.
 
 **Impact:** severe and silent — this is the dangerous kind. The run completes, every
 output file is written, and the results look plausible; wind is simply absent from the
 build. Anything downstream of capacity (generation mix, system cost, emissions, prices,
 PRAS) is wrong in a way no error surfaces. Because the failure mode is a missing input
-rather than a crash, affected runs have to be identified by inspecting
-`rsc_combined.csv` — scanning logs will not find them.
+rather than a crash, affected runs must be identified by inspecting
+`rsc_combined.csv`, not by scanning logs.
 
-**Status:** not fixed. Diagnosed, with a validated candidate fix not yet applied.
-
-The candidate fix is one line — type the empty column to match the int64 that
+**Status:** fixed, on `fix/wind-rsc-pandas3`. `agg_supplycurve()`'s empty branch now
+assigns `pd.Series([], dtype='int64')` instead of `[]`, matching the int64 that
 `reeds.inputs.get_bin` produces in the non-empty branch, so the `bin` level never
-upcasts:
+upcasts. Fixed at the dtype source rather than at the `.astype(str)` call, because the
+same trap sits one line below on `class` and because `agg_supplycurve()` also feeds the
+geothermal `pd.concat(geo, axis=0)`, which is one switch change away from the same
+failure (condition 3 above).
 
-```python
- if dfin.empty:
--    dfin['bin'] = []
-+    dfin['bin'] = pd.Series([], dtype='int64')
-```
+Verified against the real `v20260924fix_st-AZNM_baseline` inputs: restores 377 `cap` and
+377 `cost` rows for `wind-ons` and 920.3 GW of buildable resource, with the `cap` rows
+byte-identical to the pre-pandas-3 `v20260916v4` run. UPV output is unchanged before and
+after the fix. **The three `v20260924fix_st-AZNM_*` runs need to be re-run**; their
+results are not usable.
 
-Fixing at the dtype source rather than at the `.astype(str)` call is deliberate: the
-same trap sits one line below on `class`, and `agg_supplycurve()` also feeds the
-geothermal concat above. Validated offline against the real
-`v20260924fix_st-AZNM_baseline` inputs — restores 377 `cap` and 377 `cost` rows for
-`wind-ons` and 920.3 GW of buildable resource, with the `cap` rows byte-identical to
-the pre-pandas-3 `v20260916v4` run, and UPV output unchanged. Not yet committed to any
-mainline branch.
-
-**Still recurring.** A sweep of every run under `runs/` finds four affected cases: the
-three original `v20260924fix_st-AZNM_*` runs and `20260929_st-AZNM_baseline`, launched
-2026-09-29 — after the bug was diagnosed but before any fix landed, and it lost its
-wind the same way (0.7 GW in 2032). Every affected run needs re-running once a fix is
-applied; their results are not usable.
-
-Worth noting for whoever fixes this: the reason it went unnoticed is that
-`[c for c in alloutcap.columns if c.startswith("bin")]` drops non-matching columns
-silently. Asserting that no `wsc*` columns survive the rename would turn this class of
-failure loud rather than letting the pivot discard them.
+**Files changed:**
+- `reeds/input_processing/writesupplycurves.py` — in `agg_supplycurve()`, the
+  `if dfin.empty:` branch assigns `dfin['bin'] = pd.Series([], dtype='int64')` in place
+  of `dfin['bin'] = []`, with a comment recording the pandas-3 concat behaviour. No
+  other files touched.
 
 **Fixed upstream?** No — and, unlike most entries here, **the bug is live upstream right
 now, not latent.** `reeds/input_processing/writesupplycurves.py` has the identical bare
 `dfin['bin'] = []` at line 105 at tag `2026.08.03` and at line 121 on the current
 `upstream/main`, and upstream's `environment.yml` has pinned `pandas=3.0` since
-2026-05-08 (`2ff493b5`, "update all python packages and use conda-forge for
-everything") — four months before this fork moved to it. So upstream satisfies
-conditions 1 and 2 already; they simply have not hit conditions 3-4, because their
-default and test cases (`cendiv/Pacific`, `country/USA`) are coastal or national and
-always have a populated offshore curve. Any upstream user running a landlocked region
-with `GSw_OfsWind=1` on a current checkout gets silently zeroed wind.
+2026-05-08 (`2ff493b5`, "update all python packages and use conda-forge for everything")
+— four months before this fork moved to it. So upstream satisfies conditions 1 and 2
+already; they simply have not hit conditions 3-4, because their default and test cases
+(`cendiv/Pacific`, `country/USA`) are coastal or national and always have a populated
+offshore curve. Any upstream user running a landlocked region with `GSw_OfsWind=1` on a
+current checkout gets silently zeroed wind.
 
-Not raised upstream as of 2026-09-29. Searched the `ReEDS-Model/ReEDS` issue tracker
-(all 86 issues, open and closed) plus PR history for `writesupplycurves`,
-`agg_supplycurve`, `rsc_combined`, `rscbin`/`wsc`, pandas/dtype, and
-offshore/landlocked supply-curve terms. The nearest hits are unrelated: #27 ("Offshore
-wind zones incompatible with custom regions") is about prescribed offshore builds under
+Not raised upstream as of 2026-09-25. Searched the `ReEDS-Model/ReEDS` issue tracker
+(all 86 issues, open and closed) plus the PR history for `writesupplycurves`,
+`agg_supplycurve`, `rsc_combined`, `rscbin`/`wsc`, pandas/dtype, and offshore/landlocked
+supply-curve terms. The nearest hits are unrelated: #27 ("Offshore wind zones
+incompatible with custom regions") is about prescribed offshore builds under
 `GSw_OffshoreZones=1`, and #28 is an offshore-zone TODO list. Strong candidate to report
 and contribute back — it is a one-line dtype correction that is a no-op under pandas 2.
+
+**Worth knowing:** the reason this cost a week of runs is that
+`[c for c in alloutcap.columns if c.startswith("bin")]` drops non-matching columns
+silently. If this class of failure recurs, consider asserting that no `wsc*` columns
+survive the rename rather than letting the pivot quietly discard them.
 
 ## `startyear` > 2022 crashes `hydcf.py` (`arange: cannot compute length`)
 
@@ -576,12 +571,21 @@ raised from `reeds/results.py`'s `calc_systemcost()`, called from `report_dump.p
 `report_dump.py` — which needs that file for `calc_systemcost()` — runs *before*
 `retail_rate_calculations.py` in the postprocessing sequence.
 
-**Impact:** `postprocess_outputs()` aborts partway through, so the system-cost CSV
-output (and anything else queued after `calc_systemcost` in that function) is not
-written for the run. Earlier report_dump outputs (e.g. `error_check.csv`,
+**Impact:** `postprocess_outputs()` aborts partway through, so
+`outputs/post_systemcost_annualized.csv` (the `calc_systemcost()` output) and
+`outputs/post_tech_transmission.csv` (the next call in the same function) are not
+written for the run. The GAMS-reported `systemcost.csv` and `systemcost_ba.csv`
+come from `report.gms` and are unaffected. Earlier report_dump outputs (e.g. `error_check.csv`,
 `error_gen.csv`) are unaffected since they're saved before the crash. The rest of
 the postprocessing pipeline (retail rate calcs, health damage calcs, reV handoff,
 plotting) still runs — this doesn't stop the run overall.
+
+This hits **every** run, not just reduced-region cases. It was found on a single-BA
+run (`runs/v20260707_213749_ND_small`) and reproduced identically on an 11-BA
+multi-region run (`runs/v20260708_143931_Pacific`). In both logs the crash comes
+about 10 seconds before `calculate_historical_capex.py` reports writing
+`df_capex_init.csv`, and the file is present in `inputs_case/` once the run
+finishes. That is why inspecting the finished run folder doesn't reveal the problem.
 
 **Status:** not fixed. Fix would be reordering the postprocessing call sequence (run
 `retail_rate_calculations.py` before `report_dump.py`, or have `report_dump.py`
@@ -590,6 +594,48 @@ generate/depend on `df_capex_init.csv` itself) — not yet implemented.
 **Fixed upstream?** No at `2026.08.03`; fixed in `2026.09.08` (`1b3bba93`:
 `calculate_historical_capex` moved into `report_dump.py`) — resolves at the next
 sync.
+
+## `retail_rate_calculations.py` crashes on single-BA runs (`KeyError: 'res_marg_ann_flow'`)
+
+**Symptom:**
+```
+retail_rate_calculations.py | ERROR | File ".../retail_rate_calculations.py", line 534, in main
+    interp_between_solve_years(
+retail_rate_calculations.py | ERROR | File ".../retail_rate_calculations.py", line 111, in interp_between_solve_years
+    df_pivot_solve_years.update(df.pivot(index='t', columns=region_type, values=value_name))
+retail_rate_calculations.py | ERROR | KeyError: 'res_marg_ann_flow'
+```
+logged in `gamslog.txt` during the retail-rate postprocessing step.
+
+**Root cause:** `main()` interpolates three inter-regional flow components between
+solve years. Two of the calls are guarded and one is not
+(`postprocessing/retail_rate_module/retail_rate_calculations.py:521-537`):
+
+- `oper_res_flow` — runs only `if 'oper_res_flow' in state_flow_expenditures`
+- `rps_flow` — runs only `if 'rps_flow' in state_flow_expenditures`
+- `res_marg_ann_flow` — called **unconditionally**
+
+`interp_between_solve_years()` returns early only when the whole frame is empty
+(line 107). A non-empty frame that lacks the requested column falls through to
+`df.pivot(..., values=value_name)` at line 111 and raises `KeyError`. A single-BA run
+has no inter-regional planning-reserve flows, so the `res_marg_ann_flow` column is
+never created. The crash itself shows the frame still had rows, so the early
+return didn't fire.
+
+**Impact:** the retail-rate module aborts, and `outputs/retail/retail_rate_components.csv`
+(and anything else the module writes after this point) is not produced. The solve
+and core outputs (`cap`, `gen`, `systemcost`, the bokehpivot report) are unaffected.
+
+Single-BA runs only. Seen on `runs/v20260707_213749_ND_small`. Did **not**
+reproduce on the 11-BA `runs/v20260708_143931_Pacific`, where the module logged
+`Finished retail_rate_calculations.py` and wrote `retail_rate_components.csv`.
+
+**Status:** not fixed. Fix: wrap the `res_marg_ann_flow` call in the same
+`if 'res_marg_ann_flow' in state_flow_expenditures:` guard as its two siblings.
+
+**Fixed upstream?** No. `retail_rate_calculations.py` at tag `2026.08.03` has the
+same two guards (lines 521 and 527), the same unguarded `res_marg_ann_flow` call
+(line 535), and the same `df.empty`-only early return (line 107). Not RMI-introduced.
 
 ## `report_dump.py` leaves GAMS sets out of `outputs.h5` (`could not convert string to float: ''`)
 
@@ -634,6 +680,18 @@ completes and later plots still generate:
 - `map_prm` — `TypeError: 'Axes' object is not subscriptable`, from
   `reedsplots.py`'s `map_prm()` indexing a `plt.subplots()` result that's a bare
   `Axes` (not an array) when only one year is being plotted.
+- Single-BA runs add their own variants, not yet traced to individual plot
+  functions: `TypeError: cannot unpack non-iterable int object`,
+  `ValueError: No objects to concatenate` (x2), and `KeyError: '<state>'` for the
+  run's own state (`'ND'` on a North Dakota run). Seen on
+  `runs/v20260707_213749_ND_small`. None recurred on the 11-BA
+  `runs/v20260708_143931_Pacific`.
+- **`ValueError: <case> has not solved year <year>` is misleading — the year did
+  solve.** The message comes from `reeds.io.get_last_iteration()`
+  (`reeds/io.py:1313`), which raises it when no `handoff/PRAS/PRAS_{year}i*.h5`
+  file matches. It means "no PRAS output for that year", not "the solve failed".
+  On the ND run it appeared for 2026 and 2029 while dozens of other 2029 plots
+  succeeded around it. Check `gamslog.txt` for `LP status` before believing it.
 
 The same single-region runs also log `KeyError: 'res_marg_ann_flow'` from
 `retail_rate_calculations.py:111` (no inter-region flows to read) — not a
@@ -673,6 +731,10 @@ tag `2026.08.03`:
   with `capacity_offline.columns` before the plot loop; not yet implemented.
 - `map_translines_all`, `map_translines_vsc`, `map_net_imports`, `plot_max_imports`
   weren't individually diffed against the tag — unconfirmed either way.
+- `reeds.io.get_last_iteration()` raises the same misleading
+  `has not solved year` message at the tag (`reeds/io.py:1313`). The single-BA
+  `TypeError`/`ValueError`/`KeyError` variants haven't been traced to a function,
+  so they're unconfirmed either way.
 
 ## bokehpivot HTML report: every map-type section fails on an aggregated zoneset
 
@@ -805,6 +867,77 @@ Caught by the script's per-section `try`/`except`, so only that slide is dropped
 `reeds.results.add_to_pptx` at `2026.08.03` and `2026.09.08`. Inherited (present
 since upstream's `2026.04.15` tag), not RMI-introduced.
 
+## RA diagnostic plots slow every solve year on Windows and never appear in `gamslog.txt` (FIXED)
+
+**Symptom:** two, independent. On Windows, each solve year stalls for ~30 s
+after the solve finishes, before the next year starts. On every platform,
+`gamslog.txt` contains no `diagnostic_plots.py` lines at all, even when that
+script raises. On a completed run, 24 other scripts appear in `gamslog.txt`
+and this one appears zero times.
+
+**Root cause:** `runreeds.py` writes
+`python ... diagnostic_plots.py ... &` into the generated run script after
+each solve year, meaning to background it. On Windows the run script is a
+`.bat`, and in `cmd.exe` `&` separates commands rather than backgrounding one,
+so the plots run synchronously. Separately, `diagnostic_plots.py` never calls
+`reeds.log.makelog`. Each script writes its own lines to `gamslog.txt` through
+that `FileHandler`, not through shell redirection, so a script that skips it
+never reaches the run log. Because the call is also backgrounded (on
+Linux/macOS) and its exit code is never checked, its failures were silent.
+
+**Impact:** on Windows, ~2.0 min per run (~8.5% of wall clock) on a
+4-solve-year WECC-SW case. On all platforms, any error in the RA diagnostic
+plots goes unreported. Model results are unaffected.
+
+**Status:** fixed. `runreeds.py` now launches the plots with `start /b ""` on
+Windows and keeps the trailing `&` on Linux/macOS, and `diagnostic_plots.py`
+calls `reeds.log.makelog` like every other run-step script. See
+[`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) ("RA diagnostic plots block the
+solve loop on Windows and are never logged") for the change and rebase checks.
+
+**Files changed:**
+- `runreeds.py` — the RA plot invocation in `setup_sequential()`.
+- `reeds/resource_adequacy/diagnostic_plots.py` — `makelog` call in `__main__`.
+
+**Fixed upstream?** No. Both files at tag `2026.08.03` have the trailing `&`
+and no `makelog` call. Inherited, not RMI-introduced.
+
+## `runreeds.py`: `timetype=int` and `timetype=win` call GAMS solve files that don't exist
+
+**Symptom:** a case with `timetype=int` (intertemporal) or `timetype=win` (window)
+fails at its solve step: GAMS can't find the model file it was told to run. Check
+the generated `call_<case>.bat`/`.sh`. Its `gams` line references
+`reeds/core/3_solve_allyears.gms` or `reeds/core/3_solvewindow.gms`, and neither
+file exists.
+
+**Root cause:** the upstream restructure moved the solve drivers into
+`reeds/core/solve/`, but only the sequential path was updated:
+
+| `timetype` | Path `runreeds.py` builds | Actual file |
+| --- | --- | --- |
+| `seq` | `reeds/core/solve/3_solve_oneyear.gms` (built in `reeds/inputs.py:330`) | same — works |
+| `int` | `reeds/core/3_solve_allyears.gms` (`runreeds.py:687`) | `reeds/core/solve/3_solve_allyears.gms` |
+| `win` | `reeds/core/3_solvewindow.gms` (`runreeds.py:744`) | `reeds/core/solve/3_solve_window.gms` |
+
+The `win` path is wrong twice: it's missing the `solve/` folder, and the filename
+is missing an underscore (`solvewindow` vs `solve_window`).
+
+**Impact:** `int` and `win` runs can't solve at all. **CEPM is unaffected**: every
+CEPM case uses the `cases.csv` default `timetype=seq`, and `cases_cepm.csv` doesn't
+override it. If you switch a case to `int` or `win`, don't rely on the exit code to
+tell you it failed. See the
+[silent-failure entry below](#runreedspy-reports-success-on-a-failed-case-and-hangs-on-a-multi-case--s).
+
+**Status:** not fixed. Found by reading the code; not yet reproduced by a run. Fix:
+change the two `Path(...)` calls to
+`Path('reeds','core','solve','3_solve_allyears.gms')` and
+`Path('reeds','core','solve','3_solve_window.gms')`.
+
+**Fixed upstream?** No. `runreeds.py` at tag `2026.08.03` builds the same two broken
+paths (lines 678 and 735 there). The tag's actual files are under
+`reeds/core/solve/`. The bug came in with the upstream restructure and is not
+RMI-introduced.
+
 ## `runreeds.py` reports success on a failed case, and hangs on a multi-case `-s`
 
 Three separate behaviors, all of which break unattended/batch automation rather
@@ -821,15 +954,22 @@ guardrail (`runs/v20260902t5b_WECC-SW_limitre`).
 **Symptom 2 — interactive hang on the worker count.** With more than one case
 requested, `runreeds.py` calls
 `WORKERS = int(input('Number of simultaneous runs [positive integer]: '))`
-unless `--simult_runs`/`-r` was given. A single case
-short-circuits to `WORKERS = 1` with no prompt, so this
+(in `runreeds.py`'s `#%% Set number of workers` block) unless
+`--simult_runs`/`-r` was given. A single case short-circuits to `WORKERS = 1`
+with no prompt (the `if len(caseList)==1:` branch just above it), so this
 only appears once a batch has two or more — where it blocks forever in a
 background, CI, or non-interactive shell with no visible prompt.
 
-**Symptom 3 — interactive hang on `cleanup_level`.** `runreeds.py`
-prints an R2X warning and blocks on `input('\nProceed? y/[n]: ')` — defaulting
-to `n`, which `quit()`s — whenever **any** case being run has
-`cleanup_level >= 1` and `--skip_checks`/`-f` was not passed. Note this is the
+**Symptom 3 — interactive hang on `cleanup_level`.** `runreeds.py`'s
+`#%% User warnings` block prints an R2X warning and blocks on `input('\nProceed? y/[n]: ')` — defaulting
+to `n`, which `quit()`s — whenever **any** case has `cleanup_level >= 1` and
+`--skip_checks`/`-f` was not passed. Two details make this nastier than it
+looks: it fires at launch, before any run starts; and with `-s/--single` the
+ignored cases are **not** dropped from `df_cases` first
+(see the `# If no --single/-s, drop the ignored cases` block in `runreeds.py`),
+so the check scans *every* column in the cases file,
+not just the ones being run. A single `cleanup_level=2` on an unrelated,
+ignored case therefore kills an otherwise valid batch. Note this is the
 *launch-time* check only — the per-case cleanup that `runreeds.py` schedules at
 the end of a run passes `--force --quiet`, so `cleanup_files.py`'s own
 confirmation prompt never fires.
@@ -909,20 +1049,39 @@ and the `report.gms` reconciliation are byte-identical at `upstream/main`
 
 ## Operating reserves are effectively off under default switches
 
-**Symptom:** none at solve time. `eq_OpRes_requirement` and `eq_ORCap_*` have 0
-rows in every solve `.lst`, and `inputs_case/rep/opres_periods.csv` is
-header-only. The bokeh "Final OpRes by timeslice" section fails with
-`IndexError: list index out of range`.
+**Symptom:** none at solve time. All three operating-reserve outputs are
+header-only, with 0 data rows: `outputs/opRes_supply.csv`,
+`outputs/opRes_supply_h.csv` and `outputs/opres_trade.csv`.
+`eq_OpRes_requirement` and `eq_ORCap_*` have 0 rows in every solve `.lst`, and
+`inputs_case/rep/opres_periods.csv` is header-only. The bokehpivot section
+**"Final OpRes by timeslice (GW)"** is missing, with this in
+`outputs/reeds-report/report.log`:
+```
+core.py:2047  display_config: item_string += wdg[key].labels[i] + ', '
+IndexError: list index out of range
+```
+Seen on a single-BA run (`runs/v20260707_213749_ND_small`) and an 11-BA run
+(`runs/v20260708_143931_Pacific`), both with `GSw_OpRes=2`, the `cases.csv`
+default that `cases_cepm.csv` doesn't override.
 
 **Root cause:** `GSw_OpResPeriods=peakload` (the default) applies reserves only in
 peak-load periods, which exist only when `GSw_PRM_CapCredit=1`. Under the default
 stress-period method there are none. Upstream's model documentation: "operating
 reserves are typically turned off when using the stress periods formulation."
+So the model procures no operating reserves, and they do not shape dispatch in
+these runs.
+
+The report failure is a separate bokehpivot weakness: the section's preset
+(`postprocessing/bokehpivot/reports/templates/reeds2/standard_report_expanded.py:13`,
+`x='timeslice'`) plots a dimension with no values, and `display_config()` raises
+instead of skipping it.
 
 **Status:** expected; CEPM keeps the defaults. To enforce reserves, set
-`GSw_OpResPeriods=representative`.
+`GSw_OpResPeriods=representative`. The bokehpivot error is cosmetic; a fix would
+guard `display_config()` so a dimension with 0 labels is skipped.
 
-**Fixed upstream?** N/A — same defaults at `2026.08.03` and `2026.09.08`.
+**Fixed upstream?** N/A — same defaults at `2026.08.03` and `2026.09.08`. The
+bokehpivot code is identical at `2026.08.03`.
 
 ## `reeds2pras` `BoundsError` for `hydud`/`hydund` hydro capacity — no monthly profile data
 
@@ -970,6 +1129,9 @@ tracker. Inherited, not RMI-introduced.
   `IndexError: index 0 is out of bounds for axis 0 with size 0`. Happens when a
   representative-period map has nothing to plot for the run's region set (e.g. a
   reduced-region case). Diagnostic image only; doesn't affect model results.
+  On a single-BA run it appears (warning x3) during stress-period setup, from
+  `hourly_plots.py:335`/`:351`; "Writing seed stress periods" follows immediately
+  and the seed stress periods are still produced.
 - **`single_case_plots.py`** `map_VREsites-*` — `FileNotFoundError` on
   `outputs/df_sc_out_{upv,wind-ons,wind-ofs}_reduced.csv`. Expected with
   `reeds_to_rev=0` (every CEPM case), since that step writes these files; its

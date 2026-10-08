@@ -32,12 +32,14 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `reeds/core/setup/b_inputs.gms` | Modified | GAMS compatibility |
 | `reeds/input_processing/fuelcostprep.py` | Modified | Census divisions in fuelcostprep.py |
 | `reeds/input_processing/recf.py` | Modified | recf.py when offshore wind is disabled |
+| `reeds/input_processing/writesupplycurves.py` | Modified | Empty supply curve drops onshore wind under pandas 3 |
 | `reeds/resource_adequacy/reeds2pras/README.md` | Modified | Minor and cosmetic |
 | `postprocessing/compare_cases.py` | Modified | Wrong module in compare_cases.py's "Flexibly Sited Demand" slide |
 | `reeds/report_utils.py` | Modified | parse_caselist TypeError with a prefix-glob caselist |
 | `postprocessing/compare_cases.py` | Modified | compare_cases.py hardcodes 2020 instead of --startyear |
-| `cases_small.csv` | Modified | Minor and cosmetic |
-| `cases_test.csv` | Modified | Minor and cosmetic |
+| `runreeds.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
+| `reeds/resource_adequacy/diagnostic_plots.py` | Modified | RA diagnostic plots block the solve loop on Windows and are never logged |
+| `cases_RMI-test.csv` | Added | RMI test cases |
 | `CONTRIBUTING.md` | Modified | CEPM documentation |
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/dollaryear.csv` | Modified | Updated CAPEX for gas resources |
@@ -172,6 +174,71 @@ input file.
   offshore wind via `techs_banned` instead of `GSw_OfsWind = 0` leaves the
   `eq_RPS_OFSWind` state mandate active and the model infeasible.
 
+## Empty supply curve drops onshore wind under pandas 3 (writesupplycurves.py)
+
+### Description of issue:
+
+Runs completed cleanly but built **no new onshore wind**, because
+`inputs_case/rsc_combined.csv` was written with only `cost_cap`/`cost_trans` rows for
+`wind-ons` and no `cap`/`cost` rows — leaving the model with zero buildable wind
+resource. No error, no warning; `writesupplycurves.py` logged `Finished` normally.
+Caught 2026-09-24 on `runs/v20260924fix_st-AZNM_*` (0.7 GW of wind in 2032, all of it
+pre-existing) against `runs/v20260916v4_st-AZNM_*` (14.2-15.8 GW) with identical
+switches.
+
+`agg_supplycurve()` assigned `dfin['bin'] = []` for an empty input supply curve, which
+pandas types as float64. `st-AZNM` is landlocked, so its offshore curve is header-only
+while `GSw_OfsWind=1` still processes it. pandas 3.0 stopped excluding empty frames from
+dtype resolution in `pd.concat`, so stacking the onshore and offshore frames upcast the
+`bin` index level to float64, `"wsc" + bin.astype(str)` yielded `wsc1.0` instead of
+`wsc1`, and the `{"wsc1": "bin1", ...}` rename matched nothing. The downstream pivot
+selects value columns with `startswith("bin")` and silently dropped every wind row.
+
+The repo's pandas pin moved to `pandas==3.0.*` in `129ecdbc` (2026-09-10, Python 3.14
+bump); the local venv was rebuilt to 3.0.5 on 2026-09-24, 21 minutes before the first
+affected run. This is a latent upstream bug the upgrade activated — not a reason to
+un-pin pandas.
+
+### Files changed:
+
+- `reeds/input_processing/writesupplycurves.py` — in `agg_supplycurve()`, the
+  `if dfin.empty:` branch now assigns `pd.Series([], dtype='int64')` instead of `[]`,
+  matching the int64 `reeds.inputs.get_bin` produces in the non-empty branch, so the
+  `bin` level never upcasts through `pd.concat`. Fixed at the dtype source rather than
+  at the `.astype(str)` call: the same trap sits one line below on `class`, and
+  `agg_supplycurve()` also feeds the geothermal `pd.concat(geo, axis=0)`, which is one
+  switch change away from failing the same way. (UPV and CSP cannot hit it — they call
+  `agg_supplycurve()` standalone, with no populated sibling for an empty frame to
+  corrupt.)
+
+### Reference: [`known-reeds-issues.md`](known-reeds-issues.md)
+
+### What to test in new releases:
+
+- Does upstream still assign a bare `dfin['bin'] = []` in `agg_supplycurve()`'s empty
+  branch? It does at tag `2026.08.03` (line 105) and on `upstream/main` (line 121).
+  Note that upstream has pinned `pandas=3.0` since 2026-05-08 (`2ff493b5`) — four months
+  before this fork did — so **the bug is live upstream, not latent**. They have not hit
+  it only because their default and test cases (`cendiv/Pacific`, `country/USA`) are
+  coastal or national and always have a populated offshore curve. Not raised on their
+  issue tracker as of 2026-09-25 (all 86 issues searched). Worth reporting and
+  contributing back; it is a one-line dtype correction that is a no-op under pandas 2.
+  If they fix it themselves, drop this patch rather than merging it.
+- Has upstream changed how `windall` is assembled, or how the `wsc{bin}` -> `bin{bin}`
+  rename is applied? Both sit within a few lines of the fix and either would change what
+  the patch needs to guarantee.
+- After any pandas major-version bump, re-run one **landlocked** case with
+  `GSw_OfsWind=1` (an `st/AZ.NM`-style selection) and check that `rsc_combined.csv` has
+  all four `sc_cat` categories for `wind-ons` with equal row counts:
+  `awk -F, 'NR>1{split($1,a,"_"); print a[1]"|"$3}' inputs_case/rsc_combined.csv | sort | uniq -c | grep wind`.
+  A coastal case cannot surface this bug — its offshore curve is non-empty, so nothing
+  upcasts.
+- More generally, this is the second empty-frame-into-`concat` bug in the input
+  processing chain (see *Resolving recf.py when offshore wind is disabled*). That
+  pattern is safe on `axis=1` (column-wise, dtypes stay per-column) and dangerous on
+  `axis=0` (the empty frame's dtypes participate). Check new upstream `pd.concat` calls
+  against that distinction.
+
 ## Wrong module in compare_cases.py's "Flexibly Sited Demand" slide
 
 ### Description of issue:
@@ -272,6 +339,67 @@ started actually varying per batch (see `run_cepm.ps1`'s new
   functions, since upstream's own default `--startyear` is 2020 and won't
   exercise this path.
 
+## RA diagnostic plots block the solve loop on Windows and are never logged
+
+### Description of issue:
+
+Two independent problems with how `diagnostic_plots.py` is invoked after each
+solve year. Both are upstream bugs, present unchanged at tag `2026.08.03`, and
+neither is CEPM-specific — good candidates to contribute back.
+
+1. **The trailing `&` does not background anything on Windows.** `runreeds.py`
+   writes `python ... diagnostic_plots.py ... &` into the generated run script.
+   On Windows that script is a `.bat` run through `os.system('start /wait cmd ...')`,
+   and in `cmd.exe` `&` is a *command separator*, not a background operator — so
+   a trailing `&` is a no-op and the plots run **synchronously**, blocking the
+   solve loop after every solve year. Measured on a 4-solve-year WECC-SW case:
+   26 figures per solve year, ~30 s per year, **~2.0 min per run (~8.5% of wall
+   clock)**, taken from the mtimes of `outputs/figures/resource_adequacy/*.png`,
+   which cluster into four clean ~30 s bursts.
+
+2. **`diagnostic_plots.py` never calls `reeds.log.makelog`.** `gamslog.txt` is
+   written by each script's own `FileHandler` (see `reeds/log.py`), *not* by
+   shell redirection — the run script is launched with no stdout/stderr
+   redirection on Linux/macOS and via `start /wait cmd /c` on Windows. So a
+   script that skips `makelog` never appears in the run log on any platform,
+   including its tracebacks. In a completed run, 24 scripts appear in
+   `gamslog.txt` with their `makelog` prefixes; `diagnostic_plots.py` appears
+   zero times. Combined with the backgrounding and the unchecked exit code, any
+   failure inside it was completely silent.
+
+### Files changed:
+
+- `runreeds.py` — the RA plot invocation now picks its background mechanism from
+  the existing `LINUXORMAC` global: `start /b "" ` on Windows, the original
+  trailing ` &` on Linux/macOS. The `""` is a window-title placeholder that
+  `start` requires if the command is ever quoted.
+- `reeds/resource_adequacy/diagnostic_plots.py` — added the standard
+  `reeds.log.makelog(scriptname=__file__, logpath=os.path.join(casedir,'gamslog.txt'))`
+  in `__main__`, matching every other script in the repo.
+
+### Reference:
+
+Branch `fix/ra-plot-logging`. Upstream issue text drafted separately. Before
+this patch, both files were byte-identical to upstream tag `2026.08.03`, so it
+applies to that tag as-is; check it against the tip of upstream `main` before
+opening an upstream PR, since both files may have moved since the tag.
+Symptom-level entry in [`known-reeds-issues.md`](known-reeds-issues.md).
+
+### What to test in new releases:
+
+- Has upstream fixed either of these? If so, drop our patch and take theirs.
+- The insertion points both still existed at `2026.08.03` (`runreeds.py` lines
+  639-642; `casedir = args.casedir` / `sw = reeds.io.get_switches(casedir)` in
+  `diagnostic_plots.py`'s `__main__`), but line numbers move — re-locate by
+  content, not by line.
+- After any rebase, confirm `diagnostic_plots.py |` lines appear in a run's
+  `gamslog.txt`, and that the generated `.bat` contains `start /b` rather than a
+  trailing `&`.
+- Watch for a genuinely concurrent-write issue: with the process now actually
+  backgrounded *and* holding its own append handle on `gamslog.txt`, interleaved
+  lines are possible in principle. Not observed, but it is the one behaviour the
+  two fixes create together that neither creates alone.
+
 ## Minor and cosmetic
 
 ### Description of issue:
@@ -284,10 +412,6 @@ Small changes with no effect on model results.
   (`ReEDS/reeds2pras/test` to `ReEDS/reeds/resource_adequacy/reeds2pras/test`)
   after upstream relocated the vendored ReEDS2PRAS tree without updating its
   README.
-- `cases_small.csv` — `endyear` 2030 to 2029.
-- `cases_test.csv` — adds `USA_fasterish` (`country/USA`, `z54`,
-  `2010..2050..10`); sets `ignore=1` for `Pacific` and `USA_fast`; blanks
-  `Simple`'s `GSw_ZoneSet`.
 
 ### Reference:
 
@@ -295,9 +419,6 @@ n/a
 
 ### What to test in new releases:
 
-- Is `USA_fasterish` still needed, or has upstream added its own fast national
-  test case? If ours is redundant, take upstream's `cases_test.csv` whole and
-  drop the divergence.
 - If upstream fixes its own reeds2pras README paths, drop our version to keep the
   vendored tree byte-identical to upstream. That tree is otherwise nearly
   pristine, which is what keeps future ReEDS2PRAS syncs cheap.
@@ -944,9 +1065,14 @@ techs, so `GSw_H2Combustionupgrade` needs no change. Measured effect on results:
 §4.6). It is an interpretability choice, not a modelling correction.
 
 **`cleanup_level` is deliberately 0 for every case — do not raise it.**
-`runreeds.py` blocks on a hidden `input('Proceed? y/[n]: ')` prompt (defaulting
-to `n`, which quits) when a selected case has `cleanup_level >= 1` and
-`--skip_checks` was not passed, which hangs background, CI, and `-m` runs.
+`runreeds.py`'s `#%% User warnings` block blocks on `input('Proceed? y/[n]: ')`
+(defaulting to `n`, which quits) whenever **any** case in the file has
+`cleanup_level >= 1` and `--skip_checks` was not passed. The check runs at
+launch, and because `-s` leaves ignored cases in `df_cases` (see the
+`# If no --single/-s, drop the ignored cases` block) it scans *every*
+column — not just the ones being run. So a single `cleanup_level=2` anywhere in
+this file hangs a background or CI run, including any `-m` batch, on a prompt
+that is never displayed.
 
 ### Files included:
 
@@ -970,41 +1096,30 @@ switch value becomes an input file path
 - Re-run at least one case through `copy_files.py` to confirm the switch
   combination still initializes.
 
-## Custom test-case reconciliation with upstream (`cases_test.csv`)
+## RMI test cases (`cases_RMI-test.csv`)
 
 ### Description:
 
-Unlike `cases_cepm.csv` (entirely RMI-owned), `cases_test.csv` is upstream's own
-test-case matrix — both sides add and edit columns in it independently, so a
-sync has to reconcile two sets of changes rather than just re-checking ours.
-The August 2026 merge (PR #47) initially resolved this by keeping RMI's
-(`temp-dev`'s) version of the file wholesale, which correctly preserved RMI's
-own edits but silently dropped upstream's independent additions as a side
-effect — not a deliberate decision, just what "take one side" does to a file
-both sides touched.
+**RMI scenario testing happens in `cases_RMI-test.csv`** (added 2026-10-06),
+run with `-c RMI-test`. Like `cases_cepm.csv`, it needs no code change. It holds
+only RMI's own test cases. Each one is built on upstream's test-case setup:
+switches left blank take the file's `Default Value` column, then `cases.csv`'s
+defaults. It currently has one case, `USA_fasterish`, a faster national smoke
+test (`country/USA`, `z54`, `2010..2050..10`).
 
-Reconciled by comparing all three points (the shared base at commit `62f6381e`,
-RMI's edits, and upstream's `2026.08.03` edits) with `pandas`, cell by cell,
-rather than trusting the raw text diff — the two sides inserted their new
-columns in different positions, which shifts every subsequent field and makes
-a plain line diff unreadable. That comparison found:
+`cases_test.csv` is identical to upstream. RMI's test cases and edits used to
+live in it; they moved here on 2026-10-06. Upstream's `Pacific` again runs by
+default under `-c test`. See [`sync-log.md`](sync-log.md) (Sync 1) for how the
+file was reconciled before that.
 
-- **RMI added** one column, `USA_fasterish` — kept.
-- **RMI edited** three cells: `Pacific`'s `ignore` (`0`→`1`), removed
-  `GSw_PRM_StressThresholdMetrics` (didn't exist at the base either — see next
-  point), and added `github_MA_county_CC`'s `pras_samples` (`10`) — kept.
-- **Upstream added** one column, `MultiMetricRA`, and one row,
-  `GSw_PRM_StressThresholdMetrics` (populated only for `MultiMetricRA`, value
-  `NEUE/LOLH/LOLE/LOLD/duration/depth` — the same switch-rename documented in
-  the "Updated CAPEX for gas resources"/`cases.csv` entries elsewhere in this
-  log) — both restored.
-- **Upstream edited** two pre-existing cells: `USA_fast`'s `yearset` (blank →
-  `2010..2050..5`) and `Simple`'s `GSw_ZoneSet` (blank → `z134`) — only the
-  first was restored.
+Add and edit RMI test cases here, not in `cases_test.csv`. This file does not
+pick up upstream's later changes to `cases_test.csv`. If an upstream change
+breaks it, such as a renamed switch or a value that is no longer valid, fix the
+affected cells.
 
 ### Files included:
 
-- `cases_test.csv`
+- `cases_RMI-test.csv`
 
 ### Reference:
 
@@ -1012,11 +1127,10 @@ a plain line diff unreadable. That comparison found:
 
 ### What to test in new releases:
 
-- Diff `cases_test.csv` against the new tag using the merge-base method above
-  (base vs. RMI, base vs. upstream, compared cell-by-cell with `pandas` — a raw
-  text diff hides changes under any column-position shift), not a plain file
-  diff or "just take one side."
-- z134 now works, so `Simple`'s `GSw_ZoneSet=z134` can be restored.
-- Did upstream rename/retarget `GSw_PRM_StressThresholdMetrics` again, the way
-  it replaced `GSw_PRM_StressThreshold` this cycle? Check against `cases.csv`'s
-  current switch list before assuming the row is still valid.
+- Take the new tag's `cases_test.csv` whole:
+  `git show <tag>:cases_test.csv > cases_test.csv`.
+- Dry-run `cases_RMI-test.csv` against the new switch set:
+  `uv run python runreeds.py -b synccheck -c RMI-test -t`. That catches renamed
+  or removed switches and values that are no longer valid. Fix only the cells
+  that break. Blank cells inherit defaults, so an upstream default change can
+  also quietly change these cases.
