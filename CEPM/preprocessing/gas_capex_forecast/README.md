@@ -33,9 +33,8 @@ rather than ATB's trajectory.
 | — `ccgt_regression_forecast.csv` | CCGT forecast 2026-2032 (single scenario). Output of step 2, input to step 4. |
 | — `ct_regression_forecast.csv` | CT forecast 2026-2032 (single scenario). Output of step 3, input to step 4. |
 
-Paths in steps 2-4 and the clustering notebook resolve from a `REPO_ROOT` walk, so
-they can be run from any working directory. `data_cleaning_gas.ipynb` (step 1)
-uses paths relative to this folder, so run it from here.
+All paths in these notebooks resolve from a `REPO_ROOT` walk, so they can be run
+from any working directory.
 
 ## Dollar-year normalization
 
