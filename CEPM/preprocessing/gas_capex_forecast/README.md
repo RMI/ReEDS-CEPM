@@ -1,15 +1,19 @@
 # Gas Capex Forecast
-## Last Updated: 2026-09-04
+## Last Updated: 2026-10-09
 
 ## Summary
 
 Regression-based 2026-2032 capex forecast for CCGT and CT gas plants, built from the Halcyon Gas Power Plant Tracker, and used to update the ATB gas cost input for ReEDS. It gives CEPM gas build costs drawn from the current project pipeline
 rather than ATB's trajectory.
 
+> **Proprietary data.** The Halcyon tracker is licensed to RMI and is **not tracked in git**. The notebooks expect the data files in `data/`. RMI staff can download them from SharePoint at
+> `CEP (Clean Energy Planning)/ACTIVE IRP Direct Engagement and Load Growth TL/Clean Energy Portfolios 4.0/VM-Inputs/halcyon-data`.
+> See [`data/README.md`](data/README.md) for the expected file names. Clear notebook outputs before committing, since saved tables and plots can contain plant-level Halcyon data.
+
 ## Key Info
 | | |
 |---|---|
-| **Source data** | Halcyon Gas Power Plant Tracker (24 Aug 2026), `Halcyon Gas Power Plant Tracker - 24 Aug 2026 .xlsx` (sheet `Gas Plants`), 473 rows across all gas technologies and all US states. |
+| **Source data** | Halcyon Gas Power Plant Tracker (24 Aug 2026), `data/Halcyon Gas Power Plant Tracker - 24 Aug 2026 .xlsx` (sheet `Gas Plants`), 473 rows across all gas technologies and all US states. Proprietary and not tracked in git (see above). |
 | **Produces** | `inputs/plant_characteristics/gas-ccgt_CEPM_all.csv` — a new file; the original `gas_ATB_2024_moderate.csv` is left unmodified. `capcost` is replaced for `Gas-CC` and `Gas-CT` in 2026-2032 only (other gas technologies and years are left untouched). A single scenario — see "Why no clustering" below. |
 | **Related switch(es)** | `plantchar_gas = gas-ccgt_CEPM_all` |
 | **ReEDS files touched** | The output name must match a `plantchar_gas` switch value allowed by the `Choices` column in `cases.csv`, and be registered in `inputs/plant_characteristics/dollaryear.csv` (currently `2022`, which matches the 2022$ normalization done here); renaming it requires updating both. `runfiles.csv` needs no change — its `inputs/plant_characteristics/{plantchar_gas}.csv` template already resolves this by name. `cases_cepm.csv` already points `plantchar_gas` at `gas-ccgt_CEPM_all`. |
@@ -19,18 +23,19 @@ rather than ATB's trajectory.
 
 | File | Description |
 |---|---|
-| 1. **`data_cleaning_gas.ipynb`** | Loads the raw Halcyon Excel export, keeps only rows with a reported `Cost ($/kW)`, normalizes cost to **2022$** (see "Dollar-year normalization" below), and splits into `Halcyon_August_CCGT.csv` / `Halcyon_August_CT.csv` (Technology Type = Combined-Cycle / Simple-Cycle Gas Turbine). |
+| 1. **`data_cleaning_gas.ipynb`** | Loads the raw Halcyon Excel export, keeps only rows with a reported `Cost ($/kW)`, normalizes cost to **2022$** (see "Dollar-year normalization" below), and splits into `data/Halcyon_August_CCGT.csv` / `data/Halcyon_August_CT.csv` (Technology Type = Combined-Cycle / Simple-Cycle Gas Turbine). |
 | 2. **`CCGT_gas_capex.ipynb`** | Cleans the CCGT data (drop year > 2032 or cost > $3000/kW) and fits a **single regression on all 27 plants**, using the normalized cost. No clustering — see `CCGT_clustering_methods.ipynb` for why. Exports `ccgt_regression_forecast.csv`. |
 | 3. **`CT_gas_capex.ipynb`** | Same approach for CT: single regression on all 35 plants, normalized cost. Exports `ct_regression_forecast.csv`. |
 | 4. **`gas_CAPEX_update.ipynb`** | Reads `ccgt_regression_forecast.csv` and `ct_regression_forecast.csv` and builds `gas-ccgt_CEPM_all.csv`, replacing `capcost` for `Gas-CC` and `Gas-CT` in 2026-2032 only. |
 | — **`CCGT_clustering_methods.ipynb`** | Side notebook comparing clustering methods (K-Means, hierarchical with ward/complete/average/single linkage, DBSCAN) on the CCGT data. **Conclusion: none gives a robust, meaningful low/high cost-tier split** — the split is confounded with operating year, the "high" cluster isn't homogeneous, the "low" cluster's regression isn't significant, and the whole result flips (11/16 → 21/6) when a single plant's cost is revised between tracker updates. Not part of the main pipeline — exploratory only, informs the "no clustering" decision in step 2. |
-| — `Halcyon Gas Power Plant Tracker - 24 Aug 2026 .xlsx` | Raw tracker export. Input to step 1. |
-| — `Halcyon_August_CCGT.csv`, `Halcyon_August_CT.csv` | Cleaned, cost-normalized tracker exports. Output of step 1, input to steps 2-3. |
+| — `data/Halcyon Gas Power Plant Tracker - 24 Aug 2026 .xlsx` | Raw tracker export. Input to step 1. Not tracked in git; get it from SharePoint (see above). |
+| — `data/Halcyon_August_CCGT.csv`, `data/Halcyon_August_CT.csv` | Cleaned, cost-normalized tracker exports. Output of step 1, input to steps 2-3. Not tracked in git; regenerate with step 1 or get them from SharePoint. |
 | — `ccgt_regression_forecast.csv` | CCGT forecast 2026-2032 (single scenario). Output of step 2, input to step 4. |
 | — `ct_regression_forecast.csv` | CT forecast 2026-2032 (single scenario). Output of step 3, input to step 4. |
 
-All paths in these notebooks resolve from a `REPO_ROOT` walk, so they can be run
-from any working directory.
+Paths in steps 2-4 and the clustering notebook resolve from a `REPO_ROOT` walk, so
+they can be run from any working directory. `data_cleaning_gas.ipynb` (step 1)
+uses paths relative to this folder, so run it from here.
 
 ## Dollar-year normalization
 

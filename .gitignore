@@ -72,3 +72,7 @@ docs/build/*
 
 # uv stuff
 ReEDS.egg-info/
+
+# CEPM proprietary data (Halcyon tracker; see CEPM/preprocessing/gas_capex_forecast/data/README.md)
+CEPM/preprocessing/gas_capex_forecast/data/*.csv
+CEPM/preprocessing/gas_capex_forecast/data/*.xlsx
