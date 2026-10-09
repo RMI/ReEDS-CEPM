@@ -46,10 +46,7 @@ retail_rate_module/inputs/EIA861/*
 postprocessing/retail_rate_module/inputs/EIA861/*
 
 # Large files from remote sources
-inputs/profiles_cf
-inputs/profiles_demand
-inputs/profiles_dr
-inputs/profiles_temperature
+inputs/profiles*
 inputs/remote
 inputs/shapefiles/cache
 
@@ -62,6 +59,7 @@ gamslice.txt
 
 # IDE files
 *.vscode
+.markdownlint.json
 
 # HPC files
 slurm*.out
@@ -76,3 +74,15 @@ ReEDS.egg-info/
 # CEPM proprietary data (Halcyon tracker; see CEPM/preprocessing/gas_capex_forecast/data/README.md)
 CEPM/preprocessing/gas_capex_forecast/data/*.csv
 CEPM/preprocessing/gas_capex_forecast/data/*.xlsx
+
+# run_cepm.ps1 -m (multistep) per-batch working files
+# Generated at the start of phase B and removed again by the script's own
+# cleanup step, so they normally only exist mid-run -- but that is exactly when
+# they clutter the staging area, and an interrupted run leaves them behind.
+# The token is the batch name, so the names vary per run.
+# Keep the checked-in *_none.csv pair, which is the real 'no cap' input.
+cases*__*.csv
+inputs/growth_constraints/cepm_tg_cap_sys_*.csv
+inputs/growth_constraints/cepm_tg_cap_reg_*.csv
+!inputs/growth_constraints/cepm_tg_cap_sys_none.csv
+!inputs/growth_constraints/cepm_tg_cap_reg_none.csv

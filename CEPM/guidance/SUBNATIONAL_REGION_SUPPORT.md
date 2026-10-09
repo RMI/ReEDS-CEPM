@@ -1,4 +1,5 @@
 # Sub-national region support: GSw_ZoneSet x GSw_Region audit
+Written Date: 2026-08-20
 
 **Symptom:** Outside of the two national z48 cases already validated in `cases_cepm.csv` (`USA_gas_mvp`, `USA_optimized_mvp`), most `GSw_ZoneSet`/`GSw_Region` combinations fail somewhere between `copy_files.py` and the GAMS solve — including the repo's *default* zoneset (z134), used whenever `GSw_ZoneSet` is left blank, as in `NM_optimized_2yrs`/`NM_optimized_3yrs`/`NM_optimized_LLtest`.
 **Status:** We identified 5 issues within this repo's codebase; 2 fixed (Issue 1 via `fix/techs-banned-region-mapping`, merged into `zone-region-audit`; Issue 5 directly in `fuelcostprep.py`), 3 documented but not yet fixed (Issues 2, 3, 4)

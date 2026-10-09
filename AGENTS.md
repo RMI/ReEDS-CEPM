@@ -37,7 +37,8 @@ Use this file as the first stop for agent orientation. Deeper references:
 - `cases.csv`: canonical case/switch catalog, with descriptions, allowed values,
   and defaults. Scenario files such as `cases_test.csv`, `cases_small.csv`,
   `cases_cepm.csv`, and study-specific `cases_{suffix}.csv` override defaults by
-  case column.
+  case column. Keep `cases_test.csv` and `cases_small.csv` identical to upstream;
+  RMI's test cases go in `cases_RMI-test.csv` (`-c RMI-test`).
 - `reeds/`: the main Python package. Top-level modules include `reeds.io`,
   `reeds.inputs`, `reeds.spatial`, `reeds.techs`, `reeds.log`, `reeds.checks`,
   `reeds.financials`, `reeds.results`, `reeds.timeseries`, `reeds.units`,
@@ -105,7 +106,7 @@ Use this file as the first stop for agent orientation. Deeper references:
 
 ## Environment
 
-- Python is pinned to `3.11` via `.python-version` and `pyproject.toml`.
+- Python is pinned to `3.14` via `.python-version` and `pyproject.toml`.
 - Python dependencies are managed with `uv` and locked in `uv.lock`.
   `environment.yml` is kept as an upstream-compatible conda/mamba fallback; see
   @CEPM/guidance/UV_MAMBA_GUIDE.md for keeping the two in sync.
@@ -121,7 +122,7 @@ PowerShell setup used by local agents on Windows:
 ```powershell
 uv sync --extra dev
 julia --project=. instantiate.jl
-$env:CONDA_DEFAULT_ENV = "reeds2"
+$env:CONDA_DEFAULT_ENV = "reeds"
 $env:CONDA_PREFIX = (Resolve-Path .venv).Path
 ```
 

@@ -1,4 +1,5 @@
 # Switch combinations for managing PRAS
+Written Date: 2026-08-20
 
 **Scope:** which switches determine whether PRAS (`run_pras.jl`, via
 `reeds/resource_adequacy/ra_calcs.py`) runs for a given solve year, how often,

@@ -285,6 +285,7 @@ set
   gas_cc(i)            "techs that are gas combined cycle",
   gas_ct(i)            "techs that are gas combustion turbine",
   gas(i)               "techs that use gas (but not o-g-s)",
+  gentech(i)           "generation technologies",
   geo(i)               "geothermal technologies",
   geo_base(i)          "geothermal technologies typically considered in model runs",
   geo_hydro(i)         "geothermal hydrothermal technologies",
@@ -744,6 +745,7 @@ gas_cc_ccs(i)$(not ban(i))          = yes$i_subsets(i,'gas_cc_ccs') ;
 gas_cc(i)$(not ban(i))              = yes$i_subsets(i,'gas_cc') ;
 gas_ct(i)$(not ban(i))              = yes$i_subsets(i,'gas_ct') ;
 gas(i)$(not ban(i))                 = yes$i_subsets(i,'gas') ;
+gentech(i)$(not ban(i))             = yes$i_subsets(i,'gentech') ;
 geo(i)$(not ban(i))                 = yes$i_subsets(i,'geo') ;
 geo_base(i)$(not ban(i))            = yes$i_subsets(i,'geo_base') ;
 geo_hydro(i)$(not ban(i))           = yes$i_subsets(i,'geo_hydro') ;
@@ -967,7 +969,7 @@ rsc_agg(i,ii)$[ban(i) or ban(ii)] = no ;
 *     --- Region hierarchy ---
 *======================================
 
-set hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg) "hierarchy of various regional definitions"
+set hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg) "hierarchy of various regional definitions"
 /
 $offlisting
 $ondelim
@@ -992,17 +994,17 @@ set r_itlgrp(r,itlgrp)
     r_ccreg(r,ccreg)
 ;
 
-r_nercr(r,nercr)                      $sum{(      transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
-r_transreg(r,transreg)                $sum{(nercr,         transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
-r_transgrp(r,transgrp)                $sum{(nercr,transreg,         cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
-r_cendiv(r,cendiv)                    $sum{(nercr,transreg,transgrp,       st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
-r_st(r,st)                            $sum{(nercr,transreg,transgrp,cendiv,   interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
-r_interconnect(r,interconnect)        $sum{(nercr,transreg,transgrp,cendiv,st,             country,usda_region,h2ptcreg,hurdlereg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
-r_country(r,country)                  $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,        usda_region,h2ptcreg,hurdlereg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
-r_usda(r,usda_region)                 $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,            h2ptcreg,hurdlereg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
-r_h2ptcreg(r,h2ptcreg)                $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,         hurdlereg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
-r_hurdlereg(r,hurdlereg)              $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,          ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
-r_ccreg(r,ccreg)                      $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg      ) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
+r_nercr(r,nercr)                      $sum{(      transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
+r_transreg(r,transreg)                $sum{(nercr,         transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
+r_transgrp(r,transgrp)                $sum{(nercr,transreg,         cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
+r_cendiv(r,cendiv)                    $sum{(nercr,transreg,transgrp,       st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
+r_st(r,st)                            $sum{(nercr,transreg,transgrp,cendiv,   interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
+r_interconnect(r,interconnect)        $sum{(nercr,transreg,transgrp,cendiv,st,             country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
+r_country(r,country)                  $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,        usda_region,h2ptcreg,hurdlereg,gasreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
+r_usda(r,usda_region)                 $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,            h2ptcreg,hurdlereg,gasreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
+r_h2ptcreg(r,h2ptcreg)                $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,         hurdlereg,gasreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
+r_hurdlereg(r,hurdlereg)              $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,          gasreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
+r_ccreg(r,ccreg)                      $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg      ) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,gasreg,ccreg),1} = yes ;
 
 set r_itlgrp(r,itlgrp) "mapping of r to itlgrp"
 /
@@ -2029,6 +2031,34 @@ $include inputs_case%ds%cap_penalty.csv
 $offdelim
 $onlisting
 / ;
+
+*---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+* Scales the interconnection-queue exceedance penalty. Default 1 leaves the
+* shipped $10,000,000/MW untouched, so this is inert unless deliberately set.
+*
+* Why it exists: cap_penalty is the ONLY thing giving eq_interconnection_queues
+* any force -- CAP_ABOVE_LIM is a slack with no upper bound that appears in that
+* one equation and in the objective, and nowhere else. So setting this to ~0
+* makes the constraint non-binding and cleanly answers "what does the
+* interconnection queue actually do to this run?".
+*
+* Prefer a small epsilon (e.g. 0.000001 -> $10/MW) over exactly 0. At exactly 0
+* the optimizer has no incentive to minimize CAP_ABOVE_LIM, so it can settle on
+* any value at or above the true violation -- and 5_varfix.gms then fixes that
+* arbitrary value for every later solve year, making cap_above_limit.csv
+* useless as a record of what the exceedance actually was. An epsilon pins it to
+* the true violation while contributing a few parts per million of the
+* objective.
+*
+* Both halves of the penalty's behavioral effect are removed either way: the
+* portion levied on prescribed capacity (a constant, since eq_forceprescription
+* pins INV) and the per-MW surcharge on marginal builds in cells that are
+* already over their limit.
+*
+* See CEPM/guidance/interconnection-queue-and-prescribed-builds.md.
+*---------------------------------------------------------------------------
+cap_penalty(tg) = cap_penalty(tg) * Sw_CapPenaltyMult ;
 
 *=============================================
 * -- Explicit spur-line capacity (if used) --
@@ -3761,6 +3791,41 @@ ilr(i)$distpv(i) = ilr_dist ;
 * assign an ILR to hybrid PV+battery technologies based on the ILR for the configurations
 ilr(pvb) = sum{pvb_config$pvb_agg(pvb_config,pvb), ilr_pvb_config(pvb_config) } ;
 
+*---------------------------------------------------------------------------
+* CEPM ADDITION -- guardrail for eq_cepm_tg_cap_sys / eq_cepm_tg_cap_reg
+* (c_model.gms), which divide INV by ilr(i). A division by zero there would
+* corrupt the ceiling silently rather than fail, so check it explicitly.
+*
+* Why this can only fire on a genuine problem, never on a tech where ilr is
+* simply "not applicable":
+*   - GAMS makes no distinction between "assigned 0" and "never assigned"; both
+*     read as 0. So testing ilr(i) = 0 covers both cases.
+*   - ilr is NOT n/a for non-PV techs: every investable tech is explicitly
+*     assigned ilr = 1 a few lines above, before the UPV/distpv/PVB overrides.
+*     Gas, coal, nuclear etc. all read exactly 1.0.
+*   - ilr is 0 only for techs outside valcap_i -- i.e. not buildable in this run
+*     at all -- and those are excluded by the gate below AND never enter the
+*     equations' sums.
+*   - valcap_i (line ~2299) is a superset of what the equations sum over:
+*     valinv is derived from the same valcap state, and valcap is only ever
+*     narrowed afterwards (e.g. the biofeas removal ~line 5599). Erring toward a
+*     superset means the check can never miss a tech the equations actually use.
+*
+* Only enforced when the caps are switched on, so it can never affect an
+* unrelated run.
+*---------------------------------------------------------------------------
+* $onImplicitAssign is required: in a healthy run cepm_ilr_zero ends up with no
+* records, and referencing an all-empty symbol in the abort below is GAMS error
+* 141. Without this the guardrail would abort every run, switch on or off.
+$onImplicitAssign
+parameter cepm_ilr_zero(i) "--unitless-- investable techs with ilr=0 (must always be empty)" ;
+cepm_ilr_zero(i) = 0 ;
+cepm_ilr_zero(i)$[valcap_i(i)$(ilr(i) = 0)] = 1 ;
+abort$[Sw_CEPM_TgCap$sum{i, cepm_ilr_zero(i) }]
+    "CEPM: ilr(i) is zero for one or more investable technologies, but eq_cepm_tg_cap_* divides by ilr(i). See CEPM/guidance/two-step-re-limited-runs.md.",
+    cepm_ilr_zero ;
+$offImplicitAssign
+
 parameter bir_pvb_config(pvb_config) "--unitless-- ratio of the battery capacity to the inverter capacity (MW_battery / MW_inverter) for each hybrid pv+battery configuration"
 /
 $offlisting
@@ -4113,24 +4178,6 @@ fuel_price(i,r,t)$[sum{f$fuel2tech(f,i),1}$(not fuel_price(i,r,t))] =
   sum{rr$fuel_price(i,rr,t), fuel_price(i,rr,t) } / max(1,sum{rr$fuel_price(i,rr,t), 1 }) ;
 
 fuel_price(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), fuel_price(ii,r,t) } ;
-
-
-*=====================================================
-* -- Climate impacts on nondispatchable hydropower --
-*=====================================================
-
-$ifthen.climatehydro %GSw_ClimateHydro% == 1
-
-* declared over allt to allow for external data files that extend beyond end_year
-* Written by climateprep.py
-table climate_hydro_annual(r,allt)  "annual dispatchable hydropower availability"
-$offlisting
-$ondelim
-$include inputs_case%ds%climate_hydadjann.csv
-$offdelim
-$onlisting
-;
-$endif.climatehydro
 
 
 *=====================================================
@@ -4819,6 +4866,46 @@ $offdelim
 $onlisting
 / ;
 
+*---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+* Cumulative new-investment ceilings by technology group, consumed by
+* eq_cepm_tg_cap_sys / eq_cepm_tg_cap_reg in c_model.gms. Units are MW_ac, to
+* match reported cap_new_out (the equations divide INV by ilr(i)).
+* Either file may be empty; a 0 value means "no cap", not "no builds".
+* See CEPM/guidance/two-step-re-limited-runs.md.
+*---------------------------------------------------------------------------
+$onempty
+parameter cepm_tg_cap_sys(tg) "--MW_ac-- CEPM cumulative system-wide cap on new investment by technology group"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%cepm_tg_cap_sys.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter cepm_tg_cap_reg(tg,r) "--MW_ac-- CEPM cumulative regional cap on new investment by technology group"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%cepm_tg_cap_reg.csv
+$offdelim
+$onlisting
+/ ;
+$offempty
+
+* Guardrail: because a 0 value means "no cap" (GAMS stores no record for it), a
+* run with the switch on but no data loaded would solve happily and silently
+* uncapped -- which is exactly what a failed/skipped harvest step looks like.
+* Fail loudly instead. $onImplicitAssign is required because whichever of the two
+* files is unused is legitimately empty, and referencing an all-empty symbol is
+* GAMS error 141.
+$onImplicitAssign
+abort$[Sw_CEPM_TgCap$(not [sum{tg, cepm_tg_cap_sys(tg) }
+                           + sum{(tg,r), cepm_tg_cap_reg(tg,r) }])]
+    "CEPM: GSw_CEPM_TgCap=1 but both cepm_tg_cap_sys.csv and cepm_tg_cap_reg.csv are empty, so nothing would be capped. Check cepmtgcapscen and that make_tg_cap.py actually ran." ;
+$offImplicitAssign
+
 * gbin_min is based on the representative plant size for a single plant in that tech group
 parameter gbin_min(tg) "--MW-- minimum size of the first (zero cost) growth bin"
 /
@@ -5275,6 +5362,7 @@ $onlisting
 $offempty
 
 * Note that this PSH duration overwrites what is contained in storage_duration.csv
+* and will be overridden by data in storage_duration_pshdata.csv if durations for existing PSH are used
 storage_duration(i)$psh(i) = psh_sc_duration ;
 
 storage_duration(i)$[i_water_cooling(i)$Sw_WaterMain] =
@@ -5999,6 +6087,52 @@ parameter
 z_rep_inv(t) = 0 ;
 z_rep_op(t) = 0 ;
 
+*====================================
+*     --- Employment Factors ---
+*====================================
+* Employment factors of construction and operation of power plants
+$onempty
+Table employment_factor_plant(i,jtype) "--job-years/MW (construction), job-years/MW-year (fom) or job-years/MWh (vom)-- employment factors of power plants by technology and job type"
+$offlisting
+$ondelim
+$include inputs_case%ds%employment_factor_plant.csv
+$offdelim
+$onlisting
+;
+$offempty
+
+* Employment factors of transmission deployment and flow
+parameter employment_factor_inter_transmission(jtype)  "--job-years/$ (construction) -- construction employment factors of transmission lines"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%employment_factor_inter_transmission.csv
+$offdelim
+$onlisting
+/ ;
+
+* If upgrade techs, construction employment factor is adjusted by upgrade ratio
+* calculated as the ratio of the difference in capital costs between the initial 
+* techs and the upgraded tech divided by the capital costs of the initial techs
+parameter upgrade_ratio(i) ;
+upgrade_ratio(i)$upgrade(i) = 1 ;
+upgrade_ratio(i)$[upgrade(i)
+                $(sum{(ii,t)$upgrade_to(i,ii), cost_cap(ii,t)$tmodel_new(t) }
+                 - sum{(ii,t)$upgrade_from(i,ii), cost_cap(ii,t)$tmodel_new(t) } > 0)] 
+                  = (sum{(ii,t)$upgrade_to(i,ii), cost_cap(ii,t)$tmodel_new(t) } 
+                    - sum{(ii,t)$upgrade_from(i,ii), cost_cap(ii,t)$tmodel_new(t) } )
+                    / sum{(ii,t)$upgrade_from(i,ii), cost_cap(ii,t)$tmodel_new(t) } ;
+
+* Only apply this ratio to non CCS upgrades if using JEDI EFs since JEDI already specifies CCS upgrade EFs
+$ifthen.upgrade_ef %GSw_EmploymentFactor% == "jedi"
+employment_factor_plant(i,"construction")
+    $[upgrade(i)$(not ccs(i))]
+    = employment_factor_plant(i,"construction") * upgrade_ratio(i) ;
+$else.upgrade_ef
+employment_factor_plant(i,"construction")
+    $upgrade(i)
+    = employment_factor_plant(i,"construction") * upgrade_ratio(i) ;
+$endif.upgrade_ef
 
 *================================================================================================
 *== h- and szn-dependent sets and parameters (declared here, populated in 2_temporal_params) ===
@@ -6055,6 +6189,7 @@ alias(actualszn,actualsznn,actualsznnn) ;
 Parameter
 * Hour/period weighting
     hours(allh)                            "--hours-- number of hours in each time block"
+    hours_t(allh,allt)                     "--hours-- number of hours in each time block by model year"
     numdays(allszn)                        "--days-- number of days for each season"
     numpartitions(allszn)                  "--days-- number of partitions for each season in timeseries"
     hours_daily(allh)                      "--hours-- number of hours represented by time-slice 'h' during one day"
@@ -6135,6 +6270,8 @@ Parameter
 * Fossil gas supply curve
     gasadder_cd(cendiv,t,allh)             "--$/MMbtu-- adder for NG census division"
     szn_adj_gas(allh)                      "--fraction-- seasonal adjustment for gas prices"
+    gasprice_adj_r(r,allh)                 "--fraction-- adjustment for zonal gas prices"
+    gasprice_adj_cendiv(cendiv,allh)       "--fraction-- adjustment for cendiv-level gas prices"
 ;
 
 * Initialize some parameters
