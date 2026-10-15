@@ -1,4 +1,5 @@
 # How ReEDS finds its input files: `runfiles.csv` and `copy_files.py`
+Written Date: 2026-08-19
 
 **Scope:** how a switch value in a `cases_*.csv` file turns into a path on disk,
 and what that implies for where CEPM should put its own input data.

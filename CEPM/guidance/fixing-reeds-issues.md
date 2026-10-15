@@ -1,4 +1,5 @@
 # Guide to fixing ReEDS issues
+Written Date: 2026-09-29
 
 This doc walks you through fixing a problem in the ReEDS model code on the CEPM
 fork: from spotting the problem to opening a pull request.

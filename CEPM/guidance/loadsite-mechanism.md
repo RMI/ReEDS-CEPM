@@ -1,4 +1,5 @@
 # How `GSw_LoadSite{CF,RA,Trajectory}` wire together
+Written Date: 2026-09-04
 
 **Scope:** how the three `GSw_LoadSite*` switches drive ReEDS's "optimally
 sited load" feature (used by CEPM for data-center/large-load growth) — what

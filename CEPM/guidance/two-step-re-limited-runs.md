@@ -1,4 +1,5 @@
 # Two-step baseline-constrained runs (`*_baseline` → `*_limitre` + `*_optimized`)
+Written Date: 2026-09-29
 
 **Status (2026-09-02):** **the workflow is built and works end to end.** One
 command now produces the three-case factorial and its comparison deck:

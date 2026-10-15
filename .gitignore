@@ -71,6 +71,10 @@ docs/build/*
 # uv stuff
 ReEDS.egg-info/
 
+# CEPM proprietary data (Halcyon tracker; see CEPM/preprocessing/gas_capex_forecast/data/README.md)
+CEPM/preprocessing/gas_capex_forecast/data/*.csv
+CEPM/preprocessing/gas_capex_forecast/data/*.xlsx
+
 # run_cepm.ps1 -m (multistep) per-batch working files
 # Generated at the start of phase B and removed again by the script's own
 # cleanup step, so they normally only exist mid-run -- but that is exactly when

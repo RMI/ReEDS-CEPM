@@ -1,4 +1,5 @@
 # Interconnection queues and prescribed builds: how they work, and why they collide in 2026
+Written Date: 2026-09-04
 
 **Status:** investigation, 2026-09-03. Verified against the code in this fork at
 `mvp/two-step-runs` and against two runs of the same three-case two-step batch:

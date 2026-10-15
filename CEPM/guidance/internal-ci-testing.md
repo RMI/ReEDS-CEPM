@@ -1,4 +1,5 @@
 # Internal CI Test Runbook (On-Prem, GAMS-Licensed)
+Written Date: 2026-08-18
 
 This runbook reproduces the key checks from GitHub PR CI on an internal machine where a host-specific GAMS license is valid.
 

@@ -83,12 +83,12 @@ BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.
         deleted in a finally, so an interrupted or failed run leaves the working
         tree clean. See CEPM/guidance/two-step-re-limited-runs.md.
 
-        KEEP cleanup_level=0 IN THE CASES FILE. runreeds.py:959-967 prints an R2X
+        KEEP cleanup_level=0 IN THE CASES FILE. runreeds.py's "User warnings" block prints an R2X
         warning and blocks on `input('Proceed? y/[n]: ')` (defaulting to "n", so
         it quits) whenever ANY case has cleanup_level >= 1 and --skip_checks was
         not passed. Two things make this bite here specifically: the check runs
         at launch, before anything starts; and because -m always uses -s, the
-        ignored cases are NOT dropped from df_cases first (runreeds.py:899-905),
+        ignored cases are NOT dropped from df_cases first (runreeds.py's "drop the ignored cases" block),
         so the check scans EVERY column in the cases file, including the ten or
         so this batch isn't running. One stray cleanup_level=2 anywhere in
         cases_cepm.csv therefore hangs a background/CI -m run that never shows

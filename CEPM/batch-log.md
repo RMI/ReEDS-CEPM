@@ -16,9 +16,8 @@ was run and what it showed.
 
 Loosely inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## TEMPLATE Batch entry
+## TEMPLATE Batch entry: `{Batch name here, e.g., v20260903}**
 **## Author: Tyler Fitch`**
-**## Batch name: TEMPLATE `{Batch name here, e.g., v20260903}`**
 
 Summary: What'd we change, why, what'd we find, what's next
 
@@ -96,9 +95,8 @@ When compared to previous results that use Anna's capex calculations, this run h
 - [X] I edited LLM-generated text to keep this entry short and to the point
 - [X] Open a pull request and add results of a recent run as an attachment
 ---
-##Batch entry
+## Batch entry: `v20261001gt`
 **## Author: Gaby**
-**## Batch name: v20261001gt`**
 
 Summary:  Re-ran the st-AZNM baseline, limit-RE, and optimized cases to test a fix for a pandas 3.x issue that caused ReEDS to drop buildable onshore wind in landlocked regions. The fix ensures wind supply-curve bins retain the correct data type, preventing onshore wind from being removed during input processing. The corrected runs successfully restored onshore wind as a build option.
 
@@ -132,7 +130,6 @@ The corrected wind availability also changes the broader capacity mix, confirmin
 
 ### Documentation, decisions, next steps, & issues
 
-- **PROPOSED DECISION:** Merge fix into dev
 - **DOCUMENTATION:** The pandas 3.x wind supply-curve issue and fix are documented in CEPM/known-reeds-issues.md and CEPM/reeds-to-cepm-log.md.
 - **NEXT STEP:** Merge fix into dev
 - **ISSUE:** The underlying bug also exists upstream and can affect other landlocked regions when offshore wind is enabled but the offshore supply curve is empty.
