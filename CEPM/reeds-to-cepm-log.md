@@ -5,11 +5,8 @@ Tracks how this repo diverges from upstream
 upstream file that CEPM changed and what to re-check when we rebase onto a new
 upstream release.
 
-**Current ReEDS base:** upstream tag `2026.08.03`, synced via `temp-august`
-(merge base with `upstream/main` at commit `62f6381e`, 2026-06-23 — the same
-base the prior `2026.06.18` sync used; entries below predating the August 2026
-sync were written against that earlier base and are being re-verified against
-`2026.08.03` as each is touched).
+**Current ReEDS base:** upstream tag `2026.08.03` (`1515f8ae`), also the merge
+base with `upstream/main`.
 
 Most bug-fix entries below have a matching symptom-level entry in
 [`known-reeds-issues.md`](known-reeds-issues.md); that file is the "my run failed, what is
@@ -93,6 +90,9 @@ see this on its own toolchain.
 - `reeds/core/setup/b_inputs.gms` — includes `autocode/b_sets.gms` inside the
   `$gdxin` block instead of the old declare-then-load pair, with a comment
   recording the version constraint.
+- `reeds/input_processing/h5_to_gdx.py` also carries `special_keys = ['r', 'v']`
+  and a test-path comment from upstream `a09865ec` (post-tag). These are not RMI
+  changes and should vanish at the next sync.
 
 ### Reference:
 
@@ -110,6 +110,10 @@ see this on its own toolchain.
 - If the GAMS install moves to **45.6.0 or newer**, this patch is no longer
   required — consider dropping it and returning to upstream's codegen to shrink
   the diff.
+- Upstream tag `2026.09.08` replaced `write_declaration`/`write_gdxread` with
+  `write_declare_and_load()` (declare and load each set in turn, primary sets
+  first). It is likely upstream's own Error 579 fix; at the next sync, confirm it
+  compiles on GAMS 44.4.0, then drop this patch.
 
 ## Resolving census divisions in fuelcostprep.py
 
@@ -258,7 +262,7 @@ dropped one slide rather than aborting the comparison.
 
 ### Reference:
 
-n/a
+[`known-reeds-issues.md`](known-reeds-issues.md)
 
 ### What to test in new releases:
 
@@ -417,8 +421,7 @@ n/a
 
 - If upstream fixes its own reeds2pras README paths, drop our version to keep the
   vendored tree byte-identical to upstream. That tree is otherwise nearly
-  pristine, which is what keeps future ReEDS2PRAS syncs cheap — see Issue 4 of
-  [`guidance/SUBNATIONAL_REGION_SUPPORT.md`](guidance/SUBNATIONAL_REGION_SUPPORT.md).
+  pristine, which is what keeps future ReEDS2PRAS syncs cheap.
 
 # Custom CEPM inputs and changes to ReEDS files
 
@@ -449,9 +452,9 @@ Gas-CT uses the same CT forecast in all three. Selected via `plantchar_gas`.
 
 ### Underlying ReEDS files changed:
 
-- `cases.csv` — `plantchar_gas` description amended to note that upstream options
-  start with `gas_` while RMI/CEPM options start with `gas-ccgt_`. The `Choices`
-  pattern already admitted the new names, so no validation change was needed.
+- `cases.csv` — `plantchar_gas` description and `Choices` amended to accept
+  `gas-ccgt_CEPM_(low|high|all)`. Upstream's explicit list would reject our
+  files, so this edit is load-bearing.
 - `inputs/plant_characteristics/dollaryear.csv` — three new rows registering all
   three files as `2022` dollars.
 
@@ -468,9 +471,9 @@ name.
 - Does `dollaryear.csv` still exist in the same location and format, and are our
   three rows still present after the rebase? A dropped row stays silent until
   costs come out wrong by an inflation factor.
-- Has the `Choices` pattern for `plantchar_gas` in `cases.csv` become stricter
-  (an explicit list rather than a prefix pattern)? If so, our filenames must be
-  added to it.
+- Does our `gas-ccgt_CEPM_(low|high|all)` alternative survive in
+  `plantchar_gas`'s `Choices` in `cases.csv`? Taking upstream's side makes
+  `runreeds.py` reject every CEPM case.
 - Has upstream changed the ATB vintage, or the columns/units in
   `gas_ATB_2024_moderate.csv`? Our files are derived from that shape, so a schema
   change means regenerating them.
@@ -748,8 +751,6 @@ than erroring, so deleting it silently skips both jobs while still reporting a
 green check. And the comparison is a case-sensitive string match against
 `'true'`, so `True`, `TRUE`, or `1` will not enable it.
 
-Note that workflow files seem to automatically change the commit SHA that accompanies some of the workflow steps--this is not something we need to worry about when updating ReEDS releases.
-
 ### Files included:
 
 - `.github/workflows/python-app.yaml` — `if:` conditions on the `run-ReEDS` and
@@ -757,7 +758,10 @@ Note that workflow files seem to automatically change the commit SHA that accomp
   where the variable actually lives. (An earlier revision also set
   `ENABLE_GAMS_CI: 'false'` as a workflow `env:` value; that had no effect,
   since `env:` populates the `env` context and not `vars`, and it has been
-  replaced by the comment.)
+  replaced by the comment.) Also, three
+  `uses: ./.github/actions/setup-reeds-env` lines carry
+  `# zizmor: ignore[self-repository]` (`11efac87`); drop these once actionlint
+  accepts the `$/...` syntax.
 
 ### Reference:
 
@@ -772,7 +776,6 @@ value via `gh variable list --repo RMI/ReEDS-CEPM`
   upstream's side restores unconditional execution and turns CI red.
 - Does the variable still exist at the repo level? It is not version-controlled,
   so it can be deleted without leaving any trace in the repo.
-- Don't worry about changes to the alphanumeric SHAs after the steps in the workflow files.
 
 ## Using uv instead of mamba for environment/package management
 
@@ -801,7 +804,8 @@ known-accepted allowlist.
   committed *and* listed in `.gitignore`; because it is tracked, the ignore rule
   has no effect. Worth reconciling one way or the other.
 - `hourlize/pyproject.toml` — trailing-whitespace cleanup only
-- `.gitignore` — ignores `.python-version` and `ReEDS.egg-info/`
+- `.gitignore` — ignores `.python-version`, `.markdownlint.json`, and
+  `ReEDS.egg-info/`
 - [`scripts/check_env_sync.py`](scripts/check_env_sync.py) — drift checker
 - [`guidance/UV_MAMBA_GUIDE.md`](guidance/UV_MAMBA_GUIDE.md) — the sync procedure
   and accepted-drift list
@@ -829,14 +833,13 @@ order hit:
 3. **`fiona` kept, but platform/version-conditioned.** `environment.yml` itself
    declares `fiona=1.10 # for interactive maps` — this is upstream's package,
    not RMI's, so the version was kept matched rather than bumped or dropped.
-   The problem is Windows-specific: no prebuilt wheel exists yet for
-   `fiona==1.10.*` on Python 3.14 (confirmed a real wheel *does* exist for
-   Linux + 3.14 — this is a wheel-publishing lag, not an incompatibility), and
-   building from source requires GDAL on PATH, which isn't set up on RMI dev
-   machines. Marked
+   No prebuilt `fiona==1.10.*` wheel exists for Python 3.14 on any platform
+   (checked on PyPI 2026-09-29), so installing it means building from source,
+   which requires GDAL on PATH. That isn't set up on RMI dev machines. Marked
    `"fiona==1.10.*; sys_platform != 'win32' or python_full_version != '3.14.*'"`
-   so it stays declared (and installs normally on Linux/HPC) but doesn't block
-   a Windows `uv sync`. Nothing in this repo imports `fiona` directly, and
+   so it stays declared but doesn't block a Windows `uv sync`; Linux/HPC still
+   builds it from source and needs GDAL there. Nothing in this repo imports
+   `fiona` directly, and
    `geopandas` 1.1+ uses `pyogrio` as its I/O backend instead, so this doesn't
    affect any actual model or postprocessing code path.
 4. **`pyproj` bumped 3.6.1 → 3.8.0.** Same root cause as `fiona` (no Windows
@@ -897,14 +900,12 @@ real end-to-end confirmation.
 - Does the environment still resolve? Run `uv sync --extra dev` on a clean
   checkout.
 - Did Python version expectations change again? If upstream's `environment.yml`
-  moves off 3.14, update `requires-python`, `.python-version`, and
-  `run_cepm.ps1`'s Step 4 pin-check together — don't just update one.
+  moves off 3.14, update `requires-python` and `.python-version` together.
+  `run_cepm.ps1` reads the pin from `pyproject.toml`, so it needs no change.
 - Did upstream add, remove, or re-pin any dependency in `environment.yml`? Each
   change has to be mirrored into `pyproject.toml` by hand; run
   `check_env_sync.py` and reconcile anything not on the allowlist.
-- Has a Windows/cp314 wheel shipped for `fiona==1.10.*` yet? If so, the
-  platform/version marker can be dropped — check the exact version condition in
-  the marker still matches what's pinned before removing it.
+- Has any cp314 wheel shipped for `fiona==1.10.*`? If so, drop the marker.
 - Has upstream adopted its own root `pyproject.toml`? If so, ours conflicts
   directly and needs merging rather than overwriting.
 - Does ReEDS still read `CONDA_DEFAULT_ENV` / `CONDA_PREFIX`? If upstream drops
@@ -917,7 +918,8 @@ real end-to-end confirmation.
 A PowerShell wrapper that runs the whole CEPM setup-and-launch sequence in one
 command: verifies GAMS is on `PATH` and licensed, verifies Julia is exactly
 1.12.1, sets the conda-style environment variables ReEDS expects, pins Python
-3.14 and runs `uv sync --extra dev`, instantiates Julia dependencies (offline
+to the version read from `pyproject.toml`'s `requires-python` and runs
+`uv sync --extra dev`, instantiates Julia dependencies (offline
 fast path first, full instantiate as fallback), warns on `environment.yml` to
 `pyproject.toml` drift, then launches `runreeds.py` forwarding all remaining
 arguments. It also sends best-effort ntfy.sh notifications (topic
@@ -962,7 +964,7 @@ section of the [root README](../README.md)
   and upstream's install docs.
 - Have `runreeds.py`'s flags changed — particularly `-b/--BatchName` and
   `-c/--cases_suffix`, which the script parses itself, and any new short flag
-  that could collide with `-y`, `-q`, or `-u`?
+  that could collide with `-y`, `-q`, `-u`, `-x`, `-o`, or `-m`?
 - Is `runreeds.py` still the entry point, still at the repo root, still under
   that name?
 
@@ -1075,7 +1077,6 @@ that is never displayed.
 ### Files included:
 
 - `cases_cepm.csv` — the case definitions
-- `cases.csv` — unchanged apart from the `plantchar_gas` description noted above
 
 ### Reference:
 
@@ -1093,9 +1094,7 @@ switch value becomes an input file path
   cases.
 - Is the `cases_{suffix}.csv` convention still supported by `runreeds.py`?
 - Re-run at least one case through `copy_files.py` to confirm the switch
-  combination still initializes; see
-  [`guidance/SUBNATIONAL_REGION_SUPPORT.md`](guidance/SUBNATIONAL_REGION_SUPPORT.md)
-  for which `GSw_ZoneSet`/`GSw_Region` combinations are known to work.
+  combination still initializes.
 
 ## RMI test cases (`cases_RMI-test.csv`)
 
