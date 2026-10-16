@@ -1,4 +1,5 @@
 # ReEDS retirements, prescribed builds, and 2026 generator data
+**Written Date:** October 15, 2026
 
 This note summarizes how ReEDS treats generator retirements and prescribed builds, and records the comparison between the August and September 2026 generator databases used in CEPM analysis. The generator-database comparison below is for the **WECC-SW region (p27-p31 and p59)** unless otherwise noted.
 
