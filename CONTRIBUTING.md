@@ -6,6 +6,10 @@ If you encounter an issue with how ReEDS works that wouldn't be obvious to anoth
 
 If you make a change to a new file in this repo, check to see if it's already indicated in [`reeds-to-cepm-log.md`](./CEPM/reeds-to-cepm-log.md).
 
+RMI contributors should also follow
+[RMI's pull request best practices](https://github.com/RMI/practices/blob/main/process/pull_request.md)
+when preparing, reviewing, and merging pull requests.
+
 ---
 Upstream ReEDS-Model's instructions for contributing are below:
 # Contributing to ReEDS
