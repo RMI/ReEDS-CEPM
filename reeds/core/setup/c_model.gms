@@ -1488,7 +1488,7 @@ eq_cepm_tg_cap_reg(tg,r)$[cepm_tg_cap_reg(tg,r)$Sw_CEPM_TgCap$(not Sw_PCM)]..
 * CEPM ADDITION -- not present upstream.
 *
 * Per-year versions of the two caps above, active only with
-* GSw_CEPM_TgCapByYear=1. The totals cap the horizon sum, and nothing stops a
+* GSw_CEPM_TgCap=2. The totals cap the horizon sum, and nothing stops a
 * sequential solve from spending all of it in the first capped year. These
 * equations also cap cumulative investment at each modeled year t at the
 * reference run's cumulative investment through t, so the capped run follows
@@ -1499,12 +1499,13 @@ eq_cepm_tg_cap_reg(tg,r)$[cepm_tg_cap_reg(tg,r)$Sw_CEPM_TgCap$(not Sw_PCM)]..
 * that year. In the sequential solve that bound changes nothing, since later
 * years are in neither tmodel nor tfix.
 *
-* The path's last value equals the horizon total, so both sets can be active
-* together without conflict.
+* The totals stay active under GSw_CEPM_TgCap=2. The path's last value equals the
+* horizon total, so the two sets never conflict, and the totals still cap any
+* modeled year after the path's last year.
 * ---------------------------------------------------------------------------
 
 eq_cepm_tg_cap_sys_t(tg,t)
-    $[tmodel(t)$cepm_tg_cap_sys_t(tg,t)$Sw_CEPM_TgCap$Sw_CEPM_TgCapByYear$(not Sw_PCM)]..
+    $[tmodel(t)$cepm_tg_cap_sys_t(tg,t)$(Sw_CEPM_TgCap=2)$(not Sw_PCM)]..
 
 * the system-wide ceiling on investment in this tech group through year t
     cepm_tg_cap_sys_t(tg,t)
@@ -1530,7 +1531,7 @@ eq_cepm_tg_cap_sys_t(tg,t)
 ;
 
 eq_cepm_tg_cap_reg_t(tg,r,t)
-    $[tmodel(t)$cepm_tg_cap_reg_t(tg,r,t)$Sw_CEPM_TgCap$Sw_CEPM_TgCapByYear$(not Sw_PCM)]..
+    $[tmodel(t)$cepm_tg_cap_reg_t(tg,r,t)$(Sw_CEPM_TgCap=2)$(not Sw_PCM)]..
 
 * the regional ceiling on investment in this tech group through year t
     cepm_tg_cap_reg_t(tg,r,t)

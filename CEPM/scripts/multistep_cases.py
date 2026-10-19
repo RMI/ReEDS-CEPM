@@ -63,10 +63,11 @@ import reeds  # noqa: E402
 
 SUFFIXES = ('baseline', 'limitre', 'optimized')
 
-# Expected GSw_CEPM_TgCap value per case, once defaults are resolved. This is the
+# Allowed GSw_CEPM_TgCap values per case, once defaults are resolved. This is the
 # whole point of the factorial in section 1 of the guidance doc: exactly one of the
-# three cases may carry a ceiling.
-EXPECTED_TGCAP = {'baseline': 0, 'limitre': 1, 'optimized': 0}
+# three cases may carry a ceiling. _limitre may use the horizon total (1) or the
+# horizon total plus the per-year path (2).
+EXPECTED_TGCAP = {'baseline': {0}, 'limitre': {1, 2}, 'optimized': {0}}
 
 
 def fail(msg):
@@ -106,11 +107,14 @@ def validate(cases_filename, stem):
         try:
             got = int(float(str(raw).strip()))
         except (TypeError, ValueError):
-            problems.append(f'  {name}: GSw_CEPM_TgCap is {raw!r}, which is not 0 or 1')
+            problems.append(f'  {name}: GSw_CEPM_TgCap is {raw!r}, which is not 0, 1 or 2')
             continue
         want = EXPECTED_TGCAP[sfx]
-        if got != want:
-            problems.append(f'  {name}: GSw_CEPM_TgCap is {got}, expected {want}')
+        if got not in want:
+            problems.append(
+                f'  {name}: GSw_CEPM_TgCap is {got}, expected '
+                + ' or '.join(str(v) for v in sorted(want))
+            )
 
     if problems:
         return fail(
@@ -127,7 +131,7 @@ def validate(cases_filename, stem):
 
     # Advisory only: the two load cases should agree on everything but the ceiling.
     # A mismatch is not necessarily wrong (someone may be testing something), so warn.
-    ignore_rows = {'GSw_CEPM_TgCap', 'GSw_CEPM_TgCapByYear', 'cepmtgcapscen', 'ignore'}
+    ignore_rows = {'GSw_CEPM_TgCap', 'cepmtgcapscen', 'ignore'}
     differing = [
         switch
         for switch in df.index

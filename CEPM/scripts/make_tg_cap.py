@@ -11,7 +11,7 @@ Both are always written; the one not selected by --scope is header-only, so a
 scenario token always names a matched pair and the unused equation stays inert.
 
 It also writes the per-year pair consumed by `eq_cepm_tg_cap_sys_t` /
-`eq_cepm_tg_cap_reg_t` (active only with `GSw_CEPM_TgCapByYear=1`):
+`eq_cepm_tg_cap_reg_t` (active only with `GSw_CEPM_TgCap=2`):
 
     inputs/growth_constraints/cepm_tg_cap_sys_yr_{token}.csv   *tg,t,MW
     inputs/growth_constraints/cepm_tg_cap_reg_yr_{token}.csv   *tg,r,t,MW
@@ -339,7 +339,7 @@ def main():
               f'lfill-gas, can-imports, smr, dac, evmc): {diag["unmapped"]}')
 
     print(f'[make_tg_cap] per-year path (MW_ac, cumulative from {args.from_year}; '
-          f'used only with GSw_CEPM_TgCapByYear=1), solve years '
+          f'used only with GSw_CEPM_TgCap=2), solve years '
           f'{diag["solve_years"]}:')
     for tg in tgs:
         path = ', '.join(f'{t}: {v:,.1f}' for t, v in diag['sys_path'].get(tg, []))
