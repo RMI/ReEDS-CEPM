@@ -435,7 +435,7 @@ in [`preprocessing/input-requirements.md`](preprocessing/input-requirements.md).
 ### Description:
 
 Regression-based 2026-2032 capex forecast for CCGT and CT gas plants built from
-the Halcyon Gas Power Plant Tracker (17 July 2026), replacing ATB's cost
+the Halcyon Gas Power Plant Tracker (August 2026), replacing ATB's cost
 trajectory with one drawn from the current project pipeline. `capcost` is
 overwritten for `Gas-CC` and `Gas-CT` in 2026-2032 only; all other gas
 technologies and years keep their ATB values, and `gas_ATB_2024_moderate.csv` is
@@ -444,7 +444,6 @@ left unmodified.
 ### Input files created:
 
 - `inputs/plant_characteristics/gas-ccgt_CEPM_low.csv` — CCGT low-cost scenario
-- `inputs/plant_characteristics/gas-ccgt_CEPM_high.csv` — CCGT high-cost scenario
 - `inputs/plant_characteristics/gas-ccgt_CEPM_all.csv` — CCGT all-data (mid /
   reference) scenario
 
