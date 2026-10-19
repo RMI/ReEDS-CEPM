@@ -68,11 +68,12 @@ BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.
         <stem>_optimized. All three share one batch name, so the existing -x
         comparison picks up all three with no extra flags.
 
-        The cases file must define all three columns, with GSw_CEPM_TgCap=1 for
-        _limitre and 0 for the other two; this is checked up front (in seconds)
-        by CEPM/scripts/multistep_cases.py before phase A starts. Phase A must
-        also produce outputs/outputs.h5 -- runreeds.py returns 0 even when a
-        case's solve aborts, so the exit code alone is not trusted here.
+        The cases file must define all three columns, with GSw_CEPM_TgCap=1 (or
+        2, for the per-year path) for _limitre and 0 for the other two; this is
+        checked up front (in seconds) by CEPM/scripts/multistep_cases.py before
+        phase A starts. Phase A must also produce outputs/outputs.h5 --
+        runreeds.py returns 0 even when a case's solve aborts, so the exit code
+        alone is not trusted here.
 
         Cannot be combined with -o/--compare-only, or with your own -s/--single
         (each phase supplies its own). With -t/--dryrun, both phases' switches
@@ -692,7 +693,7 @@ if ([string]::IsNullOrWhiteSpace($m)) {
     # --- Step 8m.3: harvest the ceiling from phase A.
     # Written to inputs/growth_constraints/cepm_tg_cap_{sys,reg}_<BatchName>.csv plus
     # the per-year cepm_tg_cap_{sys,reg}_yr_<BatchName>.csv (used only when the
-    # _limitre case sets GSw_CEPM_TgCapByYear=1), and removed again in the finally
+    # _limitre case sets GSw_CEPM_TgCap=2), and removed again in the finally
     # block at the bottom of this script.
     $MultistepCapToken = $BatchName
     $capSysPath = Join-Path $repoRoot "inputs\growth_constraints\cepm_tg_cap_sys_${MultistepCapToken}.csv"
