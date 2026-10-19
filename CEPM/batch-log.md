@@ -16,8 +16,8 @@ was run and what it showed.
 
 Loosely inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## TEMPLATE Batch entry: `{Batch name here, e.g., v20260903}**
-**## Author: Tyler Fitch`**
+## TEMPLATE Batch entry: {Batch name here, e.g., v20260903}**
+**Author: Tyler Fitch**
 
 Summary: What'd we change, why, what'd we find, what's next
 
@@ -56,15 +56,51 @@ Summary: What'd we change, why, what'd we find, what's next
 - [ ] I edited LLM-generated text to keep this entry short and to the point
 - [ ] Open a pull request and add results of a recent run as an attachment
 
-**## Author: Gaby`**
-**## Batch name: TEMPLATE `v20261006gt_AEO`**
+## Batch entry: v20261009postcapex**
+**Author: Tyler Fitch**
+
+**Summary:** Implements a minor update to our gas capex calculations -- mostly
+normalizing on 2022 dollars.
+
+### Batch details
+
+- **Built from:** `v20261001gt`
+- **Space and Time:** st/AZ.NM 2026-2032, every 3 years
+- **Cases:** `baseline, limitre, optimized`
+
+### Change log
+
+- **ReEDS change:** Changed `gas-ccgt_cepm_all` in order to use inflation-adjusted capex
+
+### Results
+
+- Compare files are on VM-Ouputs --
+- Compare files show marginally less CCs and CTs procured in all cases
+
+### Documentation, decisions, next steps, & issues
+
+- No changes needed -- this is a minor inputs change.
+
+### Checklist
+
+- [X] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
+- [X] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
+- [X] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
+- [X] I moved batch results to the VM-Outputs folder
+- [X] I added any issues we found to the JIRA issues epic
+- [X] I edited LLM-generated text to keep this entry short and to the point
+- [/] Open a pull request and add results of a recent run as an attachment
+
+## Batch name: `v20261006gt_AEO`
+**Author: Gaby**
+
 
 Summary: Ran the st-AZNM baseline, limit-RE, and optimized cases using the AEO case assumptions to compare results against the previous AZNM runs. This batch is intended to isolate the impact of the AEO assumptions while keeping the existing baseline/limit-RE/optimized case structure consistent.
 
 ### Batch details
 
 - **Built from:**  v20261001gt`
-- **Space and Time:** `{e.g., WECC-SW, 2026-2032 every 3 years}`
+- **Space and Time:** `WECC-SW, 2026-2032 every 3 years`
 - **Cases:** st/AZ.NM`, 2026–2032 every 3 years
 - **Run comments:** 
 
@@ -163,8 +199,7 @@ create a few additional testing geographies for st/MS.AL.GA and st/VA.
 
 ### Results
 
-- Where's the compare cases file
-- What changes does it show
+- Run outputs are in VM-Outputs
 
 ### Documentation, decisions, next steps, & issues
 
