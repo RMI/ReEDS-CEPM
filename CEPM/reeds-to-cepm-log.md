@@ -587,6 +587,10 @@ run.
 - `inputs/growth_constraints/cepm_tg_cap_reg_yr_none.csv` — header-only (`*tg,r,t,MW`)
 
 `none` is the default `cepmtgcapscen` and the set every non-capped case uses.
+Cases files don't set `cepmtgcapscen` (since 2026-10-19 `cases_cepm.csv` has no
+row for it): every case inherits `none` from `cases.csv`, and `run_cepm.ps1 -m`
+points `_limitre` at the batch's ceiling through a temporary generated cases
+file.
 Real ceilings are **generated per batch** by
 [`scripts/make_tg_cap.py`](scripts/make_tg_cap.py) from a completed reference run
 and deleted afterwards, so they are deliberately not committed.
@@ -1209,7 +1213,7 @@ with a clear message naming the missing columns.
 Two things to know about the two-step columns. They are reached through
 `run_cepm.ps1 -m`, which uses `-s` and therefore overrides `ignore`, so they are
 marked `ignore=1` and never picked up by an ordinary `-c cepm` batch.
-`st-AZNM_limitre` also ships with `GSw_CEPM_TgCap=1` and `cepmtgcapscen=none`,
+`st-AZNM_limitre` also ships with `GSw_CEPM_TgCap=1` and inherits `cepmtgcapscen=none`,
 which means running it *without* `-m` (i.e. without a harvested ceiling)
 deliberately aborts at the empty-cap-files guardrail rather than solving
 uncapped — that is the safety property, not a misconfiguration.

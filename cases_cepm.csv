@@ -86,4 +86,3 @@ cleanup_level,0,0,0,0,0,0,0,0,0,0
 GSw_CapPenaltyMult,1,1,0.000001,0.000001,1,0.000001,0.000001,1,0.000001,0.000001
 GSw_CEPM_QueueExempt,3,,,,,,,,,
 GSw_CEPM_TgCap,,,1,,,1,,,1,
-cepmtgcapscen,,,none,,,none,,,none,
