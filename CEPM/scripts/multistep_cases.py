@@ -25,7 +25,8 @@ Two modes:
 
   --mode generate --token <BatchName> --out <path>
       Copy the cases file with `cepmtgcapscen` for the `_limitre` column set to
-      <BatchName>, so that case picks up
+      <BatchName> (adding the row if the cases file leaves it out, as it should),
+      so that case picks up
       inputs/growth_constraints/cepm_tg_cap_{sys,reg}_<BatchName>.csv. Nothing
       else is touched. The generated file is deleted by run_cepm.ps1 in a
       `finally`; see 5.2(b) of the guidance doc for why this is preferred over a
@@ -181,16 +182,14 @@ def generate(cases_filename, stem, token, out_path):
         return fail(f'{cases_filename} has no case column {limitre}')
 
     if 'cepmtgcapscen' not in df.index:
-        # Legal but unexpected -- the switch may be inherited from cases.csv only.
-        # Add the row so the token has somewhere to live.
+        # The normal case: cases files leave this row out and every case inherits
+        # `none` from cases.csv. Add the row so the token has somewhere to live; the
+        # other cases' cells stay blank and still resolve to `none`.
         df.loc['cepmtgcapscen'] = pd.NA
-        print(
-            f'[multistep_cases] note: added a cepmtgcapscen row to {out_path} '
-            f'({cases_filename} did not have one).',
-            file=sys.stderr,
-        )
 
     previous = df.loc['cepmtgcapscen', limitre]
+    if pd.isna(previous):
+        previous = 'none (inherited from cases.csv)'
     df.loc['cepmtgcapscen', limitre] = token
 
     out_abs = out_path if os.path.isabs(out_path) else os.path.join(reeds.io.reeds_path, out_path)
