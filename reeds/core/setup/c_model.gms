@@ -28,6 +28,8 @@ positive variables
   CAP(i,v,r,t)                             "--MW-- total generation capacity in MWac (MWdc for PV); PV capacity of hybrid PV+battery; max native, flexible EV load for EVMC"
   CAP_ENERGY(i,v,r,t)                      "--MWh-- battery capacity in terms of energy"
   CAP_ABOVE_LIM(tg,r,t)                    "--MW-- amount of capacity that is deployed above the interconnection queue limits"
+* CEPM: see CEPM/guidance/tgcap-built-plus-owed.md
+  CEPM_TGCAP_OWED(pcat,r,t,tt)             "--MW-- CEPM: prescriptions due by year tt that builds through solve year t don't yet cover"
   CAP_RSC(i,v,r,rscbin,t)                  "--MW-- total generation capacity in MWac (MWdc for PV) for wind-ons and upv"
   GROWTH_BIN(gbin,i,st,t)                  "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
   INV(i,v,r,t)                             "--MW-- generation capacity additions in year t"
@@ -180,6 +182,9 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_cepm_tg_cap_reg(tg,r)                 "--MW_ac-- CEPM: cumulative regional cap on new investment by tech group"
  eq_cepm_tg_cap_sys_t(tg,t)               "--MW_ac-- CEPM: system-wide cap on new investment by tech group, cumulative through year t"
  eq_cepm_tg_cap_reg_t(tg,r,t)             "--MW_ac-- CEPM: regional cap on new investment by tech group, cumulative through year t"
+ eq_cepm_tgcap_owed(pcat,r,t,tt)          "--MW-- CEPM: prescriptions due by year tt not yet covered by builds through solve year t"
+ eq_cepm_tg_cap_sys_owed(tg,t,tt)         "--MW_ac-- CEPM: system-wide cap at later year tt on investment through t plus prescriptions owed by tt"
+ eq_cepm_tg_cap_reg_owed(tg,r,t,tt)       "--MW_ac-- CEPM: regional cap at later year tt on investment through t plus prescriptions owed by tt"
 
 * storage capacity credit supply curves
  eq_cap_sdbin_balance(i,v,r,ccseason,t)             "--MW-- total binned storage power capacity must be greater than total storage capacity"
@@ -1553,6 +1558,115 @@ eq_cepm_tg_cap_reg_t(tg,r,t)
         (1 - upgrade_derate(i,v,r,tt))
         * [UPGRADES(i,v,r,tt) - UPGRADES_RETIRE(i,v,r,tt)]
         / ilr(i) }
+;
+
+* ---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+*
+* "Built + owed": in each solve year t, every cap in force at a later modeled
+* year tt must also hold the prescriptions due by tt that the run's builds
+* through t don't yet cover. A prescription is a cumulative minimum per region
+* (eq_forceprescription_power), and builds elsewhere don't count toward it, so
+* without this a myopic solve can spend its budget in one region and later be
+* forced over the cap by a prescription in another -- an infeasible solve.
+* Prescriptions are exogenous, so this needs no foresight; it stops the run
+* from spending, now, budget that a later prescription will need.
+*
+* The cap at tt is cepm_tg_cap_{sys,reg}_at (b_inputs.gms): the per-year path
+* under GSw_CEPM_TgCap=2, and the horizon total at the last modeled year. The
+* current-year check (tt = t) stays with the equations above. Only solve years
+* from Sw_CEPM_TgCapStartYear on: from an earlier solve year, the historical
+* prescriptions still to come would all count as owed against a cap that only
+* counts investment from the start year. See
+* CEPM/guidance/tgcap-built-plus-owed.md.
+* ---------------------------------------------------------------------------
+
+* owed = cumulative prescriptions through tt minus the category's builds
+* through t, counted exactly as in eq_forceprescription_power (all history)
+eq_cepm_tgcap_owed(pcat,r,t,tt)
+    $[tmodel(t)$(yeart(t)>=Sw_CEPM_TgCapStartYear)
+      $tmodel_new(tt)$(yeart(tt)>yeart(t))
+      $cepm_presc_cum(pcat,r,tt)
+      $sum{tg$cepm_tg_pcat(tg,pcat), cepm_tg_cap_sys_at(tg,tt) + cepm_tg_cap_reg_at(tg,r,tt) }
+      $Sw_CEPM_TgCap$(not Sw_PCM)]..
+
+    CEPM_TGCAP_OWED(pcat,r,t,tt)
+
+    =g=
+
+* prescribed through tt
+    cepm_presc_cum(pcat,r,tt)
+
+* [minus] built of this category in this region through t
+    - sum{(i,newv,ttt)$[valinv(i,newv,r,ttt)$prescriptivelink(pcat,i)
+                        $(yeart(ttt)<=yeart(t))$(tmodel(ttt) or tfix(ttt))],
+          INV(i,newv,r,ttt) + INV_REFURB(i,newv,r,ttt)$[refurbtech(i)$Sw_Refurb] }
+;
+
+eq_cepm_tg_cap_sys_owed(tg,t,tt)
+    $[tmodel(t)$(yeart(t)>=Sw_CEPM_TgCapStartYear)
+      $tmodel_new(tt)$(yeart(tt)>yeart(t))
+      $cepm_tg_cap_sys_at(tg,tt)
+      $sum{(pcat,r)$cepm_tg_pcat(tg,pcat), cepm_presc_cum(pcat,r,tt) }
+      $Sw_CEPM_TgCap$(not Sw_PCM)]..
+
+* the system-wide cap in force at tt
+    cepm_tg_cap_sys_at(tg,tt)
+
+    =g=
+
+* new investment in the group through t, in MW_ac (as eq_cepm_tg_cap_sys_t at t)
+    sum{(i,newv,r,ttt)$[valinv(i,newv,r,ttt)$tg_i(tg,i)
+                                    $(yeart(ttt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(ttt)<=yeart(t))
+                                    $(tmodel(ttt) or tfix(ttt))],
+        [INV(i,newv,r,ttt) + INV_REFURB(i,newv,r,ttt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+* [plus] capacity arriving by upgrade rather than new build, matching cap_new_out
+    + sum{(i,v,r,ttt)$[valcap(i,v,r,ttt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(ttt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(ttt)<=yeart(t))
+                                    $(tmodel(ttt) or tfix(ttt))],
+        (1 - upgrade_derate(i,v,r,ttt))
+        * [UPGRADES(i,v,r,ttt) - UPGRADES_RETIRE(i,v,r,ttt)]
+        / ilr(i) }
+
+* [plus] prescriptions owed by tt in any region, in MW_ac
+    + sum{(pcat,r)$[cepm_tg_pcat(tg,pcat)$cepm_presc_cum(pcat,r,tt)],
+          CEPM_TGCAP_OWED(pcat,r,t,tt) / cepm_pcat_ilr(pcat) }
+;
+
+eq_cepm_tg_cap_reg_owed(tg,r,t,tt)
+    $[tmodel(t)$(yeart(t)>=Sw_CEPM_TgCapStartYear)
+      $tmodel_new(tt)$(yeart(tt)>yeart(t))
+      $cepm_tg_cap_reg_at(tg,r,tt)
+      $sum{pcat$cepm_tg_pcat(tg,pcat), cepm_presc_cum(pcat,r,tt) }
+      $Sw_CEPM_TgCap$(not Sw_PCM)]..
+
+* the regional cap in force at tt
+    cepm_tg_cap_reg_at(tg,r,tt)
+
+    =g=
+
+    sum{(i,newv,ttt)$[valinv(i,newv,r,ttt)$tg_i(tg,i)
+                                    $(yeart(ttt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(ttt)<=yeart(t))
+                                    $(tmodel(ttt) or tfix(ttt))],
+        [INV(i,newv,r,ttt) + INV_REFURB(i,newv,r,ttt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+    + sum{(i,v,ttt)$[valcap(i,v,r,ttt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(ttt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(ttt)<=yeart(t))
+                                    $(tmodel(ttt) or tfix(ttt))],
+        (1 - upgrade_derate(i,v,r,ttt))
+        * [UPGRADES(i,v,r,ttt) - UPGRADES_RETIRE(i,v,r,ttt)]
+        / ilr(i) }
+
+* [plus] prescriptions owed by tt in this region only, in MW_ac
+    + sum{pcat$[cepm_tg_pcat(tg,pcat)$cepm_presc_cum(pcat,r,tt)],
+          CEPM_TGCAP_OWED(pcat,r,t,tt) / cepm_pcat_ilr(pcat) }
 ;
 
 *===============================

@@ -597,12 +597,14 @@ and deleted afterwards, so they are deliberately not committed.
 
 ### Underlying ReEDS files changed:
 
-- `reeds/core/setup/c_model.gms` — +4 equation declarations (near line 176) and
-  two equation-definition blocks immediately after `eq_interconnection_queues`:
-  the totals, then the per-year path.
+- `reeds/core/setup/c_model.gms` — +7 equation declarations (near line 176), +1
+  positive variable (`CEPM_TGCAP_OWED`, after `CAP_ABOVE_LIM`), and three
+  equation-definition blocks immediately after `eq_interconnection_queues`: the
+  totals, the per-year path, and the "built + owed" equations.
 - `reeds/core/setup/b_inputs.gms` — +4 `$onempty` parameter blocks next to the
   existing growth limits, plus four guardrail `abort`s: the two described above,
-  and the two per-year ones described below.
+  and the two per-year ones described below. After those, the "built + owed"
+  data block (two sets, four parameters, two more `abort`s).
 - `reeds/input_processing/runfiles.csv` — +4 rows staging
   `cepm_tg_cap_{sys,reg}_{cepmtgcapscen}.csv` and
   `cepm_tg_cap_{sys,reg}_yr_{cepmtgcapscen}.csv` into `inputs_case/`.
@@ -672,6 +674,26 @@ No `copy_files.py` hook, deliberately: `runfiles.csv` changes by *added rows*
 across releases, while `copy_files.py` is the most-churned file in the tree.
 The two `GSw_` switches need no GAMS plumbing at all —
 `reeds.io.write_gswitches` auto-emits `scalar Sw_X` for every numeric `GSw_X`.
+
+### "Built + owed" accounting
+
+Added 2026-10-19. A prescription is a cumulative minimum per region, and builds
+elsewhere don't count toward it. A myopic solve can therefore spend its cap
+budget in one region and later be forced over the cap by a prescription in
+another, which makes the solve infeasible. `eq_cepm_tgcap_owed`,
+`eq_cepm_tg_cap_sys_owed` and `eq_cepm_tg_cap_reg_owed` make each solve year
+from `Sw_CEPM_TgCapStartYear` on also count, against every later cap, the
+prescriptions due by then that its builds don't yet cover. Prescriptions are
+inputs, so no foresight is needed, and the cap is still exactly the reference
+run's path. No switch: it applies under `GSw_CEPM_TgCap` 1 and 2.
+
+Evaluated on finished runs before implementing: inactive in AZNM (no
+prescriptions after 2026); in VA, `VA_baseline` satisfies it with slack and
+`VA_limitre`'s 2026 builds would not have been changed, so the VA 2029
+infeasibility is not a prescription overflow. Setup-tested on copies of the
+AZNM and VA `_limitre` inputs under `=0`, `=1` and `=2` (system and region
+scope). **Not yet tested in a solve.** Design, evaluation and test plan:
+[`guidance/tgcap-built-plus-owed.md`](guidance/tgcap-built-plus-owed.md).
 
 ### Departure from convention worth knowing: both rows are non-region rows
 
