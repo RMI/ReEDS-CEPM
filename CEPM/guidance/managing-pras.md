@@ -120,6 +120,7 @@ invoked on a normally-solving case. The closest achievable combination:
 
 ## Related
 
-See [SUBNATIONAL_REGION_SUPPORT.md](SUBNATIONAL_REGION_SUPPORT.md) Issue 4
+See "PRAS crashes on single-zone regions" in
+[known-reeds-issues.md](../known-reeds-issues.md#pras-crashes-on-single-zone-regions-boundserror--0-element-vectorline)
 for a separate, unrelated PRAS bug (crashes on genuinely single-zone
 regions) — not a switch issue, a vendored-Julia-code gap.
