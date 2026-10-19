@@ -5057,6 +5057,81 @@ abort$[(Sw_CEPM_TgCap=2)$sum{t, cepm_tg_cap_t_missing(t) }]
     cepm_tg_cap_t_missing ;
 $offImplicitAssign
 
+*---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+* Data for the "built + owed" cap equations in c_model.gms
+* (eq_cepm_tgcap_owed, eq_cepm_tg_cap_sys_owed, eq_cepm_tg_cap_reg_owed).
+*
+* A prescription is a cumulative minimum per region, and builds in one region
+* don't count toward another region's prescriptions. A myopic solve doesn't
+* see later prescriptions, so it can spend its cap budget in one region and
+* later be forced to build a prescription elsewhere that no longer fits: an
+* infeasible solve. The owed equations make each solve year also count
+* prescriptions due by each later cap year that its builds don't yet cover,
+* so a prescription can never force the cap over. Prescriptions are exogenous,
+* so this needs no foresight. See CEPM/guidance/tgcap-built-plus-owed.md.
+*
+* $onImplicitAssign covers the whole block: whichever cap files a run doesn't
+* use are legitimately empty, as for the guardrails above.
+*---------------------------------------------------------------------------
+$onImplicitAssign
+
+* tech groups with any cap loaded
+set cepm_tg_capped(tg) "CEPM: tech groups with a GSw_CEPM_TgCap cap" ;
+cepm_tg_capped(tg)$[Sw_CEPM_TgCap
+                    $(cepm_tg_cap_sys(tg)
+                      or sum{r, cepm_tg_cap_reg(tg,r) }
+                      or sum{t, cepm_tg_cap_sys_t(tg,t) }
+                      or sum{(r,t), cepm_tg_cap_reg_t(tg,r,t) })] = yes ;
+
+* prescription categories whose (buildable) techs belong to each capped group
+set cepm_tg_pcat(tg,pcat) "CEPM: prescription categories whose techs belong to capped tech group tg" ;
+cepm_tg_pcat(tg,pcat)$[cepm_tg_capped(tg)
+                       $sum{i$[prescriptivelink(pcat,i)$tg_i(tg,i)$valcap_i(i)], 1 }] = yes ;
+
+* prescriptions are in the units of INV (MW_dc for UPV); the caps are MW_ac
+parameter cepm_pcat_ilr(pcat) "--unitless-- CEPM: inverter loading ratio putting pcat prescriptions in MW_ac" ;
+cepm_pcat_ilr(pcat)$sum{tg, cepm_tg_pcat(tg,pcat) }
+    = smax{i$[prescriptivelink(pcat,i)$valcap_i(i)], ilr(i) } ;
+
+* cumulative prescriptions through each modeled year, summed as on the
+* right-hand side of eq_forceprescription_power
+parameter cepm_presc_cum(pcat,r,t) "--MW-- CEPM: cumulative prescribed capacity through year t" ;
+cepm_presc_cum(pcat,r,t)$[tmodel_new(t)$sum{tg, cepm_tg_pcat(tg,pcat) }]
+    = sum{tt$[tmodel_new(tt)$(yeart(tt)<=yeart(t))], noncumulative_prescriptions(pcat,r,tt) } ;
+
+* the cap in force at each modeled year, as seen from an earlier solve year:
+* the per-year path under GSw_CEPM_TgCap=2, and the horizon total at the last
+* modeled year (which the path, when it reaches that year, already equals)
+scalar cepm_tlast_yr "--year-- CEPM: last modeled year" ;
+cepm_tlast_yr = smax{t$tmodel_new(t), yeart(t) } ;
+
+parameter cepm_tg_cap_sys_at(tg,t)  "--MW_ac-- CEPM: system-wide cap in force at modeled year t, for the built + owed equations"
+          cepm_tg_cap_reg_at(tg,r,t) "--MW_ac-- CEPM: regional cap in force at modeled year t, for the built + owed equations" ;
+cepm_tg_cap_sys_at(tg,t)$[tmodel_new(t)$cepm_tg_capped(tg)$(Sw_CEPM_TgCap=2)] = cepm_tg_cap_sys_t(tg,t) ;
+cepm_tg_cap_sys_at(tg,t)$[tmodel_new(t)$cepm_tg_capped(tg)$(yeart(t)=cepm_tlast_yr)
+                          $(not cepm_tg_cap_sys_at(tg,t))] = cepm_tg_cap_sys(tg) ;
+cepm_tg_cap_reg_at(tg,r,t)$[tmodel_new(t)$cepm_tg_capped(tg)$(Sw_CEPM_TgCap=2)] = cepm_tg_cap_reg_t(tg,r,t) ;
+cepm_tg_cap_reg_at(tg,r,t)$[tmodel_new(t)$cepm_tg_capped(tg)$(yeart(t)=cepm_tlast_yr)
+                            $(not cepm_tg_cap_reg_at(tg,r,t))] = cepm_tg_cap_reg(tg,r) ;
+
+* Guardrails: each category must belong to one capped group, and its techs must
+* share one ilr, or the owed term would be double-counted or mis-scaled.
+parameter cepm_pcat_multi_tg(pcat) "--unitless-- CEPM: pcats in more than one capped tech group (must always be empty)" ;
+cepm_pcat_multi_tg(pcat)$[sum{tg$cepm_tg_pcat(tg,pcat), 1 } > 1] = 1 ;
+abort$[Sw_CEPM_TgCap$sum{pcat, cepm_pcat_multi_tg(pcat) }]
+    "CEPM: a prescription category belongs to more than one capped tech group, so the built + owed caps would double-count it. See CEPM/guidance/tgcap-built-plus-owed.md.",
+    cepm_pcat_multi_tg ;
+
+parameter cepm_pcat_mixed_ilr(pcat) "--unitless-- CEPM: pcats whose techs have different ilr (must always be empty)" ;
+cepm_pcat_mixed_ilr(pcat)$[sum{tg, cepm_tg_pcat(tg,pcat) }
+                          $(smax{i$[prescriptivelink(pcat,i)$valcap_i(i)], ilr(i) }
+                            <> smin{i$[prescriptivelink(pcat,i)$valcap_i(i)], ilr(i) })] = 1 ;
+abort$[Sw_CEPM_TgCap$sum{pcat, cepm_pcat_mixed_ilr(pcat) }]
+    "CEPM: a prescription category mixes techs with different ilr, so its owed MW_ac is ambiguous. See CEPM/guidance/tgcap-built-plus-owed.md.",
+    cepm_pcat_mixed_ilr ;
+$offImplicitAssign
+
 * gbin_min is based on the representative plant size for a single plant in that tech group
 parameter gbin_min(tg) "--MW-- minimum size of the first (zero cost) growth bin"
 /

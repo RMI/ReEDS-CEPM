@@ -255,11 +255,14 @@ primal, not a numerical or scaling problem.
 - **Not a prescribed-build collision.** The obvious failure mode for a cumulative
   investment cap is a forced build that exceeds it. The prescriptions that apply
   from 2026 on fit inside every cap: upv 1,465.6 against 23,976.6, wind-ons 78.0
-  against 11,866.4. Ruled out. (An earlier version of this bullet also cited a
-  2,640 MW wind-ofs prescription for 2027 in `p124`. That row of
-  `prescribed_rsc.csv` never takes effect. `b_inputs.gms:1356-1378` overwrites the
-  wind rows with the hourlize prescription files, whose only offshore entry for VA
-  is 12 MW in `p99` in 2021.)
+  against 11,866.4, and wind-ofs 2,640 (the CVOW build in 2027) against 3,949.7.
+  Ruled out. The wind-ofs prescription is in `p99`, from the hourlize file
+  `prescribed_builds_wind-ofs.csv` (12 MW in 2021, 2,639.99 MW in 2027);
+  `b_inputs.gms:1356-1378` replaces the `p124` wind rows of `prescribed_rsc.csv`
+  with it. (A previous edit of this bullet said the hourlize file had only the
+  2021 entry; it has both.) Evaluating the "built + owed" rule on `VA_limitre`'s
+  2026 builds confirms it: its 2026 offshore builds already covered the 2027
+  prescription. See [`guidance/tgcap-built-plus-owed.md`](guidance/tgcap-built-plus-owed.md).
 - **Not the state RPS.** This was the first hypothesis and it does not hold up. VA's
   RPS rises 14.5% (2026) → 19.7% (2029) → 25.8% (2032), so capping RE while
   data-center load grows does make it harder to meet — but `eq_REC_Requirement`
