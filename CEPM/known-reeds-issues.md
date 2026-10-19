@@ -118,6 +118,8 @@ exists on our GAMS version, and the fix has to live in this fork.
 
 No at `2026.08.03`. Upstream tag `2026.09.08` has its own fix
 (`write_declare_and_load()`); at that sync, confirm it compiles on GAMS 44.4.0,
+**Fixed upstream?** No at `2026.08.03`. Upstream tag `2026.09.08` has its own fix
+(`write_declare_and_load()`); at that sync, confirm it compiles on GAMS 44.4.0,
 then drop our patch and this entry.
 
 ## `GSw_GrowthAbsCon=1` makes the **final** solve year infeasible (`eq_growthlimit_absolute`)

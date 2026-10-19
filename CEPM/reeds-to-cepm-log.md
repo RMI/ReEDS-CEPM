@@ -453,7 +453,7 @@ Gas-CT uses the same CT forecast in all three. Selected via `plantchar_gas`.
 ### Underlying ReEDS files changed:
 
 - `cases.csv` — `plantchar_gas` description and `Choices` amended to accept
-  `gas-ccgt_CEPM_(low|high|all)`. Upstream's explicit list would reject our
+  `gas-ccgt_CEPM_all`. Upstream's explicit list would reject our
   files, so this edit is load-bearing.
 - `inputs/plant_characteristics/dollaryear.csv` — three new rows registering all
   three files as `2022` dollars.
@@ -471,7 +471,7 @@ name.
 - Does `dollaryear.csv` still exist in the same location and format, and are our
   three rows still present after the rebase? A dropped row stays silent until
   costs come out wrong by an inflation factor.
-- Does our `gas-ccgt_CEPM_(low|high|all)` alternative survive in
+- Does our `gas-ccgt_CEPM_all` alternative survive in
   `plantchar_gas`'s `Choices` in `cases.csv`? Taking upstream's side makes
   `runreeds.py` reject every CEPM case.
 - Has upstream changed the ATB vintage, or the columns/units in
