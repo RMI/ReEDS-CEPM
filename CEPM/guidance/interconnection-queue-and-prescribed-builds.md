@@ -40,14 +40,14 @@ quotes a number off a CEPM run.
   real — but it bounds how much of a result the queue mechanism is driving.
 - `GSw_CEPM_QueueExempt` (§5.8, added 2026-10-19) fixes the collision itself:
   it counts prescribed builds against the queue by online year, so pre-2025
-  builds no longer consume 2026 headroom. `cases_cepm.csv` sets `1`, which
-  removes ~74% of the AZNM baseline's 2026/2029 overage. The rest is 2025-2026
-  prescriptions larger than the queue's 2026 limit, which is a data-source
-  mismatch rather than a counting error. The queue is an end-2024 snapshot of
-  queue requests, while the prescriptions come from a later EIA plant database
-  (§2.1). Most of the gap is SunZia Wind, which bypassed utility queues (§5.8).
-  Mode `3` exempts exactly that kind of excess. Runs before 2026-10-19 use the
-  old behavior.
+  builds no longer consume 2026 headroom. That alone (mode `1`) removes ~74% of
+  the AZNM baseline's 2026/2029 overage. The rest is 2025-2026 prescriptions
+  larger than the queue's 2026 limit, which is a data-source mismatch rather
+  than a counting error. The queue is an end-2024 snapshot of queue requests,
+  while the prescriptions come from a later EIA plant database (§2.1). Most of
+  the gap is SunZia Wind, which bypassed utility queues (§5.8). `cases_cepm.csv`
+  sets `3`, which also exempts that excess and clears the overage entirely.
+  Runs before 2026-10-19 use the old behavior.
 
 ---
 
@@ -686,7 +686,7 @@ So report the two-step result as a range, and say which end assumes what.
 `docs/sources.csv` records nothing about `interconnection_queues.csv` — no
 vintage, no citation, no method. Upstream's model documentation partly closes
 this (§2.1: end-2024 LBNL snapshot, signed agreements for 2026, full queue for
-2030), and that is what settled `GSw_CEPM_QueueExempt=1` over `2` (§5.8). §2.1
+2030), and that is what ruled out `GSw_CEPM_QueueExempt=2` as the default (§5.8). §2.1
 now records the vintages of the queue and both prescription sources. Still
 open: why the 2026 column is half of 2027 everywhere (§2.1), and whether SunZia
 is in the LBNL data at all (§5.8). Checking that needs the LBNL project-level
@@ -852,7 +852,7 @@ arrive as `INV`, and `eq_interconnection_queues` sums all of it.
 
 That last point is not fixable by any `yearset`. It would need the equation to
 net prescribed capacity out of its right-hand side (now available as
-`GSw_CEPM_QueueExempt=2`, §5.8, but see there for why CEPM uses `1`), or the
+`GSw_CEPM_QueueExempt=2`, §5.8, but see there for why CEPM uses `3`), or the
 queue data to exclude already-committed projects. Which of those is right depends on what the queue
 snapshot actually contains — **which we cannot currently answer** (§2.1), and is
 the strongest argument for doing §5.2 before any of this.
@@ -953,9 +953,9 @@ they would without it. The parameter name is picked at compile time.
 | value | exempts | queue then limits |
 |---|---|---|
 | `0` (`cases.csv` default) | nothing (upstream) | all `INV` in solve years ≥ `interconnection_start` |
-| `1` (`cases_cepm.csv`) | prescriptions online before `interconnection_start` | 2025+ prescriptions plus endogenous builds |
+| `1` | prescriptions online before `interconnection_start` | 2025+ prescriptions plus endogenous builds |
 | `2` (sensitivity only) | all prescriptions | endogenous builds only |
-| `3` | mode `1`, plus 2025+ prescriptions where they exceed the limit | endogenous builds, against `max(0, limit − 2025+ prescriptions)` |
+| `3` (`cases_cepm.csv`) | mode `1`, plus 2025+ prescriptions where they exceed the limit | endogenous builds, against `max(0, limit − 2025+ prescriptions)` |
 
 Only prescriptions after the last solve year below `interconnection_start` are
 counted, since earlier ones land in solve years the existing filter already
@@ -994,15 +994,22 @@ where the queue constraint does not exist (§5.5). Mode `3` removes the overage
 but gives p31 no new headroom through 2030. A full exemption for SunZia alone
 would be exact, but needs a per-project list, which isn't implemented.
 
-**Why CEPM uses `1`, not `2`.** The queue snapshot is end-2024 (§2.1).
+**Why CEPM uses `3`.** The queue snapshot is end-2024 (§2.1).
 Projects online before 2025 had left it, so charging them is plainly wrong, and
 mode `1` removes them. Projects online in 2025-2026 were very likely in the
 snapshot with signed agreements, which is what the 2026 limit counts. Exempting
-them too (mode `2`) would leave that headroom free for endogenous builds while
+them all (mode `2`) would leave that headroom free for endogenous builds while
 the same projects are still built: a double count in the opposite direction.
-Mode `2` is kept as a bound for sensitivity runs. It was the `cases_cepm.csv`
-default for part of 2026-10-19, before upstream's description of the data was
-found.
+But the queue and the prescriptions come from different sources and vintages
+(§2.1), so some 2025-2026 prescriptions legitimately exceed the queue, like
+SunZia above. Mode `3` sits between the two. Where prescriptions fit inside the
+queue it behaves like mode `1`. Where they exceed it, it clears the overage
+without freeing headroom elsewhere: 1.9 GW more exemption than mode `1` in
+AZNM, against 14.2 GW for mode `2`.
+
+Mode `2` is kept as a bound for sensitivity runs. Setting history for
+`cases_cepm.csv` on 2026-10-19: it was `2` until upstream's description of the
+data was found, then `1`, then `3` once the SunZia mismatch was traced.
 
 **What it does not change.** Use `GSw_CapPenaltyMult` (§5.6) to remove the
 penalty itself, and §5.5's 2032 blind spot is untouched. A startup `abort`
@@ -1059,7 +1066,7 @@ switches. Details in
 | Name | Where | Default | Effect |
 |---|---|---|---|
 | `GSw_CapPenaltyMult` | `cases.csv` (**CEPM addition**) | 1 | scales `cap_penalty`; ≈0 disables the queue constraint entirely (§5.6). Use `0.000001`, not `0` |
-| `GSw_CEPM_QueueExempt` | `cases.csv` (**CEPM addition**) | 0 (`cases_cepm.csv`: 1) | exempts prescriptions from the queue: `1` = online before `interconnection_start`, `2` = all, sensitivity only, `3` = mode 1 plus overage-only (§5.8) |
+| `GSw_CEPM_QueueExempt` | `cases.csv` (**CEPM addition**) | 0 (`cases_cepm.csv`: 3) | exempts prescriptions from the queue: `1` = online before `interconnection_start`, `2` = all, sensitivity only, `3` = mode 1 plus overage-only (§5.8) |
 | `interconnection_start` | `scalars.csv:52` | 2025 | first year whose builds count against the queue. **`>=`, so a 2025 solve year is included** (§5.3d) |
 | `model_builds_start_yr` | derived, `b_inputs.gms:1248` | — | earliest year the queue equation is generated |
 | `GSw_ForcePrescription` | `cases.csv` | 1 | prescriptions as a floor |
