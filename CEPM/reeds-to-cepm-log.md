@@ -734,7 +734,7 @@ Sw_CapPenaltyMult` for any numeric `GSw_` switch.
 
 Keeps accumulated historical prescribed builds from consuming
 interconnection-queue headroom in an analysis year. Default **0** in `cases.csv`
-is upstream behavior and changes nothing; `cases_cepm.csv` sets **1**.
+is upstream behavior and changes nothing; `cases_cepm.csv` sets **3**.
 
 `eq_interconnection_queues` excludes investment before `interconnection_start`
 (2025) by filtering on the **solve** year, but prescriptions are compressed into
@@ -789,7 +789,7 @@ the block.
   `last_prequeue_year`, `queue_years`, `queue_prescrip_pre` /
   `queue_prescrip_post`, `queue_exempt_prescrip`, and the limit adjustment.
 - `cases.csv` — one row, `GSw_CEPM_QueueExempt`, default `0`.
-- `cases_cepm.csv` — `GSw_CEPM_QueueExempt = 1` in the default column.
+- `cases_cepm.csv` — `GSw_CEPM_QueueExempt = 3` in the default column.
 
 `reeds.io.write_gswitches` auto-emits `scalar Sw_CEPM_QueueExempt`.
 
@@ -804,8 +804,8 @@ the block.
 - Does `eq_interconnection_queues` still filter on `yeart(tt) >=
   interconnection_start`, and does `noncumulative_prescriptions` still compress
   gap-year prescriptions into the next solve year? If upstream starts filtering
-  by online year, mode `1` becomes redundant. Set `cases_cepm.csv` to `0` and
-  retire the block.
+  by online year, mode `1` becomes redundant. Mode `3`'s overage-only part
+  still applies, so keep the block, but the pre-2025 half can go.
 - Is the queue limit still loaded before this block, and still named
   `queue_limit` or `cap_limit`? The `$abort` catches a third name, not a
   load that moves after the block. If it moves after, the adjustment would be

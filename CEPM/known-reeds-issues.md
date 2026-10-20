@@ -1127,16 +1127,16 @@ by `eq_forceprescription_power`, so this is the same as removing them from the
 build side.
 
 - `0` — upstream behaviour (`cases.csv` default).
-- `1` — exempt prescriptions online before `interconnection_start`
-  (`cases_cepm.csv` default). This is what the filter intends, independent of
-  the solve years.
+- `1` — exempt prescriptions online before `interconnection_start`. This is
+  what the filter intends, independent of the solve years.
 - `2` — exempt all prescriptions. Not recommended: per upstream's docs, 2025-2026
   prescribed projects are likely what the 2026 signed-agreement limit counts, so
   exempting them frees headroom for builds that are already happening.
 - `3` — mode `1`, plus 2025+ prescriptions only where they exceed the queue
-  limit. Prescriptions never cause an overage, but they use up headroom up to the
-  limit. In the AZNM baseline this clears the residual below while exempting
-  only 1.9 GW more than mode `1` (mode `2`: 14.2 GW more).
+  limit (`cases_cepm.csv` default). Prescriptions never cause an overage, but
+  they use up headroom up to the limit. In the AZNM baseline this clears the
+  residual below while exempting only 1.9 GW more than mode `1` (mode `2`:
+  14.2 GW more).
 
 The equation itself is untouched. The limit is only raised in years that already
 have queue data, so the equation's guard and `5_varfix.gms` are unchanged. The
