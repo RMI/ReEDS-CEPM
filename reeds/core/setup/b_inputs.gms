@@ -2060,6 +2060,99 @@ $onlisting
 *---------------------------------------------------------------------------
 cap_penalty(tg) = cap_penalty(tg) * Sw_CapPenaltyMult ;
 
+*---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+* Prescribed capacity exempted from eq_interconnection_queues (Sw_CEPM_QueueExempt).
+*
+* Why it exists: the queue constraint filters investment on the SOLVE year
+* (yeart(tt) >= interconnection_start), but prescriptions are compressed into
+* the first solve year at or after their online year. With a sparse yearset
+* (e.g. 2010 -> 2026) every 2011-2024 prescription lands in the 2026 solve,
+* passes the filter, and consumes queue headroom it was never meant to touch.
+* This block counts prescriptions by their ONLINE year instead and adds the
+* exempt amount to the queue limit, which is equivalent to removing it from the
+* build side (prescribed INV is pinned by eq_forceprescription_power, so the
+* exemption is a constant).
+*
+*   Sw_CEPM_QueueExempt = 0: upstream behavior (no exemption)
+*   Sw_CEPM_QueueExempt = 1: exempt prescriptions online before
+*                            interconnection_start, i.e. make the existing
+*                            filter work on online year regardless of yearset.
+*                            The queue snapshot is end-2024, so these projects
+*                            had already left it.
+*   Sw_CEPM_QueueExempt = 2: exempt all prescriptions, so the queue limits only
+*                            endogenous builds. Double-counts if 2025+ prescribed
+*                            projects are in the snapshot's signed-interconnection
+*                            -agreement limits, which upstream's docs say they are.
+*   Sw_CEPM_QueueExempt = 3: mode 1, plus exempt 2025+ prescriptions only where
+*                            they exceed the queue limit. Prescriptions use up
+*                            headroom up to the limit but never cause an overage,
+*                            so cells where the prescriptions and the queue data
+*                            disagree are not penalized, and cells where they
+*                            agree are not double-counted.
+*
+* Only prescriptions after the last solve year below interconnection_start are
+* counted, since earlier ones land in solve years the existing filter already
+* drops.
+*
+* Kept out of c_model.gms so upstream changes to eq_interconnection_queues merge
+* cleanly. The limit is only raised in years that already have queue data, so
+* the equation's own guard (which drops years with no data, e.g. those trimmed
+* by upstream's GSw_QueueConstraintYears) is unchanged. Upstream renamed
+* cap_limit to queue_limit in Sep 2026; the name is picked at compile time.
+* See CEPM/guidance/interconnection-queue-and-prescribed-builds.md §5.8.
+*---------------------------------------------------------------------------
+set tg_pcat(tg,pcat) "prescribed categories whose technologies belong in tech group tg" ;
+tg_pcat(tg,pcat)$sum{i$[prescriptivelink(pcat,i)$tg_i(tg,i)], 1 } = yes ;
+
+* each pcat must map to a single tech group, or its prescriptions are exempted twice
+parameter tg_pcat_count(pcat) "number of tech groups a prescribed category maps to" ;
+tg_pcat_count(pcat) = sum{tg$tg_pcat(tg,pcat), 1 } ;
+abort$[Sw_CEPM_QueueExempt and (smax{pcat, tg_pcat_count(pcat) } > 1)]
+    "Sw_CEPM_QueueExempt: a prescribed category maps to more than one tech group", tg_pcat_count ;
+
+scalar last_prequeue_year "last solve year before interconnection_start (already excluded from eq_interconnection_queues)" ;
+last_prequeue_year = smax{tt$[tmodel_new(tt)$(yeart(tt) < interconnection_start)], yeart(tt) } ;
+
+$ifthen.qlim declared queue_limit
+$setglobal queue_limit_param queue_limit
+$elseif.qlim declared cap_limit
+$setglobal queue_limit_param cap_limit
+$else.qlim
+$abort "Sw_CEPM_QueueExempt: neither queue_limit nor cap_limit is declared; update this block to the current queue-limit parameter"
+$endif.qlim
+
+* years where eq_interconnection_queues exists (same guard as the equation)
+set queue_years(t) "years with interconnection queue data" ;
+queue_years(t)$sum{(tg,r), %queue_limit_param%(tg,r,t) } = yes ;
+
+parameter
+    queue_prescrip_pre(tg,r,t)    "--MW-- cumulative prescriptions online before interconnection_start but charged to the queue in solve year t"
+    queue_prescrip_post(tg,r,t)   "--MW-- cumulative prescriptions online from interconnection_start through t"
+    queue_exempt_prescrip(tg,r,t) "--MW-- cumulative prescribed capacity exempted from eq_interconnection_queues"
+;
+queue_prescrip_pre(tg,r,t)$[tmodel_new(t)$(yeart(t) >= interconnection_start)$Sw_CEPM_QueueExempt]
+    = sum{(tt,pcat)$[tg_pcat(tg,pcat)
+                     $(yeart(tt) > last_prequeue_year)
+                     $(yeart(tt) < interconnection_start)],
+          prescribednonrsc(tt,pcat,r,"value") + prescribedrsc(tt,pcat,r,"value") } ;
+
+queue_prescrip_post(tg,r,t)$[tmodel_new(t)$(yeart(t) >= interconnection_start)$Sw_CEPM_QueueExempt]
+    = sum{(tt,pcat)$[tg_pcat(tg,pcat)
+                     $(yeart(tt) > last_prequeue_year)
+                     $(yeart(tt) >= interconnection_start)
+                     $(yeart(tt) <= yeart(t))],
+          prescribednonrsc(tt,pcat,r,"value") + prescribedrsc(tt,pcat,r,"value") } ;
+
+* mode 3 compares against the limit before this block adjusts it
+queue_exempt_prescrip(tg,r,t)$Sw_CEPM_QueueExempt
+    = queue_prescrip_pre(tg,r,t)
+    + queue_prescrip_post(tg,r,t)$[Sw_CEPM_QueueExempt = 2]
+    + max{0, queue_prescrip_post(tg,r,t) - %queue_limit_param%(tg,r,t) }$[Sw_CEPM_QueueExempt = 3] ;
+
+%queue_limit_param%(tg,r,t)$[queue_years(t)$queue_exempt_prescrip(tg,r,t)]
+    = %queue_limit_param%(tg,r,t) + queue_exempt_prescrip(tg,r,t) ;
+
 *=============================================
 * -- Explicit spur-line capacity (if used) --
 *=============================================

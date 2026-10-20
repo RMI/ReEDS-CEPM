@@ -38,6 +38,16 @@ quotes a number off a CEPM run.
 - `GSw_CapPenaltyMult` (§5.6) turns the constraint off for diagnosis. The "off"
   run is **not** a better estimate of reality — it removes something physically
   real — but it bounds how much of a result the queue mechanism is driving.
+- `GSw_CEPM_QueueExempt` (§5.8, added 2026-10-19) fixes the collision itself:
+  it counts prescribed builds against the queue by online year, so pre-2025
+  builds no longer consume 2026 headroom. `cases_cepm.csv` sets `1`, which
+  removes ~74% of the AZNM baseline's 2026/2029 overage. The rest is 2025-2026
+  prescriptions larger than the queue's 2026 limit, which is a data-source
+  mismatch rather than a counting error. The queue is an end-2024 snapshot of
+  queue requests, while the prescriptions come from a later EIA plant database
+  (§2.1). Most of the gap is SunZia Wind, which bypassed utility queues (§5.8).
+  Mode `3` exempts exactly that kind of excess. Runs before 2026-10-19 use the
+  old behavior.
 
 ---
 
@@ -74,14 +84,37 @@ The year columns ramp: a county/tech cell rises linearly to its full queue
 position by 2030. For example `pv` in `z28` after aggregation runs
 6,083 → 12,166 → 28,313 → 44,460 → 60,606 MW.
 
-**Provenance is undocumented.** `docs/sources.csv` has a row for this file
-(`/inputs/capacity_exogenous/interconnection_queues.csv`) but every descriptive
-field — description, vintage, citation, dollar year — is **empty**. Compare the
-unit database on the next row, which at least carries
-*"EIA-NEMS database of existing generators"*. So we cannot currently say which
-queue snapshot this is, as of when, or how "queue MW" was converted into
-"MW that will interconnect by year Y". **That is a gap worth closing before
-leaning on these numbers for a CEPM result**, since §4 shows they are binding.
+**Provenance is thin in `sources.csv`.** `docs/sources.csv` has a row for this
+file (`/inputs/capacity_exogenous/interconnection_queues.csv`) but every
+descriptive field — description, vintage, citation, dollar year — is **empty**.
+Upstream's model documentation (`docs/source/model_documentation.md`,
+"Interconnection queues"; found 2026-10-19) does describe it:
+
+- The data is LBNL's U.S. interconnection queue data as of the **end of 2024**.
+- The **2026** limits are plants with a **signed interconnection agreement**.
+- The **2030** limits are all capacity seeking interconnection.
+- Values in between are interpolated from the 2026 and 2030 points.
+
+The data does not match the last point. In **all 1,015 cells** with a nonzero
+2026 value, 2027 is exactly twice 2026, and so is the national total (170,221 →
+340,442 MW). From 2027 to 2030 the values rise linearly (Torrance County wind:
+201, 402, 536, 670, 804). So 2027 is the real anchor, presumably the
+signed-agreement total, and 2026 is set to half of it. Taken literally, the 2026
+limit is half of what upstream's docs describe.
+
+**Vintages of the data this constraint compares** (fork as of 2026-10-19):
+
+| input | source | vintage |
+|---|---|---|
+| `interconnection_queues.csv` | LBNL *U.S. Interconnection Queue Data Through 2024* (Rand et al., Aug 2025) | queue requests through **end-2024**; unchanged since upstream's 2026.04.15 tag |
+| `ReEDS_generator_database_final_EIA-NEMS.csv` (non-RSC prescriptions, via `writecapdat.py`) | EIA NEMS unit database + EIA 860M | our docs say **AEO2025 + Oct 2025 860M** (`model_documentation.md:692`; line 1388 says Mar 2025); file unchanged since 2026.04.15. Upstream `main` has since rebuilt it (**AEO2026 + June 2026 860M**, Aug-Sep 2026). |
+| `prescribed_builds_wind-ons_*.csv` (wind prescriptions) | precomputed by hourlize from the same generator database (`existing_sites` in `hourlize/inputs/configs/config_base.json`), placed on supply-curve sites | last regenerated 2026-06-10 upstream. Upstream `main` deleted these files on 2026-08-04 (`0f284b3f`), and `writecapdat.py` now derives them from the generator database at run time. |
+
+So the queue is about ten months older than the prescriptions, and they measure
+different things: queue requests, versus plants that are operating or under
+construction. Prescriptions can legitimately exceed the queue for projects that
+entered and finished development after the snapshot, or that never went through
+a utility queue (SunZia, §5.8).
 
 **The data stops at 2030.** There is no 2031 or 2032 column. That has a direct
 consequence in §2.3.
@@ -484,7 +517,8 @@ presumably dropped load. Two readings, and they have different fixes:
 
 - **The queue data is wrong or too coarse for `p59`.** A zero-in-every-year gas
   entry for a region that evidently needs dispatchable capacity is a suspicious
-  input, especially given the undocumented provenance (§2.1).
+  input, especially given that the queue data is an end-2024 snapshot of queue
+  requests that is half-weighted in 2026 (§2.1).
 - **The region is genuinely capacity-short** and the queue is correctly telling
   us so — in which case the $10M/MW penalty is silently substituting for a real
   adequacy conversation.
@@ -553,7 +587,8 @@ a constraint that represents something real — physical interconnection limits 
 so the "off" run is not a better estimate of reality. It is a *diagnostic*
 showing how much of a result is attributable to the queue mechanism as currently
 parameterised. Given §4.1 (the collision is largely an artifact of CEPM's
-yearset), §2.1 (undocumented provenance) and §5.3e (prescribed builds arguably
+yearset), §2.1 (a queue snapshot that predates the prescriptions and measures
+something different from them) and §5.3e (prescribed builds arguably
 should not be charged against a queue at all), the honest position is that the
 truth lies between the two runs and we cannot yet say where.
 
@@ -649,10 +684,13 @@ So report the two-step result as a range, and say which end assumes what.
 ### 5.2 Close the provenance gap on the queue data
 
 `docs/sources.csv` records nothing about `interconnection_queues.csv` — no
-vintage, no citation, no method. Given §4.1 shows it binding hard and §4.4 shows
-it possibly wrong for a specific region, we should know what snapshot this is
-before treating a violation as meaningful. This is the cheapest high-value
-action in this list.
+vintage, no citation, no method. Upstream's model documentation partly closes
+this (§2.1: end-2024 LBNL snapshot, signed agreements for 2026, full queue for
+2030), and that is what settled `GSw_CEPM_QueueExempt=1` over `2` (§5.8). §2.1
+now records the vintages of the queue and both prescription sources. Still
+open: why the 2026 column is half of 2027 everywhere (§2.1), and whether SunZia
+is in the LBNL data at all (§5.8). Checking that needs the LBNL project-level
+workbook, which isn't in the repo.
 
 ### 5.3 Shortening the prescription pile-up — and the traps around `startyear`
 
@@ -813,8 +851,9 @@ genuinely endogenous builds. ReEDS cannot currently distinguish the two: both
 arrive as `INV`, and `eq_interconnection_queues` sums all of it.
 
 That last point is not fixable by any `yearset`. It would need the equation to
-net prescribed capacity out of its right-hand side, or the queue data to exclude
-already-committed projects. Which of those is right depends on what the queue
+net prescribed capacity out of its right-hand side (now available as
+`GSw_CEPM_QueueExempt=2`, §5.8, but see there for why CEPM uses `1`), or the
+queue data to exclude already-committed projects. Which of those is right depends on what the queue
 snapshot actually contains — **which we cannot currently answer** (§2.1), and is
 the strongest argument for doing §5.2 before any of this.
 
@@ -894,6 +933,88 @@ charged a queue penalty on top. Checking the 2024-2026 tail of the prescription
 list against reality is a bounded task and directly serves the "grounded in
 actual 2026" goal.
 
+### 5.8 Exempting prescriptions from the queue: `GSw_CEPM_QueueExempt`
+
+Added 2026-10-19. This addresses the root cause in §4.1 directly, without
+changing the yearset (§5.3d) or `interconnection_start` (§5.4). It counts
+prescriptions by their **online year** and adds the exempt amount,
+`queue_exempt_prescrip(tg,r,t)`, to the queue limit (`cap_limit`, or
+`queue_limit` after upstream's rename). Prescribed `INV` is pinned by
+`eq_forceprescription_power`, so this is the same as removing the exempt
+prescriptions from the build side. Endogenous builds face the same limit as
+before.
+
+The whole change lives in one `b_inputs.gms` block, and `c_model.gms` is
+untouched, so upstream edits to the equation merge cleanly. The limit is only
+raised in years that already have queue data, so the equation's guard,
+`5_varfix.gms`, and upstream's `GSw_QueueConstraintYears` trimming all behave as
+they would without it. The parameter name is picked at compile time.
+
+| value | exempts | queue then limits |
+|---|---|---|
+| `0` (`cases.csv` default) | nothing (upstream) | all `INV` in solve years ≥ `interconnection_start` |
+| `1` (`cases_cepm.csv`) | prescriptions online before `interconnection_start` | 2025+ prescriptions plus endogenous builds |
+| `2` (sensitivity only) | all prescriptions | endogenous builds only |
+| `3` | mode `1`, plus 2025+ prescriptions where they exceed the limit | endogenous builds, against `max(0, limit − 2025+ prescriptions)` |
+
+Only prescriptions after the last solve year below `interconnection_start` are
+counted, since earlier ones land in solve years the existing filter already
+drops. For CEPM's yearset that year is 2010, so mode `1` exempts the 2011-2024
+online years. Mode `1` with a dense yearset is close to a no-op, which is the
+point: it makes the existing filter mean what it was meant to mean regardless
+of yearset.
+
+**Measured against `runs/v20261019noqpen_st-AZNM_baseline`.** The input build
+was rerun with each mode, and the exemption was compared to that run's reported
+`cap_above_limit.csv` (27,398 MW of overage summed over 2026 and 2029). The
+residual assumes the same builds, which holds exactly for prescribed capacity:
+
+| mode | residual overage | where |
+|---|---:|---|
+| `0` | 27,398 MW | as reported |
+| `1` | ~7,218 MW | p31 wind-ons 2026 (3,251) and 2029 (1,916), z28 battery 2026 (1,944), p31 battery 2026 (107) |
+| `2` | 0 | — but exempts 14,177 MW more than mode `1` by 2029, freeing headroom wherever prescriptions fit inside the queue |
+| `3` | 0 | — exempts only 1,916 MW more than mode `1` by 2029, all of it in p31 wind |
+
+Mode `3` adds exemption beyond mode `1` in only five cells, which are exactly the
+cells where 2025-2026 prescriptions exceed the queue limit: p31 wind-ons (2026,
+2029), p31 / p47 / z28 battery (2026).
+
+Mode `1` does not clear p31 onshore wind: 3,650 MW is prescribed there for
+2026 alone, against a 2026 queue column of 400 MW and a 2029 column of 1,734
+MW. Traced 2026-10-19: all 3,650.2 MW is **SunZia Wind South (2,561.2 MW) and
+North (1,089.0 MW)**, both listed in Torrance County with a 2026 start in the
+generator database. SunZia connects through Pattern Energy's own HVDC line to
+Arizona, not a utility generator queue, so it is most likely absent from the
+queue snapshot. That's inferred, not confirmed in the LBNL data. Even p31's full
+2030 queue (2,202 MW) is 60% of SunZia alone. Details in
+[`known-reeds-issues.md`](../known-reeds-issues.md#interconnection-queue-constraint-charges-historical-prescribed-builds-against-near-term-queue-headroom-fixed).
+Under mode `1`, p31 still builds no new wind in 2029 and catches up in 2032,
+where the queue constraint does not exist (§5.5). Mode `3` removes the overage
+but gives p31 no new headroom through 2030. A full exemption for SunZia alone
+would be exact, but needs a per-project list, which isn't implemented.
+
+**Why CEPM uses `1`, not `2`.** The queue snapshot is end-2024 (§2.1).
+Projects online before 2025 had left it, so charging them is plainly wrong, and
+mode `1` removes them. Projects online in 2025-2026 were very likely in the
+snapshot with signed agreements, which is what the 2026 limit counts. Exempting
+them too (mode `2`) would leave that headroom free for endogenous builds while
+the same projects are still built: a double count in the opposite direction.
+Mode `2` is kept as a bound for sensitivity runs. It was the `cases_cepm.csv`
+default for part of 2026-10-19, before upstream's description of the data was
+found.
+
+**What it does not change.** Use `GSw_CapPenaltyMult` (§5.6) to remove the
+penalty itself, and §5.5's 2032 blind spot is untouched. A startup `abort`
+fires if any prescribed category maps to more than one tech group, which would
+exempt its prescriptions twice.
+
+**Upstream.** The solve-year filter is unchanged on upstream `main`. Upstream's
+own defaults have since moved in ways that change how it shows up, including
+`main` appearing never to generate the constraint at all under default
+switches. Details in
+[`known-reeds-issues.md`](../known-reeds-issues.md#interconnection-queue-constraint-charges-historical-prescribed-builds-against-near-term-queue-headroom-fixed).
+
 ---
 
 ## 6. Quick reference
@@ -928,6 +1049,7 @@ actual 2026" goal.
 | `b_inputs.gms:5938-5941` | `force_pcat` |
 | `b_inputs.gms:2024` | `cap_penalty` load (never rescaled upstream) |
 | `b_inputs.gms` (just after the load) | **CEPM addition** — `cap_penalty(tg) = cap_penalty(tg) * Sw_CapPenaltyMult ;` |
+| `b_inputs.gms` (after `Sw_CapPenaltyMult`) | **CEPM addition** — `queue_exempt_prescrip`, added to the queue limit in years with queue data (§5.8) |
 | `5_varfix.gms:29` | fixes `CAP_ABOVE_LIM` for solved years — the reason §5.6 wants an epsilon rather than 0 |
 | `report.gms:129` | `cap_above_limit` reporting |
 | `report.gms:1745` | the only place the penalty enters reporting (an error check) |
@@ -937,6 +1059,7 @@ actual 2026" goal.
 | Name | Where | Default | Effect |
 |---|---|---|---|
 | `GSw_CapPenaltyMult` | `cases.csv` (**CEPM addition**) | 1 | scales `cap_penalty`; ≈0 disables the queue constraint entirely (§5.6). Use `0.000001`, not `0` |
+| `GSw_CEPM_QueueExempt` | `cases.csv` (**CEPM addition**) | 0 (`cases_cepm.csv`: 1) | exempts prescriptions from the queue: `1` = online before `interconnection_start`, `2` = all, sensitivity only, `3` = mode 1 plus overage-only (§5.8) |
 | `interconnection_start` | `scalars.csv:52` | 2025 | first year whose builds count against the queue. **`>=`, so a 2025 solve year is included** (§5.3d) |
 | `model_builds_start_yr` | derived, `b_inputs.gms:1248` | — | earliest year the queue equation is generated |
 | `GSw_ForcePrescription` | `cases.csv` | 1 | prescriptions as a floor |
