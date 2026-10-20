@@ -45,6 +45,7 @@ chasing a crash, start with them.
 | [Retail-rate module crashes on single-BA runs](#retail_rate_calculationspy-crashes-on-single-ba-runs-keyerror-res_marg_ann_flow) | Open — fix identified | `KeyError: 'res_marg_ann_flow'`; `retail_rate_components.csv` is never written. Multi-region runs unaffected. |
 | [`report_dump.py` leaves GAMS sets out of `outputs.h5`](#report_dumppy-leaves-gams-sets-out-of-outputsh5-could-not-convert-string-to-float-) | Open — fixed in `2026.09.08` | **Silent.** `read_output()` returns an empty table for sets such as `hierarchy`; read `outputs/<set>.csv`. Solve unaffected. |
 | [`single_case_plots.py` plots fail on reduced-region cases](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases) | Open — partly by design | Several diagnostic maps fail on single-region or reduced-hierarchy runs. Each is caught; core outputs unaffected. |
+| [RA diagnostic plots: `plot_stressors()` never produces maps](#ra-diagnostic-plots-plot_stressors-never-produces-stress-day-maps) | Open — fix identified | `KeyError: '2021.0-6.0-18.0'` in the final year. `map_stressors()` expects a `new_stress_periods.csv` schema that `stress_periods.py` no longer writes, so no stress-day maps are made in any year. Other outputs unaffected. |
 | [bokehpivot: every map section fails on an aggregated zoneset](#bokehpivot-html-report-every-map-type-section-fails-on-an-aggregated-zoneset) | Open | No boundary file exists for aggregated zonesets, so all map sections of the HTML report are missing. |
 | [Retail rate module: pandas-3 no-ops](#retail-rate-module-chained-assignments-are-no-ops-under-pandas-3) | Open | Some retail-rate fills and replacements silently do nothing, so retail outputs may be off. Capacity and dispatch unaffected. |
 | [`compare_cases.py` crashes on a shared-prefix glob](#compare_casespy-crashes-when-comparing-cases-via-a-shared-prefix-glob-typeerror-in-parse_caselist-fixed) | Fixed | `TypeError` in `parse_caselist()` blocked the comparison report entirely. |
@@ -765,6 +766,76 @@ tag `2026.08.03`:
   `has not solved year` message at the tag (`reeds/io.py:1313`). The single-BA
   `TypeError`/`ValueError`/`KeyError` variants haven't been traced to a function,
   so they're unconfirmed either way.
+
+## RA diagnostic plots: `plot_stressors()` never produces stress-day maps
+
+**Symptom:** after the final solve year, `gamslog.txt` shows
+```
+diagnostic_plots.py | ... | plot_stressors() failed:
+...
+pandas._libs.tslibs.parsing.DateParseError: Unknown datetime string format, unable to parse: 2021.0-6.0-18.0
+...
+  File ".../reeds/reedsplots.py", line 6400, in map_stressors
+    dfba['load'] = load.loc[timestamp].max() / load.max()
+KeyError: '2021.0-6.0-18.0'
+```
+The date in the key is whichever seed stress day comes first, so it varies by
+run. No `stress{t}i{n}-*.png` maps appear in
+`outputs/figures/resource_adequacy/` for any year. Seen in all six
+`v20261019noqpen` and `v20261020tfnewq` AZNM runs. It is not specific to
+reduced-region cases, unlike the
+[`single_case_plots.py` entry](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases).
+
+**Root cause:** `map_stressors()` (`reeds/reedsplots.py`) concatenates two frames
+with different schemas, then formats a label from `y`/`m`/`d`:
+```python
+plot_days['timestamp'] = plot_days.apply(lambda row: f'{row.y}-{row.m:02}-{row.d:02}', axis=1)
+```
+- The seed days (`stress{t}i0/forceperiods.csv`, loaded only when `t` is
+  `endyear`) get `y`, `m`, `d`, `r` and `szn` columns.
+- The added stress days (`stress{t}i{n+1}/new_stress_periods.csv`) come from
+  `stress_periods.py` as `periodtype, metric, criterion, num, region, period,
+  value`. They have no `y`/`m`/`d`, and the renames (`actual_period`→`szn`)
+  match nothing. The day loop below also expects `r`, an `EUE_MWh` column and
+  `reason` values containing `EUE` or `before`/`after`, none of which this file
+  has. `periodtype` is `stress`, which the loop would skip as
+  `Invalid stress period`.
+
+So the plot fails one of two ways:
+- **Final year (seed + new days):** the concat leaves NaN in `y`/`m`/`d` for the
+  new rows, which upcasts those columns to float. The first seed row then
+  formats as `'2021.0-6.0-18.0'` (`:02` doesn't pad a float), and
+  `load.loc[...]` raises `KeyError`.
+- **Earlier years that added stress days (new days only):** there is no `y`
+  column at all, so it raises `AttributeError: 'Series' object has no attribute
+  'y'`. This reproduces when `map_stressors()` is called directly, for example
+  for 2029 in `v20261020tfnewq_st-AZNM_baseline`. In these runs, though, it never
+  reached `gamslog.txt`, even though that year's `diagnostic_plots.py` ran to
+  completion (`netloadhours-histogram-2029.png` was written). That process runs
+  in the background while the next year solves. Why its traceback is missing
+  hasn't been traced.
+- Years that added no stress days and aren't `endyear` have nothing to plot, and
+  return quietly.
+
+Casting `y`/`m`/`d` to `int` alone won't fix it. The new-day rows have no
+values to cast, and the loop can't label them. A fix needs to map
+`new_stress_periods.csv` onto the schema the loop expects before the concat:
+`period`→`szn`, `region`→`r`, `y`/`m`/`d` from `szn` via
+`reeds.timeseries.h2timestamp` (as the seed branch does), and a labelling branch
+for `reason == 'stress'`.
+
+**Impact:** the stress-day maps (load, PV/wind CF, temperature and outage for
+each stress day) are missing. Every other RA diagnostic plot is written, and
+solve and CSV outputs are unaffected.
+
+**Status:** open. Fix approach identified, not implemented.
+
+**Fixed upstream?** No. The `_plot_days` block and the `timestamp` line are
+unchanged at tag `2026.08.03` and on upstream `main` as of 2026-10-19
+(`reedsplots.py:6544` there). Upstream's `cfbe5f5d` ("fix
+reedsplots.map_stressors()", in `2026.08.03` and already in this fork) fixed
+other parts of the function and didn't touch this block. Inherited, not
+RMI-introduced.
 
 ## bokehpivot HTML report: every map-type section fails on an aggregated zoneset
 
