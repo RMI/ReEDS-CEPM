@@ -36,10 +36,11 @@ What this script does:
     CEPM/scripts/get_batch_info.py (same script as Step 9). Runs even if an
     earlier step throws, so a failed bootstrap or run still leaves a log
     behind; best-effort throughout (a missing run folder, or any other
-    logging failure, is only warned). Under -m/--multistep the destination is
-    the <stem>_baseline run folder instead, since -s overrides `ignore` and
-    the leftmost non-ignored case may not be one of the three that ran; the
-    per-batch files -m generated are also deleted here, unconditionally.
+    logging failure, is only warned). With a forwarded -s/--single the
+    destination is the first case in the -s list instead, since -s overrides
+    `ignore` and the leftmost non-ignored case may not be one that ran. Under
+    -m/--multistep it is the <stem>_baseline run folder, for the same reason;
+    the per-batch files -m generated are also deleted here, unconditionally.
 
 
 BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.py):
@@ -909,7 +910,8 @@ if (-not $q) {
     # scenario's run folder. Uses the same leftmost-non-ignored-case convention as
     # the --startyear lookup above (CEPM/scripts/get_batch_info.py), since that case
     # folder is the one guaranteed to exist regardless of which cases in the batch
-    # ran, succeeded, or failed. Runs even if an earlier step threw, so a failed
+    # ran, succeeded, or failed -- unless -s/--single or -m/--multistep picked the
+    # cases, handled below. Runs even if an earlier step threw, so a failed
     # bootstrap/run still leaves a log behind; best-effort throughout so logging
     # itself can never fail the script or mask its real exit code.
     # Step 11a (multistep only): remove the per-batch files -m generated. Runs before
@@ -938,8 +940,25 @@ if (-not $q) {
         # In multistep mode the log belongs in the baseline's run folder: it is the one
         # folder guaranteed to exist if anything ran at all, and get_batch_info.py's
         # leftmost-non-ignored-case rule does not apply here (see Step 9).
+        # Likewise with a forwarded -s/--single: only the listed cases ran, and the
+        # leftmost non-ignored case may not be one of them, so use the first case
+        # named in the -s list instead.
+        $singleList = $null
+        for ($i = 0; $i -lt $ForwardArgs.Count; $i++) {
+            if ((($ForwardArgs[$i] -eq '-s') -or ($ForwardArgs[$i] -eq '--single')) -and ($i + 1 -lt $ForwardArgs.Count)) {
+                $singleList = [string]$ForwardArgs[$i + 1]
+                break
+            }
+            if ($ForwardArgs[$i] -like '--single=*') {
+                $singleList = ([string]$ForwardArgs[$i]).Substring('--single='.Length)
+                break
+            }
+        }
         if ((-not [string]::IsNullOrWhiteSpace($m)) -and $multistepInfo -and $multistepInfo.Count -ge 1) {
             $firstCase = $multistepInfo[0].Trim()
+            $batchInfoExit = 0
+        } elseif (-not [string]::IsNullOrWhiteSpace($singleList)) {
+            $firstCase = $singleList.Split(',')[0].Trim()
             $batchInfoExit = 0
         } else {
             $batchInfo = @(Invoke-Native { uv run python CEPM/scripts/get_batch_info.py $casesFilename })
