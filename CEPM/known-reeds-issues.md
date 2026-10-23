@@ -53,6 +53,7 @@ chasing a crash, start with them.
 | [`timetype=int`/`win` call GAMS files that don't exist](#runreedspy-timetypeint-and-timetypewin-call-gams-solve-files-that-dont-exist) | Open — fix identified | `runreeds.py` points both solve calls at pre-restructure paths. `seq` (every CEPM case) is unaffected. |
 | [`runreeds.py` reports success on failure, hangs on multi-case `-s`](#runreedspy-reports-success-on-a-failed-case-and-hangs-on-a-multi-case--s) | Open — worked around | **Silent.** Exit code 0 despite an aborted solve; interactive prompts hang under a wrapper. Check for `outputs.h5`, not the exit code. |
 | [`z_rep` dominated by the interconnection-queue penalty](#z_rep-is-dominated-by-the-interconnection-queue-penalty-and-does-not-match-systemcostcsv) | Not a bug | `z_rep` is unusable as a cost figure and the penalty does shift buildout. Use `systemcost.csv`. |
+| [Queue constraint charges historical prescribed builds](#interconnection-queue-constraint-charges-historical-prescribed-builds-against-near-term-queue-headroom-fixed) | Fixed — not upstream | **Silent.** The queue filter goes by solve year, so a sparse yearset charges 15 years of prescriptions against the 2026 limit. `GSw_CEPM_QueueExempt=1` counts them by online year. What's left comes from the queue and prescription data sources disagreeing (e.g. SunZia), which mode `3` handles. Upstream `main` also appears never to generate the constraint under defaults. |
 | [Operating reserves effectively off by default](#operating-reserves-are-effectively-off-under-default-switches) | Expected | Reserve constraints have 0 rows under default switches (upstream design with stress periods), so the `opRes` outputs are empty and one bokehpivot section fails. |
 | [`reeds2pras` `BoundsError` for `hydud`/`hydund`](#reeds2pras-boundserror-for-hydudhydund-hydro-capacity--no-monthly-profile-data) | Open — non-fatal | Hydro-upgrade categories have no monthly profile data, so PRAS zeroes their contribution. Diagnostic layer only. |
 | [PRAS crashes on single-zone regions](#pras-crashes-on-single-zone-regions-boundserror--0-element-vectorline) | Open | A one-zone region has no lines, so `make_pras_interfaces()` throws after the solve. Use ≥ 2 zones. |
@@ -1048,6 +1049,160 @@ one year of queue headroom), the one *voluntary* violation found, and options fo
 and the `report.gms` reconciliation are byte-identical at `upstream/main`
 (`1f73bd23`). The collision is specific to CEPM's short horizon and wide
 `startyear`→first-solve-year gap, which upstream's 2010-2050 runs do not have.
+The mechanism behind that collision is an upstream bug in its own right, and is
+now addressed in this fork; see the next entry.
+
+## Interconnection-queue constraint charges historical prescribed builds against near-term queue headroom (FIXED)
+
+**Symptom:** `cap_above_limit.csv` shows large overages in the first solve year
+after `startyear`, in cells where the model built nothing voluntarily. The
+overage is no larger than prescribed capacity minus the queue limit, and often
+exactly that. For `runs/v20261019noqpen_st-AZNM_baseline`, every 2026 and 2029
+overage is covered by the zone's 2011-2026 prescriptions. Several are exactly
+prescriptions minus limit: p31 onshore wind is 5,202 MW over (5,602 MW
+prescribed against a 400 MW limit), p27 wind 360 MW, z28 wind 746 MW, p29 coal
+762 MW. With the queue penalty on, the cumulative overage carries into later
+years, so new builds in those cells are blocked until the queue data runs out.
+In that run p31 builds **no new wind in 2029** and makes it up in 2032, where the
+constraint does not exist. That was a −3.1 GW / +1.7 GW swing against an
+otherwise identical penalty-off baseline.
+
+**Root cause:** `eq_interconnection_queues` (`reeds/core/setup/c_model.gms`)
+decides which investment counts against the queue by the **solve year**:
+
+```gams
+sum{(i,newv,tt)$[... $(yeart(tt)>=interconnection_start) $(tmodel(tt) or tfix(tt))],
+    INV(i,newv,r,tt) + ... }
+```
+
+But `noncumulative_prescriptions` (`b_inputs.gms`) puts every prescription
+into the first solve year at or after its **online year**. With solve years
+2010 → 2026, everything that came online 2011-2025 lands in the 2026 solve, passes
+`yeart(2026) >= 2025`, and is charged against the 2026 queue limit. The filter
+was meant to exclude exactly those pre-2025 builds. How big the error is depends
+on the solve years, not on the data: the bigger the gap before the first solve
+year at or after 2025, the more historical capacity uses up queue headroom.
+
+Upstream's documentation (`docs/source/model_documentation.md`, "Interconnection
+queues") makes clear the counting is wrong rather than a modelling choice. The
+queue data is LBNL's snapshot as of the **end of 2024**. The 2026 limits are plants
+with a signed interconnection agreement, and the 2030 limits are all capacity
+seeking interconnection. Projects online before 2025 had already left the queue,
+so they are not in the limit they are charged against.
+
+**Contributing cause: the two sides come from different data sources.** Even
+with the counting fixed, the constraint compares two datasets that don't measure
+the same thing:
+
+- **Different snapshots.** The queue is LBNL queue requests through end-2024.
+  The prescriptions come from the EIA NEMS / 860M generator database, which our
+  docs date to Oct 2025.
+- **Different scope.** The queue lists projects *requesting* interconnection
+  from utility and ISO queues. The prescriptions list plants that are operating
+  or under construction, including projects that never went through such a queue.
+- **A smaller-than-described 2026 limit.** In every cell, the queue's 2026
+  column is exactly half of 2027, so it is half the signed-agreement total
+  upstream's docs describe.
+
+So 2025-2026 prescriptions can legitimately exceed the 2026 limit. That
+explains the residual under mode `1` below. Vintages and file-level details are
+in
+[interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
+§2.1.
+
+**Impact:** silent. The run completes, and the result depends on which solve
+years were picked: two cases with identical inputs but different solve years
+get different queue headroom. It is easy to miss because the overage cells look
+like ordinary penalty-on behaviour, and `systemcost.csv` does not carry the
+penalty (see the `z_rep` entry above). The full measurement, including the
+WECC-SW 2026 breakdown (~16.5 GW of pre-2025 prescriptions against 11.8 GW of
+2026 headroom), is in
+[interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
+§4.1.
+
+**Fix (this fork):** `GSw_CEPM_QueueExempt` (2026-10-19). A block in
+`b_inputs.gms` counts prescriptions by online year and adds the exempt amount,
+`queue_exempt_prescrip(tg,r,t)`, to the queue limit. Prescribed `INV` is pinned
+by `eq_forceprescription_power`, so this is the same as removing them from the
+build side.
+
+- `0` — upstream behaviour (`cases.csv` default).
+- `1` — exempt prescriptions online before `interconnection_start`. This is
+  what the filter intends, independent of the solve years.
+- `2` — exempt all prescriptions. Not recommended: per upstream's docs, 2025-2026
+  prescribed projects are likely what the 2026 signed-agreement limit counts, so
+  exempting them frees headroom for builds that are already happening.
+- `3` — mode `1`, plus 2025+ prescriptions only where they exceed the queue
+  limit (`cases_cepm.csv` default). Prescriptions never cause an overage, but
+  they use up headroom up to the limit. In the AZNM baseline this clears the
+  residual below while exempting only 1.9 GW more than mode `1` (mode `2`:
+  14.2 GW more).
+
+The equation itself is untouched. The limit is only raised in years that already
+have queue data, so the equation's guard and `5_varfix.gms` are unchanged. The
+block picks `queue_limit` or `cap_limit` at compile time, so it survives
+upstream's rename (below) without edits. Checked by rebuilding the AZNM
+baseline's inputs under each mode: the adjusted limit equals the original plus
+the exemption in every cell, and mode `0` is identical to upstream.
+
+**Residual under mode `1`:** about 7.2 GW of the AZNM baseline's 27.4 GW
+overage remains, almost all in p31 wind (3,650 MW prescribed for 2026 alone
+against limits of 400 MW in 2026 and 1,734 MW in 2029) and z28 batteries. These
+are 2025-2026 prescriptions that are larger than the queue's 2026 limit. Mode
+`3` clears them.
+
+The p31 wind residual is traced (2026-10-19): the two datasets describe
+different projects. All 3,650.2 MW is **SunZia Wind South (2,561.2 MW) and
+North (1,089.0 MW)**, EIA plant 56545, both listed in Torrance County with a
+2026 start in the generator database. Hourlize spreads it over supply-curve
+sites in Torrance and Lincoln counties. The queue has 201 MW of wind in
+Torrance for 2026 (804 MW by 2030) and nothing in Lincoln, so even p31's full
+2030 queue (2,202 MW) is 60% of SunZia alone. SunZia Wind connects through
+Pattern Energy's own SunZia HVDC line to Arizona. That line went through CAISO's
+Subscriber Participating Transmission Owner process
+([CAISO, May 2024](https://www.caiso.com/Documents/DecisiononSubscriberParticipatingTransmissionOwnerApplication-SunZiaTransmissionLLC-Memo-May2024.pdf)),
+not a utility generator queue, so it most likely isn't in the queue snapshot at
+all. That's an inference: SunZia's absence from the LBNL data is not directly
+confirmed. The p31 counties are the same in both datasets, so it's not a mapping
+problem. The z28 battery residual is not traced.
+
+For a project that bypasses the queue, the correct treatment is a full
+exemption, as in mode `2` for that project only. Mode `3` is the cautious
+version: it removes the overage but gives p31 no new wind headroom until the
+queue passes SunZia's size, which it never does through 2030. A per-project
+exemption list would be exact, but isn't implemented.
+
+**Not yet confirmed by a solve.** The input builds above check the limit
+arithmetic. A baseline run should show 2026 `cap_above_limit.csv` dropping to the
+residual above. Runs before 2026-10-19 use the old behaviour, and each batch's
+`_limitre` case takes its caps from its baseline, so both need rerunning.
+
+**Fixed upstream?** No. Checked against `upstream/main` at `eb75a6bc`
+(2026-10-14), not just the `2026.08.03` tag. The equation still filters on
+solve year. Upstream has changed things nearby, which affects how often its own
+runs hit the bug:
+
+- **Default solve years.** `2026.08.03` defaulted to `2010_2015_2020..2050..3`
+  (… 2020, 2023, 2026 …), which charges 2024 prescriptions against the 2026
+  limit. That is a small version of the same error. `2026.09.08` switched to
+  `2010..2050..5` (… 2020, 2025, 2030 …). 2025 has no queue column, so the
+  equation is dropped in 2025. The 2030 solve then counts all 2021-2030 investment,
+  including 2021-2024 prescriptions, against the 2030 limit.
+- **`GSw_QueueConstraintYears`** (`main` only, commit `0dc01add`, not in any tag
+  yet; default 3) keeps queue columns only through `this_year + 3` = 2029. Under
+  the 5-year default no solve year falls in 2026-2029, so on `main` the queue
+  constraint **appears never to be generated at all** in a default run. That is
+  from reading the code, not a run, and it contradicts upstream's docs ("starting
+  in by default in 2025 and ending in 2030"). It looks like an oversight from the
+  two changes landing six weeks apart. With CEPM's 2026/2029 solve years, the
+  default keeps both.
+- **Rename** (`main` only, commit `7c39fc98`): `cap_limit` became `queue_limit`
+  in `b_inputs.gms`, `c_model.gms`, `5_varfix.gms` and `copy_files.py`, and the
+  input is now written through `write_to_h5`. Our block handles either name.
+
+Worth reporting upstream: the online-year vs solve-year counting, and the
+constraint never being generated on `main` under default switches. Both can be
+shown from the code alone.
 
 ## Operating reserves are effectively off under default switches
 
