@@ -56,6 +56,46 @@ Summary: What'd we change, why, what'd we find, what's next
 - [ ] I edited LLM-generated text to keep this entry short and to the point
 - [ ] Open a pull request and add results of a recent run as an attachment
 
+## Batch entry: v20261020tfnewq**
+**Author: Tyler Fitch**
+
+**Summary:** We found an issue with interconnection queues where accumulated prescribed builds were
+all hitting in 2026 and exceeding the allowed interconnection pace. This version adds an option to
+exempt certain resource builds from the interconnection limits.
+
+### Batch details
+
+- **Built from:** `v20-261009postcapex`
+- **Space and Time:** st/AZ.NM 2026-2032, every 3 years
+- **Cases:** `baseline, limitre, optimized`
+
+### Change log
+
+- **Case change:** Added a switch named GSw_CEPM_QueueExempt that includes several modes for exempting certain builds from the interconnection limit calculations. `{Switch}` in `{Case}`
+- **ReEDS change:** Changed `b_inputs.gms` to implement the queue exemptions.
+
+### Results
+
+- Run outputs in `VM_Outputs`
+- Marginal differences between baselines compared to the previous runs -- mostly, this is because of differences in selected stress periods
+
+### Documentation, decisions, next steps, & issues
+
+- **ISSUE:** We actually found an issue where the islanded SPP region was having trouble reaching reliability thresholds
+- **DOCUMENTATION:** A new file in `CEPM/guidance/st-AZNM` documents the above issue.
+- **NEXT STEP:** Makes sense to use one of the suggested solutions in that guidance doc -- likely changing PRM update method.
+
+
+### Checklist
+
+- [X] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
+- [X] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
+- [X] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
+- [X] I moved batch results to the VM-Outputs folder
+- [X] I added any issues we found to the JIRA issues epic
+- [X] I edited LLM-generated text to keep this entry short and to the point
+- [X] I opened a pull request and add results of a recent run as an attachment
+
 ## Batch entry: v20261009postcapex**
 **Author: Tyler Fitch**
 
@@ -89,13 +129,12 @@ normalizing on 2022 dollars.
 - [X] I moved batch results to the VM-Outputs folder
 - [X] I added any issues we found to the JIRA issues epic
 - [X] I edited LLM-generated text to keep this entry short and to the point
-- [/] Open a pull request and add results of a recent run as an attachment
+- [X] I opened a pull request and add results of a recent run as an attachment
 
 ## Batch name: `v20261006gt_AEO`
 **Author: Gaby**
 
-
-Summary: Ran the st-AZNM baseline, limit-RE, and optimized cases using the AEO case assumptions to compare results against the previous AZNM runs. This batch is intended to isolate the impact of the AEO assumptions while keeping the existing baseline/limit-RE/optimized case structure consistent.
+**Summary:** Ran the st-AZNM baseline, limit-RE, and optimized cases using the AEO case assumptions to compare results against the previous AZNM runs. This batch is intended to isolate the impact of the AEO assumptions while keeping the existing baseline/limit-RE/optimized case structure consistent.
 
 ### Batch details
 
