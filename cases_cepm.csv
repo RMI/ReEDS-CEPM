@@ -69,7 +69,7 @@ GSw_H2,,0,0,0,0,0,0,0,0,0
 GSw_H2Combustion,0,,,,,,,,,
 GSw_H2CombinedCycle,0,,,,,,,,,
 GSw_H2_PTC,,0,0,0,0,0,0,0,0,0
-GSw_DRShed,,,,,,,,,,
+GSw_DRShed,,,,1,,,,,,
 GSw_OffshoreZones,,,,,,,,,,
 GSw_OffshoreBackbone,,,,,,,,,,
 GSw_OffshoreBackflow,,,,,,,,,,
