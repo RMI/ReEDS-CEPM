@@ -1,0 +1,103 @@
+# `CEPM/` — RMI/CEPM-specific documentation and tooling
+
+This folder holds the documentation and helper scripts that exist only in
+RMI's CEPM fork and have no counterpart in the upstream
+[ReEDS](https://github.com/ReEDS-Model/ReEDS) repository. To the extent
+practical, CEPM-specific additions are collected here rather than scattered
+through the upstream source tree, so that the fork's surface area stays easy to
+review against upstream.
+
+Some CEPM changes unavoidably live in upstream file locations (GAMS
+compatibility fixes, `cases_cepm.csv`, `cases_RMI-test.csv`, `pyproject.toml`, `run_cepm.ps1`, and
+similar). Those are catalogued in
+[`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) rather than moved here.
+
+## Start here
+
+- **A run just failed** → [`known-reeds-issues.md`](known-reeds-issues.md). Symptom → cause →
+  status for every error seen in a CEPM run so far, including whether it is fixed
+  upstream. Check it before debugging anything.
+- **Adding a new custom input** → [`preprocessing/input-requirements.md`](preprocessing/input-requirements.md)
+  for the rules, then [`preprocessing/README_TEMPLATE.md`](preprocessing/README_TEMPLATE.md)
+  to document it.
+- **Wondering what we changed vs. upstream** → [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md).
+- **Wondering what a past batch did — or a run finished but the *results* look
+  wrong** → [`batch-log.md`](batch-log.md). Model-behaviour surprises and
+  scenario-configuration problems are logged against the batch that surfaced
+  them, not in `known-reeds-issues.md`.
+- **Doing an upstream sync** → [`sync-log.md`](sync-log.md) for a worked example
+  of the last one (branches, what broke, how it was fixed, and a lessons-learned
+  list) before you start.
+
+**A note on run folders.** Docs throughout `CEPM/` cite runs as
+`runs/<batch>_<case>` — e.g. `runs/v20260902t7_WECC-SW_baseline`. `runs/` is
+gitignored, and completed runs are archived to **VM_Outputs**, a SharePoint
+folder on the run VM. So a cited path that is no longer local will be there under
+the same name. These citations are provenance, not data: the numbers they support
+are transcribed into the docs themselves, so a doc stays readable even when the
+run folder is gone.
+
+## Top-level
+
+| File | Summary |
+|---|---|
+| [`README.md`](README.md) | This file — an index of everything in `CEPM/`. |
+| [`known-reeds-issues.md`](known-reeds-issues.md) | Running log of everything **broken, missing or surprising in the model code itself** — ReEDS and this fork's changes to it: symptom, root cause, current status, and a **Fixed upstream?** verdict checked against upstream tag `2026.08.03`. Covers the `Error 579` GAMS compile failure, the `eq_growthlimit_absolute` final-year infeasibility, the `eq_RPS_OFSWind` and DE hydrogen infeasibilities, `z134`/`z90` zoneset gaps, the `startyear` hydro-CF constraint that blocked `USA_optimized_mvp`, `runreeds.py`'s silent-failure and interactive-prompt traps, the `z_rep` interconnection-queue penalty, postprocessing and `reeds_to_rev` failures, and cosmetic warnings that are safe to ignore. The test is whether a fresh clone would hit it — problems with a *result* go in `batch-log.md` instead. Deeper investigations get their own doc under `guidance/` and are linked from the relevant entry. |
+| [`batch-log.md`](batch-log.md) | Log of notable CEPM run batches: what changed, what it showed, and what we decided. One entry per batch (newest first), each linked to its predecessor by a **Built from** field so the chain back through the work is traceable. Records decisions, next steps and unresolved issues alongside results. Since `runs/` is gitignored and archived to VM_Outputs, this is the in-repo record of what was run. |
+| [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md) | Change log of how this fork diverges from upstream ReEDS — per change: description, files changed, reference, and what to re-test on each new upstream release. Sectioned into GAMS-compatibility fixes, helper scripts, and custom CEPM inputs. |
+| [`sync-log.md`](sync-log.md) | Append-only history of each upstream sync *event* itself (as opposed to `reeds-to-cepm-log.md`'s standing description of current divergence): branches and commits involved, what broke and why, how it was fixed, validation performed, and a per-patch "still needed / altered by this sync" verdict against `reeds-to-cepm-log.md`'s "what to test" lists. One dated entry per sync. |
+
+## `guidance/` — how-to and investigation write-ups
+
+Ordered roughly from most general to most situational, with closed
+investigations at the end.
+
+| File | Summary |
+|---|---|
+| [`guidance/running-test-scenarios.md`](guidance/running-test-scenarios.md) | Step-by-step process for testing switch changes against the core CEPM runs: branch, copy `cases_cepm.csv` to a `cases_{suffix}.csv`, run the two-step scenario with `run_cepm.ps1 -m ... -x`, share results via SharePoint and `batch-log.md`, then archive the cases file and open a pull request. |
+| [`guidance/fixing-reeds-issues.md`](guidance/fixing-reeds-issues.md) | Step-by-step process for fixing a bug in the ReEDS model code: branch from the working branch, record the issue in `known-reeds-issues.md`, fix and verify it, log any upstream-file changes in `reeds-to-cepm-log.md`, and open a pull request. Uses `fix/ra-plot-logging` as a worked example. |
+| [`guidance/reeds-data-sources.md`](guidance/reeds-data-sources.md) | How `runfiles.csv` and `copy_files.py` turn a switch value into an input file path, and why bespoke CEPM inputs belong in `inputs/` if we want to keep access to upstream defaults. |
+| [`guidance/objective-function-and-end-effects.md`](guidance/objective-function-and-end-effects.md) | What the ReEDS objective minimizes (every capital and operating term in `d_objective.gms`, with line citations) and how it handles years after `endyear`. Key finding: operating costs extend past the horizon by assumption. The final modeled year (or, in the default `seq` mode, *every* solve year) is valued as repeating unchanged for `sys_eval_years` (30) years through `pvf_onm`. Capital is charged once, scaled to a 30-year life, with no salvage value. Also covers how this differs across `seq`/`int`/`win`, why the objective is not the reported `systemcost`, what it means for CEPM's 2026-2032 runs, and which `inputs_case/` files show the actual factors. |
+| [`guidance/tech-limit-options.md`](guidance/tech-limit-options.md) | The mechanisms available for restricting a technology's capacity — `ban`/`bannew`, resource supply curve edits, the interconnection-queue cumulative cap, growth-rate constraints, cost multipliers, and customizing `tg` — with the implications of each. |
+| [`guidance/interconnection-queue-and-prescribed-builds.md`](guidance/interconnection-queue-and-prescribed-builds.md) | How the interconnection-queue ceiling and the prescribed-build floor are sourced, wired and enforced — and why they contradict each other in 2026. Key finding: the queue cap is *soft*, priced at a flat **$10M/MW** recharged every modeled year, and CEPM's 2026 solve must place 33.0 GW of capacity against 11.8 GW of queue headroom because it absorbs **16 years** of accumulated prescriptions at once. The resulting penalty is **77% of the 2026 objective** and is excluded from reported `systemcost`. Measured with the new `GSw_CapPenaltyMult` switch, removing it shifts WECC-SW buildout by -15% PV / +13% onshore wind / +158% h2 and moves the two-step headline result from +33.4% to +43.4%. Also documents the 2032 blind spot (queue data ends in 2030, so the final CEPM year is interconnection-unconstrained) and what to do about 2026. |
+| [`guidance/two-step-re-limited-runs.md`](guidance/two-step-re-limited-runs.md) | Design, decisions and full test record for the two-step `*_baseline` → `*_limitre` + `*_optimized` workflow and the `GSw_CEPM_TgCap` cumulative tech-group caps behind it: why `GSw_GrowthAbsCon` and the interconnection-queue cap could not be reused, the purpose-built equations added instead, `make_tg_cap.py`, `run_cepm.ps1 -m`, and the T0-T10 test plan. |
+| [`guidance/managing-pras.md`](guidance/managing-pras.md) | Which switches actually control whether PRAS runs, how often, and how expensive it is — and which ones people expect to control it but don't. Key finding: `GSw_PRM_CapCredit` does not disable PRAS; only `pras_samples=0` reliably skips its Monte Carlo compute. Includes a "get as close as possible to no PRAS" recipe. |
+| [`guidance/loadsite-mechanism.md`](guidance/loadsite-mechanism.md) | How `GSw_LoadSiteCF`/`GSw_LoadSiteRA`/`GSw_LoadSiteTrajectory` wire into the "optimally sited load" (data-center) feature — Python and GAMS call sites for each, how the trajectory file/hierarchy level is selected, and why a trajectory file's regions don't need to match the run's own `GSw_Region`/`GSw_ZoneSet` (out-of-scope regions are silently dropped, not an error). |
+| [`guidance/UV_MAMBA_GUIDE.md`](guidance/UV_MAMBA_GUIDE.md) | How to keep `environment.yml` (conda/mamba) and `pyproject.toml`/`uv.lock` (uv) in sync by hand, plus the list of known-accepted drift between them. |
+| [`guidance/internal-ci-testing.md`](guidance/internal-ci-testing.md) | Runbook for reproducing the GitHub PR CI checks on an on-prem machine, for the CI jobs that cannot run on GitHub-hosted runners because of GAMS licensing. |
+| [`guidance/GAMS_ERROR_579_INVESTIGATION.md`](guidance/GAMS_ERROR_579_INVESTIGATION.md) | Investigation and fix for the 16x `Error 579` model-compile failure on GAMS 44.4.0, caused by declaring every set before loading any of them in the h5-to-gdx pipeline. |
+
+## `preprocessing/` — custom CEPM input pipelines
+
+Each pipeline folder keeps its raw source data and notebooks here but writes its
+generated outputs into the repo's top-level `inputs/` tree, not into `CEPM/`.
+See [`guidance/reeds-data-sources.md`](guidance/reeds-data-sources.md) for why a
+bespoke input has to sit alongside the upstream file it is an alternative to.
+
+Every folder has its own README with source, outputs, switches, ReEDS files
+touched, and whether a run has confirmed it — see `README_TEMPLATE.md` for that
+structure.
+
+| Path | Summary |
+|---|---|
+| [`preprocessing/input-requirements.md`](preprocessing/input-requirements.md) | The criteria a custom CEPM input has to meet: its own descriptive folder, an orienting README or `main` notebook, traceable raw source data, `CEPM` in output filenames, validation against the ReEDS input it replaces, outputs written straight to their final repo location, and a record of every ReEDS file edited (`cases.csv`, `runfiles.csv`, `dollaryear.csv`, …). Read this before adding an input. |
+| [`preprocessing/README_TEMPLATE.md`](preprocessing/README_TEMPLATE.md) | Template for the per-folder READMEs below: the sections each pipeline should document, including source, what it produces, the switches and ReEDS files it touches, and known issues. |
+| [`preprocessing/datacenter_load_forecast/`](preprocessing/datacenter_load_forecast/) | Notebook and EPRI Powering Intelligence export that build state-level data center load-site inputs for all 48 contiguous states in Low/Medium/High scenarios, written to `inputs/load/`. This is the load-site input the national CEPM cases currently select (`GSw_LoadSiteTrajectory`) — see [`guidance/loadsite-mechanism.md`](guidance/loadsite-mechanism.md) for how that switch and its siblings actually work. |
+| [`preprocessing/gas_capex_forecast/`](preprocessing/gas_capex_forecast/) | Four notebooks and the Halcyon Gas Power Plant Tracker exports behind the 2026-2032 CCGT and CT gas capex regression forecast, producing the `gas-ccgt_CEPM_{low,high,all}.csv` variants in `inputs/plant_characteristics/` selected by `plantchar_gas`. Its [README](preprocessing/gas_capex_forecast/README.md) documents the notebook run order. |
+| [`preprocessing/dc_load_nm/`](preprocessing/dc_load_nm/) | New-Mexico-only variant of the same EPRI data, using annual energy converted to a flat hourly MW load. Superseded by `datacenter_load_forecast/` and kept for posterity — its output is not committed and no case selects it. |
+
+## `scripts/`
+
+| File | Summary |
+| --- | --- |
+| [`scripts/check_env_sync.py`](scripts/check_env_sync.py) | Stdlib-only script that reports dependency drift between `environment.yml` and `pyproject.toml`, warning only on differences that are not on its known-accepted allowlist. |
+| [`scripts/get_batch_info.py`](scripts/get_batch_info.py) | Prints the name and `yearset`-derived start year of the first non-ignored case (left to right) in a cases file. Used by `run_cepm.ps1` to set `compare_cases.py`'s `--startyear` and to locate the run folder `bootstraplog.txt` is saved into. Not used in `-m/--multistep` mode, where `-s` overrides `ignore` and the leftmost non-ignored case may not be one that ran — `multistep_cases.py` answers both questions from the `_baseline` column instead. |
+| [`scripts/make_tg_cap.py`](scripts/make_tg_cap.py) | Harvests a cumulative tech-group capacity ceiling (MW_ac) from a completed reference run's `cap_new_out` and writes the `cepm_tg_cap_{sys,reg}_<token>.csv` pair consumed by `GSw_CEPM_TgCap`. Mirrors GAMS `tg_i` membership and upgrade-subset inheritance, applies a nonzero floor to groups with zero reference builds (a literal `0` would read as "no cap"), and warns when a requested ceiling falls below the first-year prescribed-build floor — which would otherwise surface as an infeasibility 25 minutes into a solve. See [`guidance/two-step-re-limited-runs.md`](guidance/two-step-re-limited-runs.md) §5.3. |
+| [`scripts/multistep_cases.py`](scripts/multistep_cases.py) | Validates and generates the cases file for `run_cepm.ps1 -m`. `--mode validate` checks that a stem has all three `_baseline`/`_limitre`/`_optimized` columns with the cap switch on for exactly one of them, and returns the baseline's name and start year; `--mode generate` writes a per-batch copy pointing `_limitre` at that batch's harvested ceiling, differing from the committed file by exactly one cell. |
+
+## `decisions/` - Logs of the model decisions we've made and why.
+
+| File | Summary |
+| --- | --- |
+| [`decisions/202XXXXX-decision_template.md`](decisions/202XXXXX-decision_template.md) | Template for when we make decisions |
+| [`decisions/README.md`](decisions/README.md) | Guidance for writing decisions |

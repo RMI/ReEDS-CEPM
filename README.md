@@ -1,24 +1,20 @@
-# ReEDS
+# ReEDS for CEPM
 
-**Regional Energy Deployment System (ReEDS) Model**
+**NLR's Regional Energy Deployment System (ReEDS) Model, used for RMI's Clean Energy Portfolio Model**
 
+<!--
+The below are links and buttons that were created by the NLR team for their ReEDS repo -- we should re-design these before including them in our Readme.
 [![CI](https://github.com/ReEDS-Model/ReEDS/actions/workflows/python-app.yaml/badge.svg?branch=main)](https://github.com/ReEDS-Model/ReEDS/actions/workflows/python-app.yaml)
 [![Documentation](https://img.shields.io/badge/Documentation-view%20online-0a7f5e?logo=readthedocs&logoColor=white&labelColor=555)](https://reeds-model.github.io/ReEDS)
-![Static Badge](https://img.shields.io/badge/python-3.11-blue)
+![Static Badge](https://img.shields.io/badge/python-3.14-blue)
 ![GitHub License](https://img.shields.io/github/license/ReEDS-Model/ReEDS)
-[![DOI](https://zenodo.org/badge/189060033.svg)](https://doi.org/10.5281/zenodo.16943302)
+[![DOI](https://zenodo.org/badge/189060033.svg)](https://doi.org/10.5281/zenodo.20314874)
 
-This GitHub repository contains the source code for NLR's ReEDS model.
+This GitHub repository contains the source code for a modified version of the National Laboratory of the Rockies' Regional Energy Deployment (ReEDS) model, customized for use for RMI's Clean Energy Portfolio Model (CEPM).
 
-The ReEDS model source code is available at no cost from the National Laboratory of the Rockies.
+The ReEDS model source code is available at no cost from the National Laboratory of the Rockies. It can be downloaded or cloned from [https://github.com/ReEDS-Model/ReEDS](https://github.com/ReEDS-Model/ReEDS).
 
-The ReEDS model can be downloaded or cloned from [https://github.com/ReEDS-Model/ReEDS](https://github.com/ReEDS-Model/ReEDS).
-
-If you want to use the latest stable version of ReEDS, download or check out the latest stable release [here](https://github.com/ReEDS-Model/ReEDS/releases/latest).
-
-**For more information about the model, see the [ReEDS Documentation](https://reeds-model.github.io/ReEDS).**
-
-ReEDS training videos are available on the [NLR Learning YouTube channel](https://youtube.com/playlist?list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&si=NgGBaL_MxNcYiIEX).
+**For more information about NLR's ReEDS model, see their [ReEDS Documentation](https://reeds-model.github.io/ReEDS).**
 
 ## Introduction
 
@@ -28,7 +24,21 @@ As NLR's flagship long-term power sector model, ReEDS has served as the primary 
 
 Example model results are available in the [Scenario Viewer](https://scenarioviewer.nlr.gov/).
 
-## Quick-start guide
+## The Clean Energy Portfolio Model and key differences with ReEDS.
+
+RMI's Clean Energy Portfolio Model modifies NLR's ReEDS model, starting with its June 2026 release. 
+
+CEPM is designed to answer the question "What's the most cost-effective way to serve the next increment of data center load across the United States?" We use a modified version of NLR's ReEDS model. A few of the key differnces are:
+
+* Python package management in UV, instead of conda
+* An additional Powershell helper script `run_cepm.ps1` that verifies the local environment, then passes arguments through to runreeds.py. It also sends an [ntfy.sh](https://ntfy.sh) notification when a batch finishes, since local runs can take a long time. See [section 4.5](#45-optional-powershell-setup-and-run-command-run_cepmps1) for full details and flags.
+* Minor changes to maintain compatibility with GAMS version 44.4.0. This repo's GAMS install is pinned to 44.4.0. To maintain compability with the upstream codebase, which tests on more recent GAMS versions, we implement several minor changes. The main ones are in `h5_to_gdx.py`/`b_input.gms`. See [`CEPM/guidance/GAMS_ERROR_579_INVESTIGATION.md`](CEPM/guidance/GAMS_ERROR_579_INVESTIGATION.md) for the full investigation and fix.
+* Customized cases_*.csv files that reflect CEPM scenarios.
+* A [`CEPM/`](CEPM/) folder holds the documentation and tooling that exists only in this fork — dependency-management guidance, an on-prem CI runbook, the GAMS 44.4.0 compatibility investigation, and the `environment.yml`/`pyproject.toml` drift checker. See [`CEPM/README.md`](CEPM/README.md) for a one-line summary of each file. To the extent practical, CEPM-specific additions are collected in this folder rather than scattered through the upstream source tree, so the fork stays easy to review against upstream.
+* Some changes necessarily live in upstream file locations — the GAMS compatibility fixes above, the `cases_*.csv` scenario files, `pyproject.toml`, and `run_cepm.ps1` among them. Those are tracked in [`CEPM/reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md), which records which upstream files CEPM changed and why.
+* Additional minor changes throughout.
+
+## Getting Started
 
 The ReEDS model is written in [Python](https://www.python.org/), [GAMS](https://www.gams.com/), and [Julia](https://julialang.org/).
 
@@ -36,23 +46,38 @@ Python and Julia are free, open-source languages.
 
 GAMS requires a software license from the vendor.
 
-A step-by-step guide for getting started with ReEDS is available [here](https://reeds-model.github.io/ReEDS/setup.html), and a quick-start guide for advanced users is outlined below.
+A step-by-step guide for getting started with ReEDS from NLR is available [here](https://reeds-model.github.io/ReEDS/setup.html).
+
+## Quick-start guide for CEPM
+
+We provide a guide for installing ReEDS' component software and resolving an operating environment for running ReEDS below.
+
+
 
 ### 1. Install UV and Python
 
 Install UV:
 
+For Mac or linux users, or users using Git Bash:
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Restart your terminal, then install Python 3.11:
+For Windows users, use:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Restart your terminal, then install Python 3.14:
 
 ```bash
-uv python install 3.11
+uv python install 3.14
 ```
 
 ### 2. Set up GAMS
+
+NOTE: If you're working on a shared virtual machine, GAMS may already be installed with a license. If it's a Windows shared machine, check C:/GAMS for an existing install. You can test whether gams is already installed by entering 'gams' into the terminal as described below.
 
 1. Install GAMS: <https://www.gams.com/download/>
 2. Obtain a combined GAMS/CPLEX license: <https://www.gams.com/sales/licensing/>
@@ -79,9 +104,7 @@ $addPath = 'C:/GAMS/53' # or wherever your gams install is
 
 Install Julia using `juliaup`:
 
-```bash
-curl -fsSL https://install.julialang.org | sh
-```
+Follow instructions for installing Julia on your machine from <https://julialang.org/downloads/>.
 
 Install the required Julia version:
 
@@ -98,17 +121,17 @@ julia --version
 
 ### 4. Set up the ReEDS environment
 
-Clone the repository:
+Navigate in terminal to the folder where you want to install ReEDS, then clone this repository:
 
 ```bash
-git clone https://github.com/ReEDS-Model/ReEDS.git
+git clone https://github.com/RMI/ReEDS-CEPM.git
 cd ReEDS
 ```
 
-Pin Python 3.11 for the project:
+Pin Python 3.14 for the project:
 
 ```bash
-uv python pin 3.11
+uv python pin 3.14
 ```
 
 Create the UV-managed Python environment:
@@ -123,18 +146,28 @@ Instantiate the Julia environment:
 julia --project=. instantiate.jl
 ```
 
-Link large data files from shared folder, so we each don't store separate instances of this ~95GB of input data. Note you cannot do this in git bash as 
-there are some type of strange permission issues, so use powershell:
+### 5. Install large input files
+Several large data files are hosted remotely. These files are downloaded automatically as needed during a ReEDS run, but the command above finishes all internet-requiring steps up front.
+
+Additional details on remote files and other topics can be found in the [user guide](https://reeds-model.github.io/ReEDS/user_guide.html#large-input-files).
+
+For CEPM, we link large data files from shared folder, so each user doesn't store separate instances of this ~95GB of input data. Note you cannot do this in git bash as there are some type of strange permission issues, so use powershell:
+
+NOTE: This step may have already been completed if you're setting up a new user on an existing virtual machine.
 
 ```powershell
 New-Item -ItemType Junction -Path ".\inputs\remote" -Target "C:\Users\Public\Documents\reeds_data\remote"
 ```
 
-Several large data files are hosted remotely. These files are downloaded automatically as needed during a ReEDS run, but the command above finishes all internet-requiring steps up front.
+### 6. Set Powershell runtime environment
+ReEDS currently expects Conda-style environment variables in order to sun successfully. When using UV, each instance of powershell will need to set these variables before running ReEDS. You can enter the below commands into the terminal before running ReEDS, set personal or VS Code workspace-level .env files, or use the below helper script to set these variables.
 
-Additional details on remote files and other topics can be found in the [user guide](https://reeds-model.github.io/ReEDS/user_guide.html#large-input-files).
+```bash
+export CONDA_DEFAULT_ENV=reeds
+export CONDA_PREFIX="$PWD/.venv"
+```
 
-### 4.5 Optional PowerShell setup-and-run command (`run_cepm.ps1`)
+### 6.5 Optional PowerShell setup-and-run command (`run_cepm.ps1`)
 
 Once you've cloned the repository, you can use the optional PowerShell helper `run_cepm.ps1` to 
 ensure supporting software is up to date and then immediately run runreeds.py:
@@ -147,31 +180,37 @@ This script performs the following steps in order:
 1. Verifies GAMS is on PATH, checks GAMS license status, and prints a detected version string.
 2. Verifies Julia is on PATH and checks that the version is `1.12.1`.
 3. Sets ReEDS environment variables for the current PowerShell session.
-4. Checks that Python is pinned to 3.11 and runs `uv python pin 3.11` if needed.
+4. Checks the Python version required by `pyproject.toml`'s `requires-python`
+   and runs `uv python pin` to match if `.python-version` disagrees.
 5. Runs `uv sync --extra dev`.
 6. Instantiates Julia dependencies only when needed: a fast offline check (`Pkg.instantiate` without a registry update) skips the work when the environment is already current, and only falls back to the full `julia --project=. instantiate.jl` (which updates the registry) if dependencies changed or are missing.
-7. Checks `environment.yml` against `pyproject.toml` and prints a non-fatal warning if they have drifted beyond the known-accepted allowlist (see `CEPM/UV_MAMBA_GUIDE.md`).
+7. Checks `environment.yml` against `pyproject.toml` and prints a non-fatal warning if they have drifted beyond the known-accepted allowlist (see `CEPM/guidance/UV_MAMBA_GUIDE.md`).
 8. Forwards all arguments to `runreeds.py`.
-9. Sends a best-effort [ntfy.sh](https://ntfy.sh) notification (topic `rmi-cepm-run-batch-finished`) before `runreeds.py` is launched and once it returns (on fail or success), so you can be alerted when a long-running batch finishes. Subscribe to the topic in the ntfy app or at <https://ntfy.sh/rmi-cepm-run-batch-finished>. A failed or offline notification is ignored. A failed or offline notification is ignored. Note: ntfy.sh topics are public; avoid including sensitive information in notifications.
+9. When `-x` (or `--compare-cases`) is passed and `runreeds.py` succeeds, runs `postprocessing/compare_cases.py` against all completed cases in the batch. Skipped (with a logged note) when `-s`/`--single` or `-t`/`--dryrun` was also passed, or when fewer than two cases in the batch actually completed, since there's nothing meaningful to compare in either case. No base case is specified, so `compare_cases.py` defaults to the first alphabetically-sorted completed case as the base -- not necessarily the leftmost case in the cases file. This assumes the batch name is unique to this run; failures are non-fatal since the ReEDS run itself already succeeded.
+10. Sends a best-effort [ntfy.sh](https://ntfy.sh) notification (topic `rmi-cepm-run-batch-finished`) before `runreeds.py` is launched and once it returns (on fail or success), so you can be alerted when a long-running batch finishes. Subscribe to the topic in the ntfy app or at <https://ntfy.sh/rmi-cepm-run-batch-finished>. A failed or offline notification is ignored. A failed or offline notification is ignored. Note: ntfy.sh topics are public; avoid including sensitive information in notifications.
 
 Passing `-y` (or `--skip-setup` / `--bypass`) skips Step 5 (`uv sync --extra dev`) and Step 6 (Julia instantiation).
 All other checks and setup steps still run, and remaining arguments are still passed to `runreeds.py`
 
-Two more bootstrap-only options: `-q` (or `--quiet`) disables the ntfy.sh notifications, and `-u <name>` (or `--user <name>`) includes `<name>` as the username in the notification messages (omitted when not given). All other arguments are forwarded to `runreeds.py`.
+More bootstrap-only options: `-q` (or `--quiet`) disables the ntfy.sh notifications, `-u <name>` (or `--user <name>`) includes `<name>` as the username in the notification messages (omitted when not given), and `-x` (or `--compare-cases`) runs `compare_cases.py` on the batch after a successful run (see Step 9 above). All other arguments are forwarded to `runreeds.py`.
 
 ```powershell
 .\run_cepm.ps1 -y -b v20250314_main -c test
 .\run_cepm.ps1 --bypass -b v20250314_main -c test
 ```
 
-### 5. Run ReEDS
+### 6. Run ReEDS
 
-ReEDS currently expects Conda-style environment variables. When using UV, set these variables before running ReEDS or ideally in your dotenv file, so you don't ahve to do this before every run.
+ReEDS currently expects Conda-style environment variables. When using UV, set these variables before running ReEDS or ideally in your dotenv file, like so
 
 ```bash
-export CONDA_DEFAULT_ENV=reeds2
-export CONDA_PREFIX="$PWD/.venv"
+echo 'export CONDA_DEFAULT_ENV=reeds' >> ~/.bashrc
+echo 'export CONDA_PREFIX="$PWD/.venv"' >> ~/.bashrc
+source ~/.bashrc
 ```
+
+so you don't have to enter this code block before every run.
+
 
 For interactive setup:
 
@@ -191,12 +230,6 @@ Run the following for information on other optional command-line arguments:
 
 ```bash
 uv run python runreeds.py -h
-```
-
-PowerShell users can run setup + launch in one command with `run_cepm.ps1`:
-
-```powershell
-.\run_cepm.ps1 -b v20250314_main -c test
 ```
 
 ## Troubleshooting
@@ -233,7 +266,7 @@ uv sync --extra dev
 When running with UV, set:
 
 ```bash
-export CONDA_DEFAULT_ENV=reeds2
+export CONDA_DEFAULT_ENV=reeds
 export CONDA_PREFIX="$PWD/.venv"
 ```
 

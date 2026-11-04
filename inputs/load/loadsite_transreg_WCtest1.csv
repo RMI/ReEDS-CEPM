@@ -1,0 +1,14 @@
+# Other region hierarchy levels can be used in the first column,,
+# but they can only be used with a matching GSw_LoadSiteReg.,,
+# So this file would need GSw_LoadSiteReg = country.,,
+# If using smaller levels then multiple entries can be provided on different rows,,
+# (e.g. for state- or ISO-specific load across multiple states/ISOs).,,
+# NOTE: this is a test forecast created using ChatGPT.
+*loadsitereg,t,MW
+WestConnect,2026,0
+WestConnect,2027,250
+WestConnect,2028,350
+WestConnect,2029,500
+WestConnect,2030,700
+WestConnect,2031,900
+WestConnect,2032,1100

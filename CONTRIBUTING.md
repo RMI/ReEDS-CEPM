@@ -1,4 +1,19 @@
+# Contributing to CEPM
+
+Where possible, we keep our documentation in the [`CEPM`](./CEPM/) folder. For information about how that's arranged, read CEPM's [`README.md`](./CEPM/README.md).
+
+If you encounter an issue with how ReEDS works that wouldn't be obvious to another CEPM user, log it in [`known-reeds-issues.md`](./CEPM/known-reeds-issues.md).
+
+If you make a change to a new file in this repo, check to see if it's already indicated in [`reeds-to-cepm-log.md`](./CEPM/reeds-to-cepm-log.md).
+
+RMI contributors should also follow
+[RMI's pull request best practices](https://github.com/RMI/practices/blob/main/process/pull_request.md)
+when preparing, reviewing, and merging pull requests.
+
+---
+Upstream ReEDS-Model's instructions for contributing are below:
 # Contributing to ReEDS
+
 
 Community contributions to ReEDS are welcome and encouraged!
 
