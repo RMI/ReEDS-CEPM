@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
@@ -6,24 +8,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sources Documentation &mdash; ReEDS  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="_static/customtheme.css?v=299ffeb9" />
 
   
     <link rel="shortcut icon" href="_static/reeds-icon.png"/>
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=5929fcd5"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-        <script src="_static/design-tabs.js?v=f930bc37"></script>
-        <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/design-tabs.js?v=f930bc37"></script>
+      <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -1550,6 +1548,13 @@
 <li><p><strong>Description:</strong> Dollar year mapping for each fuel price scenario</p></li>
 </ul>
 </li>
+<li><p><a class="reference internal" href="#/inputs/fuelprices/gasreg_price_adj_regression_params.csv"><span class="xref myst">gasreg_price_adj_regression_params.csv</span></a></p>
+<ul>
+<li><p><strong>File Type:</strong> Input</p></li>
+<li><p><strong>Description:</strong> Parameters derived from regression with monthly fixed effects regressing daily gasreg heating/cooling degree days on daily deviations of gas prices from their annual averages (https://github.com/ReEDS-Model/ReEDS_Input_Processing/tree/main/aeo_updates/temperature_gas_price_adj_regression). “Beta” values are HDD/CDD coefficients and “alpha” values are intercepts and monthly fixed effects.</p></li>
+<li><p><strong>Indices:</strong> param</p></li>
+</ul>
+</li>
 <li><p><a class="reference internal" href="#/inputs/fuelprices/h2-combustion_10.csv"><span class="xref myst">h2-combustion_10.csv</span></a></p>
 <ul>
 <li><p><strong>Description:</strong> price of hydrogen for combustion technologies (h2-ct and cc) at $10/MMBtu for all years</p></li>
@@ -2422,6 +2427,7 @@
 <li><p><strong>Description:</strong> set of technologies that use water, but are not differentiated by cooling tech and water source</p></li>
 </ul>
 </li>
+<li><p><a class="reference internal" href="#/inputs/sets/jtype.csv"><span class="xref myst">jtype.csv</span></a></p></li>
 <li><p><a class="reference internal" href="#/inputs/sets/lcclike.csv"><span class="xref myst">lcclike.csv</span></a></p>
 <ul>
 <li><p><strong>File Type:</strong> GAMS set</p></li>
@@ -2718,7 +2724,7 @@
 <ul class="simple">
 <li><p><a class="reference internal" href="#/inputs/storage/cap_existing_psh.csv"><span class="xref myst">cap_existing_psh.csv</span></a></p>
 <ul>
-<li><p><strong>Description:</strong> County-wide PSH operational capacity, pump capacity, and max energy, based on plant-level data from https://www.hydropower.org/hydropower-pumped-storage-tool</p></li>
+<li><p><strong>Description:</strong> County-wide PSH operational capacity, pump capacity, and max energy, based on plant-level data from https://www.energy.gov/sites/prod/files/2021/01/f82/us-hydropower-market-report-full-2021.pdf</p></li>
 <li><p><strong>Units:</strong> MW/MWh</p></li>
 </ul>
 </li>
@@ -2925,8 +2931,6 @@
 </ul>
 </li>
 <li><p><a class="reference internal" href="#/inputs/supply_curve/rev_paths.csv"><span class="xref myst">rev_paths.csv</span></a></p></li>
-<li><p><a class="reference internal" href="#/inputs/supply_curve/sc_point_gid_old2new.csv"><span class="xref myst">sc_point_gid_old2new.csv</span></a></p></li>
-<li><p><a class="reference internal" href="#/inputs/supply_curve/sitemap.h5"><span class="xref myst">sitemap.h5</span></a></p></li>
 <li><p><a class="reference internal" href="#/inputs/supply_curve/supplycurve_egs-reference.csv"><span class="xref myst">supplycurve_egs-reference.csv</span></a></p></li>
 <li><p><a class="reference internal" href="#/inputs/supply_curve/supplycurve_upv-limited.csv"><span class="xref myst">supplycurve_upv-limited.csv</span></a></p>
 <ul>
@@ -3207,11 +3211,6 @@
 <li><p><a class="reference internal" href="#/inputs/userinput/ivt_step.csv"><span class="xref myst">ivt_step.csv</span></a></p>
 <ul>
 <li><p><strong>Description:</strong> ivt steps for endyears beyond 2050</p></li>
-</ul>
-</li>
-<li><p><a class="reference internal" href="#/inputs/userinput/modeled_regions.csv"><span class="xref myst">modeled_regions.csv</span></a></p>
-<ul>
-<li><p><strong>Description:</strong> Sets of BA regions that a user can model in a run. Each column is a different region option and can be specified in cases using GSw_Region.</p></li>
 </ul>
 </li>
 <li><p><a class="reference internal" href="#/inputs/userinput/windows_2100.csv"><span class="xref myst">windows_2100.csv</span></a></p>
@@ -3662,7 +3661,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2024, NREL.
-      <span class="lastupdated">Last updated on July 20, 2026.
+      <span class="lastupdated">Last updated on November 04, 2026.
       </span></p>
   </div>
 

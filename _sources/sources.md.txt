@@ -1025,6 +1025,10 @@
 
   - [dollaryear.csv](/inputs/fuelprices/dollaryear.csv)
     - **Description:** Dollar year mapping for each fuel price scenario
+  - [gasreg_price_adj_regression_params.csv](/inputs/fuelprices/gasreg_price_adj_regression_params.csv)
+    - **File Type:** Input
+    - **Description:** Parameters derived from regression with monthly fixed effects regressing daily gasreg heating/cooling degree days on daily deviations of gas prices from their annual averages (https://github.com/ReEDS-Model/ReEDS_Input_Processing/tree/main/aeo_updates/temperature_gas_price_adj_regression). "Beta" values are HDD/CDD coefficients and "alpha" values are intercepts and monthly fixed effects.
+    - **Indices:** param
   - [h2-combustion_10.csv](/inputs/fuelprices/h2-combustion_10.csv)
     - **Description:** price of hydrogen for combustion technologies (h2-ct and cc) at $10/MMBtu for all years
   - [h2-combustion_30.csv](/inputs/fuelprices/h2-combustion_30.csv)
@@ -1607,6 +1611,7 @@
   - [i_water_nocooling.csv](/inputs/sets/i_water_nocooling.csv)
     - **File Type:** GAMS set
     - **Description:** set of technologies that use water, but are not differentiated by cooling tech and water source
+  - [jtype.csv](/inputs/sets/jtype.csv)
   - [lcclike.csv](/inputs/sets/lcclike.csv)
     - **File Type:** GAMS set
     - **Description:** set of transmission capacity types where lines are bundled with AC/DC converters
@@ -1757,7 +1762,7 @@
 #### inputs/storage
 
   - [cap_existing_psh.csv](/inputs/storage/cap_existing_psh.csv)
-    - **Description:** County-wide PSH operational capacity, pump capacity, and max energy, based on plant-level data from https://www.hydropower.org/hydropower-pumped-storage-tool
+    - **Description:** County-wide PSH operational capacity, pump capacity, and max energy, based on plant-level data from https://www.energy.gov/sites/prod/files/2021/01/f82/us-hydropower-market-report-full-2021.pdf
     - **Units:** MW/MWh
 
   - [PSH_supply_curves_durations.csv](/inputs/storage/PSH_supply_curves_durations.csv)
@@ -1886,8 +1891,6 @@
     - **Dollar year:** 2004
     - **Citation:** [https://www.nlr.gov/gis/psh-supply-curves.html](https://www.nlr.gov/gis/psh-supply-curves.html)
   - [rev_paths.csv](/inputs/supply_curve/rev_paths.csv)
-  - [sc_point_gid_old2new.csv](/inputs/supply_curve/sc_point_gid_old2new.csv)
-  - [sitemap.h5](/inputs/supply_curve/sitemap.h5)
   - [supplycurve_egs-reference.csv](/inputs/supply_curve/supplycurve_egs-reference.csv)
   - [supplycurve_upv-limited.csv](/inputs/supply_curve/supplycurve_upv-limited.csv)
     - **Description:** UPV supply curve from reV for the limited siting scenario
@@ -2061,8 +2064,6 @@
   - [ivt_small.csv](/inputs/userinput/ivt_small.csv)
   - [ivt_step.csv](/inputs/userinput/ivt_step.csv)
     - **Description:** ivt steps for endyears beyond 2050
-  - [modeled_regions.csv](/inputs/userinput/modeled_regions.csv)
-    - **Description:** Sets of BA regions that a user can model in a run. Each column is a different region option and can be specified in cases using GSw_Region.
   - [windows_2100.csv](/inputs/userinput/windows_2100.csv)
     - **Description:** Window size for using window solve method to 2100
   - [windows_default.csv](/inputs/userinput/windows_default.csv)
