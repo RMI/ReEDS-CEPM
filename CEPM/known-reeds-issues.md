@@ -35,7 +35,7 @@ chasing a crash, start with them.
 |---|---|---|
 | [GAMS 44.4.0: `Error 579` on model compile](#gams-4440-compile-failure-error-579-in-autocodeb_load_setsgms-fixed) | Fixed | Blocked every run at model compile on our pinned GAMS. Fixed in `h5_to_gdx.py`. |
 | [`GSw_GrowthAbsCon=1`: final solve year infeasible](#gsw_growthabscon1-makes-the-final-solve-year-infeasible-eq_growthlimit_absolute) | Open — workaround | Last modeled year goes infeasible from a year-gap sign error. Use a sacrificial final year, or the cumulative caps instead. |
-| [`GSw_CEPM_TgCap=1`: Virginia 2029 infeasible](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found) | Open — cause unknown | VA `limitre` dies at 2029 with 1665 infeasible rows. Cap is the trigger; the colliding constraint is not yet identified. Disabling the RPS is **not** expected to help. |
+| [`GSw_CEPM_TgCap=1`: Virginia 2029 infeasible](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found) | Open — cause unknown | VA `limitre` dies at 2029 with 1665 infeasible rows. Cap is the trigger; the colliding constraint is not yet identified. The 2026 solve spent the whole wind budget, the leading suspect. Disabling the RPS is **not** expected to help. |
 | [H2 infeasibility with `GSw_H2=2` (unverified)](#possible-h2-infeasibility-with-gsw_h22-in-national-runs-unverified) | Open — untested | A 2026-07 national run went infeasible in DE. Root cause never traced; every CEPM case sets `GSw_H2=0`. |
 | [`cendivweights.csv` domain violation at cendiv borders](#cendivweightscsv-domain-violation-near-census-division-borders-fixed) | Fixed — not on `main` | Sub-national runs near a census-division border fail GAMS compile. Fixed on `dev`; `main` still has it. |
 | [`recf.py` crashes when offshore wind is disabled](#recfpy-crashes-when-offshore-wind-is-disabled-fixed) | Fixed | `GSw_OfsWind=0` left `df_windofs` undefined before a concat. |
@@ -45,6 +45,7 @@ chasing a crash, start with them.
 | [Retail-rate module crashes on single-BA runs](#retail_rate_calculationspy-crashes-on-single-ba-runs-keyerror-res_marg_ann_flow) | Open — fix identified | `KeyError: 'res_marg_ann_flow'`; `retail_rate_components.csv` is never written. Multi-region runs unaffected. |
 | [`report_dump.py` leaves GAMS sets out of `outputs.h5`](#report_dumppy-leaves-gams-sets-out-of-outputsh5-could-not-convert-string-to-float-) | Open — fixed in `2026.09.08` | **Silent.** `read_output()` returns an empty table for sets such as `hierarchy`; read `outputs/<set>.csv`. Solve unaffected. |
 | [`single_case_plots.py` plots fail on reduced-region cases](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases) | Open — partly by design | Several diagnostic maps fail on single-region or reduced-hierarchy runs. Each is caught; core outputs unaffected. |
+| [RA diagnostic plots: `plot_stressors()` never produces maps](#ra-diagnostic-plots-plot_stressors-never-produces-stress-day-maps) | Open — fix identified | `KeyError: '2021.0-6.0-18.0'` in the final year. `map_stressors()` expects a `new_stress_periods.csv` schema that `stress_periods.py` no longer writes, so no stress-day maps are made in any year. Other outputs unaffected. |
 | [bokehpivot: every map section fails on an aggregated zoneset](#bokehpivot-html-report-every-map-type-section-fails-on-an-aggregated-zoneset) | Open | No boundary file exists for aggregated zonesets, so all map sections of the HTML report are missing. |
 | [Retail rate module: pandas-3 no-ops](#retail-rate-module-chained-assignments-are-no-ops-under-pandas-3) | Open | Some retail-rate fills and replacements silently do nothing, so retail outputs may be off. Capacity and dispatch unaffected. |
 | [`compare_cases.py` crashes on a shared-prefix glob](#compare_casespy-crashes-when-comparing-cases-via-a-shared-prefix-glob-typeerror-in-parse_caselist-fixed) | Fixed | `TypeError` in `parse_caselist()` blocked the comparison report entirely. |
@@ -234,11 +235,35 @@ primal, not a numerical or scaling problem.
   load (`GSw_LoadSiteTrajectory=st_epri_medium_extended_to_2032`,
   `GSw_LoadSiteCF=1`, `GSw_LoadSiteRA=1`) and solves through 2032 cleanly. So the
   infeasibility is created by `eq_cepm_tg_cap_sys`, not by the load scenario.
+- **The 2026 solve spent the entire onshore and offshore wind budget.** The cap
+  covers the 2026-2032 total, and nothing stops a sequential solve from using all of
+  it at once (see the
+  [per-year path in `reeds-to-cepm-log.md`](reeds-to-cepm-log.md#per-year-path-gsw_cepm_tgcap2)).
+  From `inv_ivrt` in `handoff/reeds_data/reeds_data_2026.gdx` (MW_ac):
+
+  | tech group | cap (2026-2032) | `VA_limitre` 2026 | `VA_baseline` 2026 | left for 2029-2032 |
+  | --- | ---: | ---: | ---: | ---: |
+  | wind-ons | 11,866.4 | 11,866.4 | 78.0 | **0** |
+  | wind-ofs | 3,949.7 | 3,949.7 | 2,599.0 | **0** |
+  | pv | 23,976.6 | 10,798.1 | 6,700.7 | 13,178.5 |
+  | battery | 2,980.2 | 321.9 | 275.0 | 2,658.3 |
+
+  So the 2029 solve could add no wind at all while data-center load kept growing.
+  This is the leading suspect, but it isn't shown to cause the infeasibility: gas is
+  uncapped, so on the face of it the model should still be able to meet load. The
+  direct test is to re-run with `GSw_CEPM_TgCap=2`, which holds each solve
+  year to the baseline's cumulative path.
 - **Not a prescribed-build collision.** The obvious failure mode for a cumulative
-  investment cap is a forced build that exceeds it, but prescribed capacity from 2026
-  on fits comfortably inside every cap: wind-ofs 2,640 MW against a 3,949.7 MW cap
-  (the CVOW build in 2027), upv 1,465.6 against 23,976.6, wind-ons 78.0 against
-  11,866.4. Ruled out.
+  investment cap is a forced build that exceeds it. The prescriptions that apply
+  from 2026 on fit inside every cap: upv 1,465.6 against 23,976.6, wind-ons 78.0
+  against 11,866.4, and wind-ofs 2,640 (the CVOW build in 2027) against 3,949.7.
+  Ruled out. The wind-ofs prescription is in `p99`, from the hourlize file
+  `prescribed_builds_wind-ofs.csv` (12 MW in 2021, 2,639.99 MW in 2027);
+  `b_inputs.gms:1356-1378` replaces the `p124` wind rows of `prescribed_rsc.csv`
+  with it. (A previous edit of this bullet said the hourlize file had only the
+  2021 entry; it has both.) Evaluating the "built + owed" rule on `VA_limitre`'s
+  2026 builds confirms it: its 2026 offshore builds already covered the 2027
+  prescription. See [`guidance/tgcap-built-plus-owed.md`](guidance/tgcap-built-plus-owed.md).
 - **Not the state RPS.** This was the first hypothesis and it does not hold up. VA's
   RPS rises 14.5% (2026) → 19.7% (2029) → 25.8% (2032), so capping RE while
   data-center load grows does make it harder to meet — but `eq_REC_Requirement`
@@ -276,7 +301,10 @@ below: the batch still reports success. Check for `outputs/cap.csv` and
 specifically, the intuitive one (disable the state RPS) is expected not to work, per
 above. Until the conflict refiner is run, the honest summary is: the cumulative cap
 makes VA's 2029 LP infeasible and we do not yet know which constraint it collides
-with.
+with. Two next steps, either of which would narrow it: the refiner re-solve
+described above, and a `VA_limitre` re-run with `GSw_CEPM_TgCap=2` (and
+`--scope region` in `make_tg_cap.py`), which removes the 2026 front-loading. If the
+re-run solves, front-loading was at least a necessary ingredient.
 
 Worth checking once the refiner names the rows: whether this is specific to VA's
 cap *values* (harvested from `VA_baseline` by `CEPM/scripts/make_tg_cap.py`) or a
@@ -738,6 +766,76 @@ tag `2026.08.03`:
   `has not solved year` message at the tag (`reeds/io.py:1313`). The single-BA
   `TypeError`/`ValueError`/`KeyError` variants haven't been traced to a function,
   so they're unconfirmed either way.
+
+## RA diagnostic plots: `plot_stressors()` never produces stress-day maps
+
+**Symptom:** after the final solve year, `gamslog.txt` shows
+```
+diagnostic_plots.py | ... | plot_stressors() failed:
+...
+pandas._libs.tslibs.parsing.DateParseError: Unknown datetime string format, unable to parse: 2021.0-6.0-18.0
+...
+  File ".../reeds/reedsplots.py", line 6400, in map_stressors
+    dfba['load'] = load.loc[timestamp].max() / load.max()
+KeyError: '2021.0-6.0-18.0'
+```
+The date in the key is whichever seed stress day comes first, so it varies by
+run. No `stress{t}i{n}-*.png` maps appear in
+`outputs/figures/resource_adequacy/` for any year. Seen in all six
+`v20261019noqpen` and `v20261020tfnewq` AZNM runs. It is not specific to
+reduced-region cases, unlike the
+[`single_case_plots.py` entry](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases).
+
+**Root cause:** `map_stressors()` (`reeds/reedsplots.py`) concatenates two frames
+with different schemas, then formats a label from `y`/`m`/`d`:
+```python
+plot_days['timestamp'] = plot_days.apply(lambda row: f'{row.y}-{row.m:02}-{row.d:02}', axis=1)
+```
+- The seed days (`stress{t}i0/forceperiods.csv`, loaded only when `t` is
+  `endyear`) get `y`, `m`, `d`, `r` and `szn` columns.
+- The added stress days (`stress{t}i{n+1}/new_stress_periods.csv`) come from
+  `stress_periods.py` as `periodtype, metric, criterion, num, region, period,
+  value`. They have no `y`/`m`/`d`, and the renames (`actual_period`→`szn`)
+  match nothing. The day loop below also expects `r`, an `EUE_MWh` column and
+  `reason` values containing `EUE` or `before`/`after`, none of which this file
+  has. `periodtype` is `stress`, which the loop would skip as
+  `Invalid stress period`.
+
+So the plot fails one of two ways:
+- **Final year (seed + new days):** the concat leaves NaN in `y`/`m`/`d` for the
+  new rows, which upcasts those columns to float. The first seed row then
+  formats as `'2021.0-6.0-18.0'` (`:02` doesn't pad a float), and
+  `load.loc[...]` raises `KeyError`.
+- **Earlier years that added stress days (new days only):** there is no `y`
+  column at all, so it raises `AttributeError: 'Series' object has no attribute
+  'y'`. This reproduces when `map_stressors()` is called directly, for example
+  for 2029 in `v20261020tfnewq_st-AZNM_baseline`. In these runs, though, it never
+  reached `gamslog.txt`, even though that year's `diagnostic_plots.py` ran to
+  completion (`netloadhours-histogram-2029.png` was written). That process runs
+  in the background while the next year solves. Why its traceback is missing
+  hasn't been traced.
+- Years that added no stress days and aren't `endyear` have nothing to plot, and
+  return quietly.
+
+Casting `y`/`m`/`d` to `int` alone won't fix it. The new-day rows have no
+values to cast, and the loop can't label them. A fix needs to map
+`new_stress_periods.csv` onto the schema the loop expects before the concat:
+`period`→`szn`, `region`→`r`, `y`/`m`/`d` from `szn` via
+`reeds.timeseries.h2timestamp` (as the seed branch does), and a labelling branch
+for `reason == 'stress'`.
+
+**Impact:** the stress-day maps (load, PV/wind CF, temperature and outage for
+each stress day) are missing. Every other RA diagnostic plot is written, and
+solve and CSV outputs are unaffected.
+
+**Status:** open. Fix approach identified, not implemented.
+
+**Fixed upstream?** No. The `_plot_days` block and the `timestamp` line are
+unchanged at tag `2026.08.03` and on upstream `main` as of 2026-10-19
+(`reedsplots.py:6544` there). Upstream's `cfbe5f5d` ("fix
+reedsplots.map_stressors()", in `2026.08.03` and already in this fork) fixed
+other parts of the function and didn't touch this block. Inherited, not
+RMI-introduced.
 
 ## bokehpivot HTML report: every map-type section fails on an aggregated zoneset
 
