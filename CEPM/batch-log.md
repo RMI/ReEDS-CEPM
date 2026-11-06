@@ -65,7 +65,7 @@ exempt certain resource builds from the interconnection limits.
 
 ### Batch details
 
-- **Built from:** `v20-261009postcapex`
+- **Built from:** `v20261009postcapex`
 - **Space and Time:** st/AZ.NM 2026-2032, every 3 years
 - **Cases:** `baseline, limitre, optimized`
 
