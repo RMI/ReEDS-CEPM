@@ -949,8 +949,9 @@ if (-not $q) {
                 $singleList = [string]$ForwardArgs[$i + 1]
                 break
             }
-            if ($ForwardArgs[$i] -like '--single=*') {
-                $singleList = ([string]$ForwardArgs[$i]).Substring('--single='.Length)
+            if (($ForwardArgs[$i] -like '-s=*') -or ($ForwardArgs[$i] -like '--single=*')) {
+                $argText = [string]$ForwardArgs[$i]
+                $singleList = $argText.Substring($argText.IndexOf('=') + 1)
                 break
             }
         }
