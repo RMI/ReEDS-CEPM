@@ -140,6 +140,10 @@ RESERVED OPTIONS (do NOT add a bootstrap-only flag that reuses these):
     bootstrap-only switch, pick a letter outside that set (and re-check against
     runreeds.py, which may change).
 
+    QUOTE COMMA-SEPARATED LISTS: PowerShell parses an unquoted A,B as an array,
+    so `-s A,B` reaches runreeds.py as the single case name "A B", and
+    `--single=A,B` as two separate args. Write `-s "A,B"` (or `--single="A,B"`).
+
 Usage examples:
     .\run_cepm.ps1
     .\run_cepm.ps1 -b v20260625_test -c test
@@ -157,6 +161,12 @@ Usage examples:
 # Initializing functions and variables for this script.
 
 # Accept and forward all remaining command-line args to runreeds.py.
+# PositionalBinding = $false is required: PowerShell does not treat double-dash
+# tokens (--single, --bypass, --BatchName, ...) as parameter names, so without it
+# they are bound positionally to the first unset [string] parameter (-u, -m, -b,
+# -c) instead of landing in $RunbatchArgs. E.g. `--single X` would silently become
+# `-u --single -m X` -- a multistep run.
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [switch]$y, # Bypass mode for skipping uv sync and Julia instantiate. We use y to prevent collision with runreeds options.
     [switch]$q, # Quiet: disable the ntfy.sh notifications. -q is free of runreeds options.
@@ -279,7 +289,7 @@ if (-not [string]::IsNullOrWhiteSpace($m)) {
     # A caller-supplied -s/--single would fight with the -s each phase supplies for
     # itself, and silently run the wrong cases. Refuse rather than guess.
     if (($ExtraArgs -contains '-s') -or ($ExtraArgs -contains '--single') -or
-        [bool]($ExtraArgs | Where-Object { $_ -like '--single=*' })) {
+        [bool]($ExtraArgs | Where-Object { ($_ -like '-s=*') -or ($_ -like '--single=*') })) {
         throw '-m/--multistep supplies its own -s/--single for each phase; remove the -s you passed.'
     }
 }
@@ -819,7 +829,7 @@ if ($x -or $o) {
     $isMultistep = -not [string]::IsNullOrWhiteSpace($m)
     $isSingleRun = (-not $o) -and (-not $isMultistep) -and `
         (($ForwardArgs -contains '-s') -or ($ForwardArgs -contains '--single') -or `
-        [bool]($ForwardArgs | Where-Object { $_ -like '--single=*' }))
+        [bool]($ForwardArgs | Where-Object { ($_ -like '-s=*') -or ($_ -like '--single=*') }))
     $isDryRun = (-not $o) -and (($ForwardArgs -contains '-t') -or ($ForwardArgs -contains '--dryrun'))
     if ($isSingleRun -or $isDryRun) {
         Write-Host "[note] Only a single case could have run for batch '$BatchName' (-s/--single or -t/--dryrun was forwarded); skipping compare_cases.py."
