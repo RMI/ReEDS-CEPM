@@ -728,6 +728,98 @@ Sw_CapPenaltyMult` for any numeric `GSw_` switch.
 - Does `5_varfix.gms` still fix `CAP_ABOVE_LIM` for solved years? That is the
   reason for the epsilon rather than 0.
 
+## Prescribed builds exempted from the interconnection queue (`GSw_CEPM_QueueExempt`)
+
+### Description:
+
+Keeps accumulated historical prescribed builds from consuming
+interconnection-queue headroom in an analysis year. Default **0** in `cases.csv`
+is upstream behavior and changes nothing; `cases_cepm.csv` sets **3**.
+
+`eq_interconnection_queues` excludes investment before `interconnection_start`
+(2025) by filtering on the **solve** year, but prescriptions are compressed into
+the first solve year at or after their **online** year. With CEPM's sparse
+yearset (2010, 2026, ...) every 2011-2024 prescription lands in the 2026 solve,
+passes the filter, and is charged against a queue snapshot (end-2024) that those
+projects had already left. Upstream has the same bug; see
+[`known-reeds-issues.md`](known-reeds-issues.md#interconnection-queue-constraint-charges-historical-prescribed-builds-against-near-term-queue-headroom-fixed)
+for how its own defaults interact with it.
+
+The switch computes `queue_exempt_prescrip(tg,r,t)` and adds it to the queue
+limit. Because `eq_forceprescription_power` pins prescribed `INV`, this is
+equivalent to removing the exempt prescriptions from the build side.
+
+- `1` — exempt prescriptions online before `interconnection_start`, counted by
+  online year. This is what the existing filter intends, made independent of
+  the yearset.
+- `2` — exempt all prescriptions, so the queue limits only endogenous builds.
+  Kept for sensitivity runs only. Upstream's docs say the 2026 queue limits are
+  plants with a signed interconnection agreement, which likely includes the
+  2025-2026 prescribed projects, so mode `2` frees headroom for builds that are
+  already happening.
+- `3` — mode `1`, plus 2025+ prescriptions exempted only where they exceed the
+  queue limit: `pre + max(0, post(t) − limit(t))`. Prescriptions use up headroom
+  up to the limit but never cause an overage. Cells where the generator database
+  and the queue snapshot agree behave as in mode `1`. Cells where they disagree
+  (prescriptions larger than the queue) are not penalized, but new builds there
+  get no headroom until the queue grows past the prescriptions. Those
+  disagreements are expected: the queue is an end-2024 snapshot of queue
+  requests, while the prescriptions come from a later EIA plant database that
+  includes projects outside any queue. In AZNM the biggest is SunZia Wind,
+  3,650 MW in p31 (guidance doc §2.1, §5.8).
+
+Only prescriptions after the last solve year below `interconnection_start` are
+counted, since earlier ones already land in solve years the filter drops. A
+startup `abort` fires if any prescribed category maps to more than one tech
+group, which would double-count its exemption.
+
+**Written to survive upstream syncs.** `c_model.gms` is not touched: the limit
+is raised in `b_inputs.gms`, only in years that already have queue data, so the
+equation's guard and `5_varfix.gms` see exactly what upstream gives them. That
+also means upstream's `GSw_QueueConstraintYears` trimming (on `main`, not yet
+tagged) applies automatically. The block picks `queue_limit` or `cap_limit` at
+compile time with `$ifthen declared`, so upstream's rename (also `main` only)
+needs no edit here. If neither exists it `$abort`s with a message pointing at
+the block.
+
+### Underlying ReEDS files changed:
+
+- `reeds/core/setup/b_inputs.gms` — one block just after the
+  `Sw_CapPenaltyMult` block: `tg_pcat`, the double-mapping `abort`,
+  `last_prequeue_year`, `queue_years`, `queue_prescrip_pre` /
+  `queue_prescrip_post`, `queue_exempt_prescrip`, and the limit adjustment.
+- `cases.csv` — one row, `GSw_CEPM_QueueExempt`, default `0`.
+- `cases_cepm.csv` — `GSw_CEPM_QueueExempt = 3` in the default column.
+
+`reeds.io.write_gswitches` auto-emits `scalar Sw_CEPM_QueueExempt`.
+
+### Reference:
+
+[`guidance/interconnection-queue-and-prescribed-builds.md`](guidance/interconnection-queue-and-prescribed-builds.md)
+§4.1 (the problem) and §5.8 (the fix);
+[`known-reeds-issues.md`](known-reeds-issues.md#interconnection-queue-constraint-charges-historical-prescribed-builds-against-near-term-queue-headroom-fixed)
+
+### What to test in new releases:
+
+- Does `eq_interconnection_queues` still filter on `yeart(tt) >=
+  interconnection_start`, and does `noncumulative_prescriptions` still compress
+  gap-year prescriptions into the next solve year? If upstream starts filtering
+  by online year, mode `1` becomes redundant. Mode `3`'s overage-only part
+  still applies, so keep the block, but the pre-2025 half can go.
+- Is the queue limit still loaded before this block, and still named
+  `queue_limit` or `cap_limit`? The `$abort` catches a third name, not a
+  load that moves after the block. If it moves after, the adjustment would be
+  overwritten silently. Check the rebuilt limit, e.g. `display` it, after a sync.
+- Is the equation's guard still "any queue data in year `t`"? `queue_years`
+  copies it.
+- Mode `3` compares against the limit *before* the block adjusts it. Keep the
+  `queue_exempt_prescrip` assignment above the limit adjustment.
+- Is prescribed `INV` still pinned to `noncumulative_prescriptions` by
+  `eq_forceprescription_power`? The exemption relies on that being a constant.
+- Do `prescribednonrsc` / `prescribedrsc` still carry the online year in their
+  first index, and does the `abort` still pass (each `pcat` in one `tg`)?
+- With switch `0`, the queue limit should be identical to upstream.
+
 # CEPM documentation and functionality
 
 ## GitHub repo-level ENABLE_GAMS_CI variable and workflow changes
