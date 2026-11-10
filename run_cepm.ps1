@@ -36,10 +36,11 @@ What this script does:
     CEPM/scripts/get_batch_info.py (same script as Step 9). Runs even if an
     earlier step throws, so a failed bootstrap or run still leaves a log
     behind; best-effort throughout (a missing run folder, or any other
-    logging failure, is only warned). Under -m/--multistep the destination is
-    the <stem>_baseline run folder instead, since -s overrides `ignore` and
-    the leftmost non-ignored case may not be one of the three that ran; the
-    per-batch files -m generated are also deleted here, unconditionally.
+    logging failure, is only warned). With a forwarded -s/--single the
+    destination is the first case in the -s list instead, since -s overrides
+    `ignore` and the leftmost non-ignored case may not be one that ran. Under
+    -m/--multistep it is the <stem>_baseline run folder, for the same reason;
+    the per-batch files -m generated are also deleted here, unconditionally.
 
 
 BOOTSTRAP-ONLY OPTIONS (consumed here; everything else is forwarded to runreeds.py):
@@ -139,6 +140,10 @@ RESERVED OPTIONS (do NOT add a bootstrap-only flag that reuses these):
     bootstrap-only switch, pick a letter outside that set (and re-check against
     runreeds.py, which may change).
 
+    QUOTE COMMA-SEPARATED LISTS: PowerShell parses an unquoted A,B as an array,
+    so `-s A,B` reaches runreeds.py as the single case name "A B", and
+    `--single=A,B` as two separate args. Write `-s "A,B"` (or `--single="A,B"`).
+
 Usage examples:
     .\run_cepm.ps1
     .\run_cepm.ps1 -b v20260625_test -c test
@@ -156,6 +161,12 @@ Usage examples:
 # Initializing functions and variables for this script.
 
 # Accept and forward all remaining command-line args to runreeds.py.
+# PositionalBinding = $false is required: PowerShell does not treat double-dash
+# tokens (--single, --bypass, --BatchName, ...) as parameter names, so without it
+# they are bound positionally to the first unset [string] parameter (-u, -m, -b,
+# -c) instead of landing in $RunbatchArgs. E.g. `--single X` would silently become
+# `-u --single -m X` -- a multistep run.
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [switch]$y, # Bypass mode for skipping uv sync and Julia instantiate. We use y to prevent collision with runreeds options.
     [switch]$q, # Quiet: disable the ntfy.sh notifications. -q is free of runreeds options.
@@ -278,7 +289,7 @@ if (-not [string]::IsNullOrWhiteSpace($m)) {
     # A caller-supplied -s/--single would fight with the -s each phase supplies for
     # itself, and silently run the wrong cases. Refuse rather than guess.
     if (($ExtraArgs -contains '-s') -or ($ExtraArgs -contains '--single') -or
-        [bool]($ExtraArgs | Where-Object { $_ -like '--single=*' })) {
+        [bool]($ExtraArgs | Where-Object { ($_ -like '-s=*') -or ($_ -like '--single=*') })) {
         throw '-m/--multistep supplies its own -s/--single for each phase; remove the -s you passed.'
     }
 }
@@ -818,7 +829,7 @@ if ($x -or $o) {
     $isMultistep = -not [string]::IsNullOrWhiteSpace($m)
     $isSingleRun = (-not $o) -and (-not $isMultistep) -and `
         (($ForwardArgs -contains '-s') -or ($ForwardArgs -contains '--single') -or `
-        [bool]($ForwardArgs | Where-Object { $_ -like '--single=*' }))
+        [bool]($ForwardArgs | Where-Object { ($_ -like '-s=*') -or ($_ -like '--single=*') }))
     $isDryRun = (-not $o) -and (($ForwardArgs -contains '-t') -or ($ForwardArgs -contains '--dryrun'))
     if ($isSingleRun -or $isDryRun) {
         Write-Host "[note] Only a single case could have run for batch '$BatchName' (-s/--single or -t/--dryrun was forwarded); skipping compare_cases.py."
@@ -909,7 +920,8 @@ if (-not $q) {
     # scenario's run folder. Uses the same leftmost-non-ignored-case convention as
     # the --startyear lookup above (CEPM/scripts/get_batch_info.py), since that case
     # folder is the one guaranteed to exist regardless of which cases in the batch
-    # ran, succeeded, or failed. Runs even if an earlier step threw, so a failed
+    # ran, succeeded, or failed -- unless -s/--single or -m/--multistep picked the
+    # cases, handled below. Runs even if an earlier step threw, so a failed
     # bootstrap/run still leaves a log behind; best-effort throughout so logging
     # itself can never fail the script or mask its real exit code.
     # Step 11a (multistep only): remove the per-batch files -m generated. Runs before
@@ -938,8 +950,26 @@ if (-not $q) {
         # In multistep mode the log belongs in the baseline's run folder: it is the one
         # folder guaranteed to exist if anything ran at all, and get_batch_info.py's
         # leftmost-non-ignored-case rule does not apply here (see Step 9).
+        # Likewise with a forwarded -s/--single: only the listed cases ran, and the
+        # leftmost non-ignored case may not be one of them, so use the first case
+        # named in the -s list instead.
+        $singleList = $null
+        for ($i = 0; $i -lt $ForwardArgs.Count; $i++) {
+            if ((($ForwardArgs[$i] -eq '-s') -or ($ForwardArgs[$i] -eq '--single')) -and ($i + 1 -lt $ForwardArgs.Count)) {
+                $singleList = [string]$ForwardArgs[$i + 1]
+                break
+            }
+            if (($ForwardArgs[$i] -like '-s=*') -or ($ForwardArgs[$i] -like '--single=*')) {
+                $argText = [string]$ForwardArgs[$i]
+                $singleList = $argText.Substring($argText.IndexOf('=') + 1)
+                break
+            }
+        }
         if ((-not [string]::IsNullOrWhiteSpace($m)) -and $multistepInfo -and $multistepInfo.Count -ge 1) {
             $firstCase = $multistepInfo[0].Trim()
+            $batchInfoExit = 0
+        } elseif (-not [string]::IsNullOrWhiteSpace($singleList)) {
+            $firstCase = $singleList.Split(',')[0].Trim()
             $batchInfoExit = 0
         } else {
             $batchInfo = @(Invoke-Native { uv run python CEPM/scripts/get_batch_info.py $casesFilename })
