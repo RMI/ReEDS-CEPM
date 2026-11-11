@@ -20,6 +20,10 @@ caps are and how `run_cepm.ps1 -m` harvests them.
   later year must hold the run's builds so far *plus* the prescriptions due by
   then that those builds don't cover. Prescriptions are fixed inputs, so this
   needs no foresight. The cap is still exactly the baseline's system path.
+- State capacity mandates are forced builds too and are counted the same way
+  (section 4): the offshore-wind requirement (`eq_RPS_OFSWind`) and the battery
+  mandate (`eq_batterymandate`), including battery mandates met with PV+battery
+  hybrids.
 - In the runs checked so far it doesn't bind. AZNM has no prescriptions after
   2026, and Virginia's (offshore wind and PV in `p99`) were covered in both
   `VA_baseline` and `VA_limitre`. It's a guarantee for cases where it would.
@@ -160,6 +164,13 @@ enforces what the cap already means.
 | `cepm_pcat_ilr(pcat)` | `ilr` of the category's buildable techs. Prescriptions are in `INV` units (MW_dc for UPV); the caps are MW_ac. |
 | `cepm_presc_cum(pcat,r,t)` | Cumulative `noncumulative_prescriptions` through `t`, the right-hand side of `eq_forceprescription_power` |
 | `cepm_tg_cap_sys_at(tg,t)`, `cepm_tg_cap_reg_at(tg,r,t)` | The cap in force at `t`: the per-year path under `=2`, plus the horizon total at the last modeled year |
+| `cepm_mand` | The state mandates counted: `ofs` (`offshore_cap_req`, `eq_RPS_OFSWind`) and `bat` (`batterymandate`, `eq_batterymandate`) |
+| `cepm_mand_w(cepm_mand,i)` | How much of a tech's capacity counts toward a mandate, as on its equation's left-hand side: 1 for `ofswind`, `bcr(i)` for `battery` (= 1) and `pvb` |
+| `cepm_mand_k(cepm_mand,tg)` | Mandate MW met per MW_ac of a capped group's room: `max(w × ilr)` over the group's buildable counting techs. 1 for `wind-ofs` and `battery`; `bcr × ilr` for `pv` through hybrids |
+| `cepm_mand_lvl(cepm_mand,st,t)` | Each mandate's level, gated exactly as its equation is (offshore: `Sw_StateRPS`, `stfeas`, `firstyear_RPS`, offshore buildable in the state; battery: `Sw_BatteryMandate`, `stfeas`, `firstyear_battery`) |
+| `cepm_mand_req(cepm_mand,st,t)` | The level, except in a state where a counting tech can be built in an *uncapped* group: the run can always meet it there |
+| `cepm_mand_r(cepm_mand,tg,st,r,t)` | Regions of `st` where capped group `tg` can build toward the mandate at `t` |
+| `cepm_mand_pcat_w(cepm_mand,pcat)` | `cepm_mand_w` of a prescription category whose builds also count toward the mandate |
 | Two `abort`s | A category in two capped groups (it would be double-counted), or a category mixing `ilr` values (MW_ac would be ambiguous) |
 
 The block is wrapped in `$onImplicitAssign`, because whichever cap files a run
@@ -175,6 +186,59 @@ by zero.
 | `eq_cepm_tgcap_owed(pcat,r,t,tt)` | `OWED ≥ cumulative prescriptions through tt − the category's builds in r through t` |
 | `eq_cepm_tg_cap_sys_owed(tg,t,tt)` | `cap_at(tt) ≥ new investment through t + Σ_(pcat,r) OWED / ilr` |
 | `eq_cepm_tg_cap_reg_owed(tg,r,t,tt)` | The same for a region, counting only that region's owed prescriptions |
+| `CEPM_TGCAP_MAND_OWED(cepm_mand,tg,st,t,tt)` | Positive variable, MW_ac: group `tg`'s share of a state mandate at `tt` not covered by existing capacity, builds through `t`, or owed prescriptions |
+| `eq_cepm_tgcap_mand_owed(cepm_mand,st,t,tt)` | `Σ_tg k × MAND_OWED ≥ mandate(tt) − w × existing at tt − w × builds through t still online at tt − w × owed prescriptions in the state`, over the capped groups that can build toward it in the state at `tt` |
+| `eq_cepm_tg_cap_sys_owed` | Also adds the group's `Σ_(mand,st) MAND_OWED` |
+| `eq_cepm_tg_cap_st_mand_owed(tg,cepm_mand,st,t,tt)` | Regional scope: the group's regional caps across the regions where it can build toward the mandate, summed, must hold its builds there through `t`, its owed prescriptions there, and its `MAND_OWED`. Generated only when every such region has a regional cap at `tt`. |
+
+**Why mandates need their own term.** A prescription is a cumulative minimum
+per region. A state mandate is a *level* (the state's capacity at `tt`, existing
+plus built) that any of the state's regions can meet. The offshore requirement
+only shows up in `eq_forceprescription_power` as free slack (`EXTRA_PRESCRIP`
+for `wind-ofs` in `r_offshore` regions), which allows extra builds but never
+forces them; the forcing is in `eq_RPS_OFSWind`. The battery mandate is only in
+`eq_batterymandate`. Virginia hits both:
+
+| VA (MW) | 2026 | 2029 | 2032 |
+|---|---:|---:|---:|
+| Offshore requirement | 2,599 | 2,599 | 3,949.7 |
+| Offshore prescriptions, cumulative (`p99`) | 12 | 2,652 | 2,652 |
+| Battery mandate | 275 | 275 | 1,350 |
+
+So about 1,300 MW of 2032 offshore wind, and the rise in the battery mandate,
+are forced by the mandates alone. The 2026 and 2029 solves don't see them.
+
+**Mandates met by more than one group.** The battery mandate counts standalone
+batteries (`battery` group) and the battery share of PV+battery hybrids (`pv`
+group). Neither group is forced to build on its own; only their total is. So
+the owed amount is split across the capped groups that can build toward it,
+each in its own MW_ac, converted by `cepm_mand_k`. The solver picks the split,
+and the run can follow whatever split it picks in later years, so the
+induction argument in section 2 still holds. If a counting tech can be built in
+an uncapped group in the state, the mandate is skipped there, since it can
+always be met without going over a cap. Offshore wind has one group, so its
+split is trivial.
+
+**No double-counting.** A prescribed build of a counting tech also counts
+toward the mandate. Subtracting the owed prescriptions inside
+`eq_cepm_tgcap_mand_owed` makes prescriptions + `MAND_OWED` = max(owed
+prescriptions, mandate shortfall), which is the least the state is forced to
+build. That subtraction only uses `OWED` terms whose own equation is generated,
+in the same regions the state-level regional equation counts. Otherwise the
+solver could raise an unbounded `OWED` to cancel `MAND_OWED`.
+
+**Why the regional check is by state.** A mandate can't be charged to one
+regional cap. If every region where a group can build toward it is capped, the
+caps together must have room for the group's share. Each region's own equation
+already makes room for its prescriptions, so the remainder can go to any region
+with room. If any such region is uncapped, the group's share can be met there,
+and only the system-wide cap can be forced over.
+
+**Assumption: no early retirements of counted capacity.** Existing capacity
+follows the exogenous schedule, and built capacity counts until its lifetime
+ends (`inv_cond`), as in `eq_RPS_OFSWind`. `eq_batterymandate` counts `CAP`
+instead, so a battery the run retires early would leave more to build than is
+counted. Early battery retirements aren't expected.
 
 All three are generated only for solve years from `Sw_CEPM_TgCapStartYear` on,
 for later modeled years `tt` with a cap in force, and only where the group has
@@ -215,6 +279,15 @@ straight away. `OWED` has no cost and is non-negative, so it settles at
   wind-ofs in `p99` (12 MW through 2026, then 2,652 by 2029) and UPV in `p99`
   (7,632 to 7,760 MW_dc).
 
+- State mandates (2026-11-11): Virginia again (`v20260925_VA_limitre`'s
+  inputs, `=1`) completed normally with the mandate terms added.
+  `cepm_mand_k` is 1 for (`ofs`, `wind-ofs`) and (`bat`, `battery`) and empty
+  elsewhere (hybrids are off in that run, so `pv` has none). `cepm_mand_req`
+  matches the table in section 4. Offshore wind can be built in `p99` and
+  `p124`, batteries in four VA regions. So the 2026 and 2029 solves should
+  generate `eq_cepm_tgcap_mand_owed` rows for 2032. **Not tested with hybrids
+  on** (`GSw_PVB=1`), which needs a run whose inputs were built with them.
+
 **Not yet tested: a solve.** Setup doesn't generate equations, so these haven't
 been exercised yet: equation generation (domains, the `/ ilr` division), the
 start-year limit, and the claim that the new equations don't change a run where
@@ -232,11 +305,44 @@ nothing is owed. The tests, in order:
 
 ## 6. Open questions
 
-- **The state offshore-wind requirement.** `EXTRA_PRESCRIP` also absorbs
-  `offshore_cap_req`, which isn't in `noncumulative_prescriptions`, so it isn't
-  counted as owed. A capped run under a binding offshore requirement could still
-  be forced over the cap. Whether any CEPM case has a binding offshore
-  requirement hasn't been checked.
+- **Other forced minimums.** State offshore-wind and battery mandates are now
+  counted (section 4; the offshore one was raised in Copilot's review of
+  PR #77). Any other constraint that forces a capped group's builds to a level
+  that rises over time would need the same treatment: add a member to
+  `cepm_mand` with its level and weights.
+- **Generation-based requirements.** State RPS and CES requirements
+  (`eq_REC_Requirement`, including the wind and solar carve-outs under
+  `GSw_StateRPS_Carveouts`) and the national generation mandate
+  (`eq_national_gen`, `GSw_GenMandate`) require MWh, not MW, and don't name a
+  tech group. So they don't fit the owed accounting: no level of builds in a
+  capped group is forced. They can still collide with the caps the same way a
+  prescription can. A myopic solve could spend its RE budget where it doesn't
+  help a later, rising requirement (in another state, say), and the later solve
+  then can't build enough clean generation.
+  - **State RPS and CES are relieved by ACP** (`ACP_PURCHASES`, no upper bound,
+    [`c_model.gms`](../../reeds/core/setup/c_model.gms) `eq_REC_Requirement`),
+    so an unreachable requirement makes the run expensive, not infeasible. The
+    exception is any (state, category) in `acp_disallowed.csv`, which today is
+    only **NY CES**.
+  - **The national generation mandate has no slack.** It's off in every CEPM
+    case so far (`GSw_GenMandate=0`).
+  - **Not every clean option is capped.** `make_tg_cap.py`'s default groups are
+    `pv`, `wind-ons`, `wind-ofs`, `csp`, `battery` and `pumped-hydro`. Nuclear,
+    hydro, geothermal and biomass aren't capped, and neither is distributed PV
+    (`tg_i('pv')` excludes `distpv`). Those can still help meet a requirement,
+    although resource limits, state nuclear bans and `GSw_` switches often rule
+    them out in practice. Which ones count toward a given requirement depends
+    on its `RecTech` eligibility.
+  - **When it would matter:** a capped run covering NY (CES), a run with
+    `GSw_GenMandate` on, or a run with ACP disallowed more broadly. Even then,
+    the run is infeasible only if the uncapped options and imported RECs can't
+    cover the shortfall. Not checked against any run.
+  - **If it's ever needed:** these can't be counted as owed, since the
+    requirement doesn't say which group must build. The practical options are
+    to raise `--headroom` for the RE groups in such runs, to leave ACP allowed,
+    or to add a priced slack to the requirement for capped runs only (which
+    turns an infeasibility into a reported shortfall, with the drawback noted in
+    section 1 for soft caps).
 - **The regional leak** under `--scope region` / `both`. Built + owed makes it
   safe to fix in `make_tg_cap.py` by writing the zero floor for every (tech
   group, region) with no baseline builds: a region with a prescription always

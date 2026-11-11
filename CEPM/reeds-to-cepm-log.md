@@ -59,6 +59,8 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `cases.csv` | Modified | Cumulative tech-group investment caps |
 | `reeds/core/setup/b_inputs.gms` | Modified | Interconnection-queue penalty multiplier |
 | `cases.csv` | Modified | Interconnection-queue penalty multiplier |
+| `reeds/core/setup/b_inputs.gms` | Modified | Prescribed builds exempted from the interconnection queue |
+| `cases.csv` | Modified | Prescribed builds exempted from the interconnection queue |
 | `inputs/growth_constraints/cepm_tg_cap_{sys,reg}_none.csv` | Added | Cumulative tech-group investment caps |
 | `inputs/growth_constraints/cepm_tg_cap_{sys,reg}_yr_none.csv` | Added | Cumulative tech-group investment caps |
 
@@ -67,6 +69,24 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 In some cases, we change base ReEDS files to fix bugs, ensure compatibility,
 or adjust ReEDS functionality for CEPM's needs. Most of these are captured in
 [`known-reeds-issues.md`](known-reeds-issues.md).
+
+**Markers in the GAMS files.** In `reeds/core/setup/b_inputs.gms` and
+`reeds/core/setup/c_model.gms`, every CEPM block is wrapped in a pair of comment
+lines, so it's clear where CEPM code starts and stops and upstream code stays
+untouched:
+
+```text
+*>>> BEGIN CEPM ADDITION ...     (or BEGIN CEPM CHANGE, for a block that replaces upstream lines)
+...
+*<<< END CEPM ADDITION ...       (or END CEPM CHANGE)
+```
+
+A `CEPM CHANGE` block lists the upstream lines it replaces in its opening
+comment. List every CEPM block with `grep -n '^\*\(>>>\|<<<\)'` on either file.
+Add new CEPM GAMS code inside an existing pair or a new one, and don't edit
+upstream lines outside them. (Added 2026-11-11. The markers are three
+characters, so they can't be mistaken for git's seven-character conflict
+markers.)
 
 ## GAMS compatibility
 
@@ -90,7 +110,8 @@ see this on its own toolchain.
   separate `b_declare_sets.gms` / `b_load_sets.gms` pair.
 - `reeds/core/setup/b_inputs.gms` — includes `autocode/b_sets.gms` inside the
   `$gdxin` block instead of the old declare-then-load pair, with a comment
-  recording the version constraint.
+  recording the version constraint. Wrapped in `BEGIN/END CEPM CHANGE` markers
+  whose comment lists the four upstream lines it replaces.
 - `reeds/input_processing/h5_to_gdx.py` also carries `special_keys = ['r', 'v']`
   and a test-path comment from upstream `a09865ec` (post-tag). These are not RMI
   changes and should vanish at the next sync.
@@ -597,14 +618,20 @@ and deleted afterwards, so they are deliberately not committed.
 
 ### Underlying ReEDS files changed:
 
-- `reeds/core/setup/c_model.gms` — +7 equation declarations (near line 176), +1
-  positive variable (`CEPM_TGCAP_OWED`, after `CAP_ABOVE_LIM`), and three
-  equation-definition blocks immediately after `eq_interconnection_queues`: the
-  totals, the per-year path, and the "built + owed" equations.
+- `reeds/core/setup/c_model.gms` — +9 equation declarations (after
+  `eq_interconnection_queues`' declaration), +2 positive variables
+  (`CEPM_TGCAP_OWED` and `CEPM_TGCAP_MAND_OWED`, after `CAP_ABOVE_LIM`), and
+  three equation-definition blocks immediately after `eq_interconnection_queues`:
+  the totals, the per-year path, and the "built + owed" equations (including the
+  state-mandate ones). Each of the three places is wrapped in CEPM markers.
 - `reeds/core/setup/b_inputs.gms` — +4 `$onempty` parameter blocks next to the
   existing growth limits, plus four guardrail `abort`s: the two described above,
   and the two per-year ones described below. After those, the "built + owed"
-  data block (two sets, four parameters, two more `abort`s).
+  data block: the prescription and cap-in-force data, the state-mandate data
+  (`cepm_mand` and the `cepm_mand_*` symbols), and two more `abort`s. The full
+  symbol list is in
+  [`guidance/tgcap-built-plus-owed.md`](guidance/tgcap-built-plus-owed.md) §4.
+  The `ilr` guardrail sits in its own marked block after the `ilr` assignments.
 - `reeds/input_processing/runfiles.csv` — +4 rows staging
   `cepm_tg_cap_{sys,reg}_{cepmtgcapscen}.csv` and
   `cepm_tg_cap_{sys,reg}_yr_{cepmtgcapscen}.csv` into `inputs_case/`.
@@ -695,6 +722,22 @@ AZNM and VA `_limitre` inputs under `=0`, `=1` and `=2` (system and region
 scope). **Not yet tested in a solve.** Design, evaluation and test plan:
 [`guidance/tgcap-built-plus-owed.md`](guidance/tgcap-built-plus-owed.md).
 
+**State mandates (added 2026-11-11).** Prescriptions weren't the only forced
+builds. State offshore-wind requirements (`offshore_cap_req`, forced by
+`eq_RPS_OFSWind`) and state battery mandates (`batterymandate`, forced by
+`eq_batterymandate`) also force a capped group to build, and weren't counted as
+owed (the offshore case was raised in Copilot's review of PR #77). Both are now
+counted through one set, `cepm_mand` (`ofs`, `bat`), with
+`eq_cepm_tgcap_mand_owed` and `eq_cepm_tg_cap_st_mand_owed`, and a new term in
+`eq_cepm_tg_cap_sys_owed`. A mandate is a state-level *level*, not a per-region
+cumulative minimum, so the regional check is per state. The battery mandate
+also counts PV+battery hybrids (`pv` group), so the owed amount is split across
+the capped groups that can meet it, and the solver picks the split. Owed
+prescriptions are subtracted so a prescribed build isn't counted twice. VA is
+the live case: offshore 2,599 → 3,949.7 MW and battery 275 → 1,350 MW between
+the 2029 and 2032 solve years. Setup-tested on the VA `_limitre` copy under
+`=1`; **not tested in a solve, and not tested with hybrids on (`GSw_PVB=1`)**.
+
 ### Departure from convention worth knowing: both rows are non-region rows
 
 The regional file carries an `r` column but is registered with `region_col`
@@ -772,6 +815,17 @@ existing mechanisms don't fit), [`known-reeds-issues.md`](known-reeds-issues.md)
 - **Is `reeds.io.get_years()` still reading `modeledyears.csv`?** The per-year
   harvest takes its solve years from it, and the missing-year guardrail assumes
   those match the capped run's `tmodel_new`.
+- **Are `eq_forceprescription_power`, `eq_RPS_OFSWind` and `eq_batterymandate`
+  unchanged?** The "built + owed" equations count prescriptions and state
+  mandates exactly as these do: their `$` guards (copied into
+  `cepm_mand_lvl`), what counts toward them (`cepm_mand_w`: all `ofswind`;
+  `bcr(i)` of `battery` and `pvb`), and existing plus `inv_cond` capacity. If
+  upstream changes any of them, update the matching CEPM terms. A *new* upstream
+  constraint that forces a capped group's builds to a rising level needs a new
+  `cepm_mand` member, or a capped run can still be forced over its cap.
+- **Is `tg_i` membership unchanged for `ofswind`, `battery` and `pvb`?** The
+  mandate is charged to the groups holding its techs (`wind-ofs`; `battery` and
+  `pv`).
 
 ## Interconnection-queue penalty multiplier (`GSw_CapPenaltyMult`)
 

@@ -264,6 +264,16 @@ primal, not a numerical or scaling problem.
   2021 entry; it has both.) Evaluating the "built + owed" rule on `VA_limitre`'s
   2026 builds confirms it: its 2026 offshore builds already covered the 2027
   prescription. See [`guidance/tgcap-built-plus-owed.md`](guidance/tgcap-built-plus-owed.md).
+- **Not a state-mandate collision (checked 2026-11-11).** VA's state mandates
+  are also forced builds of capped groups, and before 2026-11-11 the "built +
+  owed" accounting didn't count them (see
+  [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md#built--owed-accounting)). They
+  don't explain 2029. The offshore-wind requirement is 2,599 MW in 2026 and 2029,
+  and the 2026 solve had already built 3,949.7 MW. The battery mandate is 275 MW
+  in 2026 and 2029, against 321.9 MW built in 2026. Both mandates only rise for
+  the 2032 solve (offshore to 3,949.7, battery to 1,350), and both would still
+  have fit: offshore exactly, and battery within the 2,658.3 MW left. Now counted
+  either way.
 - **Not the state RPS.** This was the first hypothesis and it does not hold up. VA's
   RPS rises 14.5% (2026) → 19.7% (2029) → 25.8% (2032), so capping RE while
   data-center load grows does make it harder to meet — but `eq_REC_Requirement`

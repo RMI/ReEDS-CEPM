@@ -83,6 +83,11 @@ $onlisting
 $offempty
 
 * Written by h5_to_gdx.py
+*>>> BEGIN CEPM CHANGE -- replaces these upstream lines:
+*       $include autocode%ds%b_declare_sets.gms
+*       $include autocode%ds%b_declare_parameters.gms
+*       $gdxin inputs_case%ds%inputs_0.gdx
+*       $include autocode%ds%b_load_sets.gms
 * b_sets.gms declares and loads each set one at a time (primary sets first, then
 * domain-based subsets) rather than declaring everything before loading anything.
 * This repo's GAMS install is pinned to 44.4.0, which raises Error 579 ("Cannot
@@ -93,6 +98,7 @@ $offempty
 $gdxin inputs_case%ds%inputs_0.gdx
 $include autocode%ds%b_sets.gms
 $include autocode%ds%b_declare_parameters.gms
+*<<< END CEPM CHANGE
 $include autocode%ds%b_load_parameters.gms
 $gdxin
 
@@ -2032,6 +2038,7 @@ $offdelim
 $onlisting
 / ;
 
+*>>> BEGIN CEPM ADDITION ======================================================
 *---------------------------------------------------------------------------
 * CEPM ADDITION -- not present upstream.
 * Scales the interconnection-queue exceedance penalty. Default 1 leaves the
@@ -2152,6 +2159,7 @@ queue_exempt_prescrip(tg,r,t)$Sw_CEPM_QueueExempt
 
 %queue_limit_param%(tg,r,t)$[queue_years(t)$queue_exempt_prescrip(tg,r,t)]
     = %queue_limit_param%(tg,r,t) + queue_exempt_prescrip(tg,r,t) ;
+*<<< END CEPM ADDITION ========================================================
 
 *=============================================
 * -- Explicit spur-line capacity (if used) --
@@ -3884,6 +3892,7 @@ ilr(i)$distpv(i) = ilr_dist ;
 * assign an ILR to hybrid PV+battery technologies based on the ILR for the configurations
 ilr(pvb) = sum{pvb_config$pvb_agg(pvb_config,pvb), ilr_pvb_config(pvb_config) } ;
 
+*>>> BEGIN CEPM ADDITION ======================================================
 *---------------------------------------------------------------------------
 * CEPM ADDITION -- guardrail for eq_cepm_tg_cap_sys / eq_cepm_tg_cap_reg
 * (c_model.gms), which divide INV by ilr(i). A division by zero there would
@@ -3918,6 +3927,7 @@ abort$[Sw_CEPM_TgCap$sum{i, cepm_ilr_zero(i) }]
     "CEPM: ilr(i) is zero for one or more investable technologies, but eq_cepm_tg_cap_* divides by ilr(i). See CEPM/guidance/two-step-re-limited-runs.md.",
     cepm_ilr_zero ;
 $offImplicitAssign
+*<<< END CEPM ADDITION ========================================================
 
 parameter bir_pvb_config(pvb_config) "--unitless-- ratio of the battery capacity to the inverter capacity (MW_battery / MW_inverter) for each hybrid pv+battery configuration"
 /
@@ -4959,6 +4969,7 @@ $offdelim
 $onlisting
 / ;
 
+*>>> BEGIN CEPM ADDITION ======================================================
 *---------------------------------------------------------------------------
 * CEPM ADDITION -- not present upstream.
 * Cumulative new-investment ceilings by technology group, consumed by
@@ -5071,6 +5082,13 @@ $offImplicitAssign
 * so a prescription can never force the cap over. Prescriptions are exogenous,
 * so this needs no foresight. See CEPM/guidance/tgcap-built-plus-owed.md.
 *
+* "Prescriptions" here means two kinds of forced build:
+*   1. noncumulative_prescriptions, forced by eq_forceprescription_power
+*      (per region, every tech group).
+*   2. State capacity mandates (set cepm_mand below), per state:
+*      ofs: offshore wind requirement, offshore_cap_req, forced by eq_RPS_OFSWind
+*      bat: battery mandate, batterymandate, forced by eq_batterymandate
+*
 * $onImplicitAssign covers the whole block: whichever cap files a run doesn't
 * use are legitimately empty, as for the guardrails above.
 *---------------------------------------------------------------------------
@@ -5115,6 +5133,65 @@ cepm_tg_cap_reg_at(tg,r,t)$[tmodel_new(t)$cepm_tg_capped(tg)$(Sw_CEPM_TgCap=2)] 
 cepm_tg_cap_reg_at(tg,r,t)$[tmodel_new(t)$cepm_tg_capped(tg)$(yeart(t)=cepm_tlast_yr)
                             $(not cepm_tg_cap_reg_at(tg,r,t))] = cepm_tg_cap_reg(tg,r) ;
 
+* State capacity mandates. Each says a state's capacity of some techs at year t
+* (existing plus built) must reach a level. Unlike a prescription, it's a level
+* (not a cumulative sum) and any region in the state can meet it. Both are
+* handled by the same data and equations (eq_cepm_tgcap_mand_owed and
+* eq_cepm_tg_cap_st_mand_owed in c_model.gms).
+set cepm_mand "CEPM: state capacity mandates counted by the built + owed caps"
+    / ofs "offshore wind requirement, offshore_cap_req (eq_RPS_OFSWind)"
+      bat "battery mandate, batterymandate (eq_batterymandate)" / ;
+
+* how much of each tech's capacity counts toward a mandate, as on the left-hand
+* side of its equation: all of offshore wind; bcr(i) of standalone batteries
+* (bcr = 1) and of PV+battery hybrids (their battery share of PV MW_dc)
+parameter cepm_mand_w(cepm_mand,i) "--unitless-- CEPM: share of a tech's capacity that counts toward a state mandate" ;
+cepm_mand_w('ofs',i)$ofswind(i) = 1 ;
+cepm_mand_w('bat',i)$[battery(i) or pvb(i)] = bcr(i) ;
+
+* A mandate can be met by builds in more than one group: the battery mandate by
+* 'battery' or, through hybrids, by 'pv'. The owed amount is split across those
+* groups (CEPM_TGCAP_MAND_OWED), and this is how many MW of mandate one MW_ac of
+* a group's cap room can meet: w * ilr, at the group's best tech (the run can
+* choose it). 1 for offshore wind and batteries; bcr * ilr for hybrids.
+parameter cepm_mand_k(cepm_mand,tg) "--MW per MW_ac-- CEPM: mandate MW met per MW_ac of a capped group's room" ;
+* (the $sum guard matters: smax over an empty set is -INF, which isn't 0)
+cepm_mand_k(cepm_mand,tg)$[cepm_tg_capped(tg)
+                           $sum{i$[tg_i(tg,i)$cepm_mand_w(cepm_mand,i)$valcap_i(i)], 1 }]
+    = smax{i$[tg_i(tg,i)$cepm_mand_w(cepm_mand,i)$valcap_i(i)], cepm_mand_w(cepm_mand,i) * ilr(i) } ;
+
+* each mandate's level, gated exactly as its equation is
+parameter cepm_mand_lvl(cepm_mand,st,t) "--MW-- CEPM: state mandate level at modeled year t, where its equation exists" ;
+cepm_mand_lvl('ofs',st,t)$[tmodel_new(t)$stfeas(st)$Sw_StateRPS$(yeart(t)>=firstyear_RPS)
+                           $sum{(i,v,r)$[r_st(r,st)$ofswind(i)], valcap(i,v,r,t) }]
+    = offshore_cap_req(st,t) ;
+cepm_mand_lvl('bat',st,t)$[tmodel_new(t)$stfeas(st)$Sw_BatteryMandate$(yeart(t)>=firstyear_battery)]
+    = batterymandate(st,t) ;
+
+* The mandates the capped groups must make room for. Skipped in a state where
+* a tech that counts toward it is buildable (in any modeled year) in a group
+* with no cap: the run can always meet the mandate there, so it forces nothing
+* over a cap.
+parameter cepm_mand_req(cepm_mand,st,t) "--MW-- CEPM: state mandate at modeled year t that the capped groups must make room for" ;
+cepm_mand_req(cepm_mand,st,t)$[sum{tg, cepm_mand_k(cepm_mand,tg) }
+                               $(not sum{(i,v,r,tt)$[r_st(r,st)$cepm_mand_w(cepm_mand,i)$valinv(i,v,r,tt)
+                                                     $(not sum{tg$[tg_i(tg,i)$cepm_tg_capped(tg)], 1 })], 1 })]
+    = cepm_mand_lvl(cepm_mand,st,t) ;
+
+* regions of st where a group's counting techs can be built at t, the ones that
+* group's regional caps must make room in (eq_cepm_tg_cap_st_mand_owed)
+set cepm_mand_r(cepm_mand,tg,st,r,t) "CEPM: regions of state st where capped group tg can build toward a mandate at modeled year t" ;
+cepm_mand_r(cepm_mand,tg,st,r,t)$[cepm_mand_req(cepm_mand,st,t)$cepm_mand_k(cepm_mand,tg)$r_st(r,st)
+                                  $sum{(i,v)$[tg_i(tg,i)$cepm_mand_w(cepm_mand,i)], valcap(i,v,r,t) }] = yes ;
+
+* Prescription categories whose builds also count toward a mandate, and how
+* much (as cepm_mand_w, in INV units). Their owed prescriptions are subtracted
+* in eq_cepm_tgcap_mand_owed so they aren't counted twice.
+parameter cepm_mand_pcat_w(cepm_mand,pcat) "--unitless-- CEPM: share of a prescription category's builds that counts toward a state mandate" ;
+cepm_mand_pcat_w(cepm_mand,pcat)$[sum{tg, cepm_tg_pcat(tg,pcat) }
+                                  $sum{i$[prescriptivelink(pcat,i)$valcap_i(i)$cepm_mand_w(cepm_mand,i)], 1 }]
+    = smax{i$[prescriptivelink(pcat,i)$valcap_i(i)], cepm_mand_w(cepm_mand,i) } ;
+
 * Guardrails: each category must belong to one capped group, and its techs must
 * share one ilr, or the owed term would be double-counted or mis-scaled.
 parameter cepm_pcat_multi_tg(pcat) "--unitless-- CEPM: pcats in more than one capped tech group (must always be empty)" ;
@@ -5130,7 +5207,9 @@ cepm_pcat_mixed_ilr(pcat)$[sum{tg, cepm_tg_pcat(tg,pcat) }
 abort$[Sw_CEPM_TgCap$sum{pcat, cepm_pcat_mixed_ilr(pcat) }]
     "CEPM: a prescription category mixes techs with different ilr, so its owed MW_ac is ambiguous. See CEPM/guidance/tgcap-built-plus-owed.md.",
     cepm_pcat_mixed_ilr ;
+
 $offImplicitAssign
+*<<< END CEPM ADDITION ========================================================
 
 * gbin_min is based on the representative plant size for a single plant in that tech group
 parameter gbin_min(tg) "--MW-- minimum size of the first (zero cost) growth bin"
