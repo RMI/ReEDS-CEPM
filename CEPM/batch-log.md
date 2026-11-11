@@ -17,9 +17,9 @@ was run and what it showed.
 Loosely inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## TEMPLATE Batch entry: {Batch name here, e.g., v20260903}**
-**Author: Tyler Fitch**
+**Author:** Tyler Fitch
 
-Summary: What'd we change, why, what'd we find, what's next
+**Summary:** What'd we change, why, what'd we find, what's next
 
 ### Batch details
 
@@ -51,10 +51,120 @@ Summary: What'd we change, why, what'd we find, what's next
 - [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
 - [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
 - [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
-- [ ] I moved batch results to the VM-Outputs folder
-- [ ] I added any issues we found to the JIRA issues epic
+- [ ] I moved batch results to the `VM-Outputs` folder
+- [ ] I added any issues we found as `C4-XXX` to the JIRA issues epic
+- [ ] I opened pull request `#XX` and added results of a recent run as an attachment
 - [ ] I edited LLM-generated text to keep this entry short and to the point
-- [ ] Open a pull request and add results of a recent run as an attachment
+
+## Batch entry: v20261020tfrecaps**
+**Author:** Tyler Fitch
+
+**Summary:** `limitre`'s RE ceiling capped only the 2026-2032 total, so the
+myopic solve spent the whole budget by 2029 (as `VA_limitre` did in 2026). This
+batch adds a per-year mode (`GSw_CEPM_TgCap=2`) that also holds `limitre` to the
+baseline's cumulative build path in each modeled year. `limitre` now tracks the
+baseline year by year and fills the 2029 gap with gas, which raises its cost.
+
+### Batch details
+
+- **Built from:** `v20261020tfnewq` (code: `feature/tgcap-per-year` @ `cd992b2a`)
+- **Space and Time:** st/AZ.NM, 2026-2032, every 3 years
+- **Cases:** `baseline, limitre, optimized`
+- **Run comments:** ~1h20 total: baseline ~36 min, then `limitre` and
+  `optimized` concurrently ~38 min.
+
+### Change log
+
+- **ReEDS change:** Added `eq_cepm_tg_cap_sys_t` / `eq_cepm_tg_cap_reg_t`
+  (`c_model.gms`, `b_inputs.gms`), which cap cumulative tech-group investment
+  through each modeled year at the reference run's path. `make_tg_cap.py` now
+  writes the per-year cap files too. `GSw_CEPM_TgCap` carries the mode: 0 = off,
+  1 = horizon total, 2 = horizon total + per-year path.
+- **ReEDS change:** Added "built + owed" accounting (`eq_cepm_tgcap_owed`) so
+  prescriptions due in later years count against earlier caps. No switch. It's
+  inactive in AZNM because there are no prescriptions after 2026.
+- **Case change:** `GSw_CEPM_TgCap` 1 -> 2 in `limitre`. Removed
+  `cepmtgcapscen` from `cases_cepm.csv`, since `run_cepm.ps1 -m` sets it.
+- **ReEDS change (2026-11-11, `80ae3fb2`):** "Built + owed" now also counts
+  state offshore-wind requirements (`eq_RPS_OFSWind`) and battery mandates
+  (`eq_batterymandate`), including battery mandates met by PV+battery hybrids.
+  Raised in Copilot's review of PR #77. It only binds in multi-state runs or with
+  hybrids on; no current CEPM region has a mandate it would change. It was a
+  no-op on AZNM in setup testing.
+
+### Results
+
+- Compare cases deck in `VM_Outputs`:
+  `v20261020tfrecaps_st-AZNM_baseline/outputs/comparisons/results-st-AZNM_baseline,st-AZNM_limitre,st-AZNM_optimized.pptx`
+- `baseline` and `optimized` are identical to `tfnewq` (same objective to the
+  cent), so all differences are in `limitre`.
+- Cumulative new capacity through 2029, MW_ac (2032 totals are unchanged for
+  the capped groups):
+
+  | tech group | `baseline` | `limitre` (newq, mode 1) | `limitre` (recaps, mode 2) |
+  |---|---:|---:|---:|
+  | pv | 14,064.3 | 18,156.9 | **14,064.3** |
+  | wind-ons | 8,203.2 | 10,655.5 | **8,203.2** |
+  | pumped-hydro | 0.0 | 1,050.4 | **0.0** |
+  | gas | 3,404.2 | 1,936.3 | 4,880.3 |
+  | hydro (uncapped) | 37.0 | 6.0 | 434.0 |
+
+- Under mode 1, `limitre` built its full 2032 pv and wind-ons budget by 2029.
+  Under mode 2 it lands exactly on the baseline's path each year, and makes up
+  the shortfall in 2029 with ~2.9 GW more gas and ~0.4 GW of hydro, which isn't
+  a capped group.
+- `limitre` objective rises 6.1% (57.05bn -> 60.56bn, `objfn_raw`). The
+  `limitre` - `optimized` gap widens from +2.5% to +8.8%.
+
+### Documentation, decisions, next steps, & issues
+
+- **DECISION:** Use `GSw_CEPM_TgCap=2` for `limitre` going forward.
+  Mode 1 lets a myopic solve front-load the ceiling, which understates the cost
+  of limiting RE.
+- **DOCUMENTATION:** `CEPM/guidance/tgcap-built-plus-owed.md` (owed
+  accounting) and the per-year path section of `reeds-to-cepm-log.md`.
+- **ISSUE:** The stress-period non-convergence from `tfnewq` persists. All
+  three cases hit `GSw_PRM_StressIterateMax=5` in 2029 and 2032 (see
+  `CEPM/guidance/st-AZNM/p47-stress-period-nonconvergence.md`). Main
+  candidate is a GAMS<->PRAS issue; added a comment on C4-395 to better
+  characterize this issue.
+- **ISSUE:** `plot_stressors()` produces no stress-day maps. Documented in
+  `known-reeds-issues.md`, with a fix identified but not implemented.
+- **NEXT STEP:** Decide whether hydro (and any other uncapped group) belongs in
+  the `limitre` ceiling.
+- **ISSUE (2026-11-11):** Data-center load starting in 2026 makes the first
+  capped year inconsistent. `limitre` and `optimized` carry state load sites from
+  2026 (6.6 GW in VA), but `baseline` has none, so `limitre`'s 2026 cap path comes
+  from a run with much less load. Test batch `v20261111mand` (VA, mode 2):
+  `VA_limitre` was infeasible in 2026. The conflict refiner points at the 2026
+  path caps, the data-center load, and the CSAPR NOx budget, with no imports in a
+  VA-only run. Re-solves show mode 2 alone causes it; the owed and mandate rows
+  don't. Starting data-center load in 2027 would make 2026 consistent but likely
+  moves the problem to 2029. Not addressed yet. In JIRA at C4-558.
+- **DOCUMENTATION (2026-11-11):** Updated
+  `CEPM/guidance/st-AZNM/p47-stress-period-nonconvergence.md`: p47 fails in all
+  21 AZNM runs since 2026-10-09, `limitre`/`optimized` put New Mexico's
+  data-center load in p47, and per-sample PRAS shows the 200 MW tie is the
+  bottleneck. Candidate fixes: `GSw_PRM_UpdateMethod=2` and
+  `GSw_TransInvNearTerm=1`.
+- **IDEA**: We use EPRI's state-level data center forecasts. Without addditional
+  manipulation, this makes it difficult to model non-state-size regions. We could
+  allocate data center load to partial states based on load participation to help us
+  model partial states as part of larger regions. Discussed in
+  `loadsite-partial-state-allocation.md`. Captured in C4-559.
+- **NOTE**: Current settings don't allow transmission to be built until 2033, which
+  mean transmission is effectively fixed in our analysis period. Switch is called
+  `GSw_TransInvNearTerm`.
+
+### Checklist
+
+- [X] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
+- [X] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
+- [X] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
+- [X] I moved batch results to the VM-Outputs folder
+- [X] I added issue #__ we found to the JIRA issues epic
+- [X] I edited LLM-generated text to keep this entry short and to the point
+- [X] I opened pull request #77 and added results of a recent run as an attachment
 
 ## Batch entry: v20261020tfnewq**
 **Author: Tyler Fitch**
@@ -84,7 +194,6 @@ exempt certain resource builds from the interconnection limits.
 - **ISSUE:** We actually found an issue where the islanded SPP region was having trouble reaching reliability thresholds
 - **DOCUMENTATION:** A new file in `CEPM/guidance/st-AZNM` documents the above issue.
 - **NEXT STEP:** Makes sense to use one of the suggested solutions in that guidance doc -- likely changing PRM update method.
-
 
 ### Checklist
 

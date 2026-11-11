@@ -59,13 +59,34 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `cases.csv` | Modified | Cumulative tech-group investment caps |
 | `reeds/core/setup/b_inputs.gms` | Modified | Interconnection-queue penalty multiplier |
 | `cases.csv` | Modified | Interconnection-queue penalty multiplier |
+| `reeds/core/setup/b_inputs.gms` | Modified | Prescribed builds exempted from the interconnection queue |
+| `cases.csv` | Modified | Prescribed builds exempted from the interconnection queue |
 | `inputs/growth_constraints/cepm_tg_cap_{sys,reg}_none.csv` | Added | Cumulative tech-group investment caps |
+| `inputs/growth_constraints/cepm_tg_cap_{sys,reg}_yr_none.csv` | Added | Cumulative tech-group investment caps |
 
 # Changes to base ReEDS files
 
 In some cases, we change base ReEDS files to fix bugs, ensure compatibility,
 or adjust ReEDS functionality for CEPM's needs. Most of these are captured in
 [`known-reeds-issues.md`](known-reeds-issues.md).
+
+**Markers in the GAMS files.** In `reeds/core/setup/b_inputs.gms` and
+`reeds/core/setup/c_model.gms`, every CEPM block is wrapped in a pair of comment
+lines, so it's clear where CEPM code starts and stops and upstream code stays
+untouched:
+
+```text
+*>>> BEGIN CEPM ADDITION ...     (or BEGIN CEPM CHANGE, for a block that replaces upstream lines)
+...
+*<<< END CEPM ADDITION ...       (or END CEPM CHANGE)
+```
+
+A `CEPM CHANGE` block lists the upstream lines it replaces in its opening
+comment. List every CEPM block with `grep -n '^\*\(>>>\|<<<\)'` on either file.
+Add new CEPM GAMS code inside an existing pair or a new one, and don't edit
+upstream lines outside them. (Added 2026-11-11. The markers are three
+characters, so they can't be mistaken for git's seven-character conflict
+markers.)
 
 ## GAMS compatibility
 
@@ -89,7 +110,8 @@ see this on its own toolchain.
   separate `b_declare_sets.gms` / `b_load_sets.gms` pair.
 - `reeds/core/setup/b_inputs.gms` — includes `autocode/b_sets.gms` inside the
   `$gdxin` block instead of the old declare-then-load pair, with a comment
-  recording the version constraint.
+  recording the version constraint. Wrapped in `BEGIN/END CEPM CHANGE` markers
+  whose comment lists the four upstream lines it replaces.
 - `reeds/input_processing/h5_to_gdx.py` also carries `special_keys = ['r', 'v']`
   and a test-path comment from upstream `a09865ec` (post-tag). These are not RMI
   changes and should vanish at the next sync.
@@ -370,8 +392,8 @@ neither is CEPM-specific — good candidates to contribute back.
 ### Files changed:
 
 - `runreeds.py` — the RA plot invocation now picks its background mechanism from
-  the existing `LINUXORMAC` global: `start /b "" ` on Windows, the original
-  trailing ` &` on Linux/macOS. The `""` is a window-title placeholder that
+  the existing `LINUXORMAC` global: `start /b ""` on Windows, the original
+  trailing `&` on Linux/macOS. The `""` is a window-title placeholder that
   `start` requires if the command is ever quoted.
 - `reeds/resource_adequacy/diagnostic_plots.py` — added the standard
   `reeds.log.makelog(scriptname=__file__, logpath=os.path.join(casedir,'gamslog.txt'))`
@@ -582,27 +604,145 @@ run.
 
 - `inputs/growth_constraints/cepm_tg_cap_sys_none.csv` — header-only (`*tg,MW`)
 - `inputs/growth_constraints/cepm_tg_cap_reg_none.csv` — header-only (`*tg,r,MW`)
+- `inputs/growth_constraints/cepm_tg_cap_sys_yr_none.csv` — header-only (`*tg,t,MW`)
+- `inputs/growth_constraints/cepm_tg_cap_reg_yr_none.csv` — header-only (`*tg,r,t,MW`)
 
-`none` is the default `cepmtgcapscen` and the pair every non-capped case uses.
+`none` is the default `cepmtgcapscen` and the set every non-capped case uses.
+Cases files don't set `cepmtgcapscen` (since 2026-10-19 `cases_cepm.csv` has no
+row for it): every case inherits `none` from `cases.csv`, and `run_cepm.ps1 -m`
+points `_limitre` at the batch's ceiling through a temporary generated cases
+file.
 Real ceilings are **generated per batch** by
 [`scripts/make_tg_cap.py`](scripts/make_tg_cap.py) from a completed reference run
 and deleted afterwards, so they are deliberately not committed.
 
 ### Underlying ReEDS files changed:
 
-- `reeds/core/setup/c_model.gms` — +2 equation declarations (near line 176) and
-  one equation-definition block immediately after `eq_interconnection_queues`.
-- `reeds/core/setup/b_inputs.gms` — +2 `$onempty` parameter blocks next to the
-  existing growth limits, plus the two guardrail `abort`s described above.
-- `reeds/input_processing/runfiles.csv` — +2 rows staging
-  `cepm_tg_cap_{sys,reg}_{cepmtgcapscen}.csv` into `inputs_case/`.
+- `reeds/core/setup/c_model.gms` — +9 equation declarations (after
+  `eq_interconnection_queues`' declaration), +2 positive variables
+  (`CEPM_TGCAP_OWED` and `CEPM_TGCAP_MAND_OWED`, after `CAP_ABOVE_LIM`), and
+  three equation-definition blocks immediately after `eq_interconnection_queues`:
+  the totals, the per-year path, and the "built + owed" equations (including the
+  state-mandate ones). Each of the three places is wrapped in CEPM markers.
+- `reeds/core/setup/b_inputs.gms` — +4 `$onempty` parameter blocks next to the
+  existing growth limits, plus four guardrail `abort`s: the two described above,
+  and the two per-year ones described below. After those, the "built + owed"
+  data block: the prescription and cap-in-force data, the state-mandate data
+  (`cepm_mand` and the `cepm_mand_*` symbols), and two more `abort`s. The full
+  symbol list is in
+  [`guidance/tgcap-built-plus-owed.md`](guidance/tgcap-built-plus-owed.md) §4.
+  The `ilr` guardrail sits in its own marked block after the `ilr` assignments.
+- `reeds/input_processing/runfiles.csv` — +4 rows staging
+  `cepm_tg_cap_{sys,reg}_{cepmtgcapscen}.csv` and
+  `cepm_tg_cap_{sys,reg}_yr_{cepmtgcapscen}.csv` into `inputs_case/`.
 - `cases.csv` — +3 rows: `cepmtgcapscen` (default `none`), `GSw_CEPM_TgCap`
-  (default `0`), `GSw_CEPM_TgCapStartYear` (default `2026`).
+  (default `0`; `1` = horizon totals, `2` = horizon totals plus the per-year
+  path), `GSw_CEPM_TgCapStartYear` (default `2026`).
+
+### Per-year path (`GSw_CEPM_TgCap=2`)
+
+Added 2026-10-07. The totals above cap only the 2026-2032 sum. Each is generated
+in every solve year, so a myopic sequential solve can spend the whole budget in
+its first capped year. `VA_limitre` did exactly that: it built 100% of its
+onshore and offshore wind budgets in 2026, leaving 2029 and 2032 unable to add
+any wind (see [`known-reeds-issues.md`](known-reeds-issues.md)). There's no
+error, and the horizon totals in `cap_new_out` look exactly as intended, so a
+`_limitre` run under `1` can follow a different year-by-year path from its
+baseline. Comparing `_limitre` with `_baseline` or `_optimized` in any year before
+the last then reflects timing, not just the ceiling.
+
+With `GSw_CEPM_TgCap=2`, `eq_cepm_tg_cap_sys_t(tg,t)` and
+`eq_cepm_tg_cap_reg_t(tg,r,t)` also cap cumulative investment through each
+modeled year `t` at the reference run's cumulative investment through `t`. They
+have the same terms as the totals, plus `yeart(tt) <= yeart(t)` so an
+intertemporal solve counts each year's constraint correctly. The path's last
+value equals the horizon total, so the two sets never conflict; the totals stay
+active under `2` and still cap any modeled year after the path's last year. `0`
+and `1` behave exactly as before. Every `_limitre` case in `cases_cepm.csv` uses
+`2`; the `_baseline` and `_optimized` cases leave the caps off. (This was
+first written as a separate `GSw_CEPM_TgCapByYear` switch, and folded into
+`GSw_CEPM_TgCap=2` on 2026-10-19 so a single switch sets the cap mode.)
+
+`make_tg_cap.py` always writes the per-year pair alongside the totals, from the
+reference run's own solve years (`modeledyears.csv`). Each value is floored at
+`--zero-floor` and kept non-decreasing. `run_cepm.ps1 -m` checks for and deletes
+all four files, and `multistep_cases.py` accepts `GSw_CEPM_TgCap` of `1` or `2`
+on `_limitre`. `.gitignore` already ignored per-batch
+`cepm_tg_cap_{sys,reg}_*.csv` files, which covers the per-year ones; it gained
+two exceptions so the `_yr_none` files are committed.
+
+Two more guardrails in `b_inputs.gms`, active only with `GSw_CEPM_TgCap=2`: one
+for "both per-year files empty", and one for a modeled year from
+`Sw_CEPM_TgCapStartYear` through the path's last year that has no value. The
+second is what a `_limitre` `yearset` that differs from the baseline's looks
+like, and without it that year would solve uncapped by the path.
+
+Prefer `--scope region` with the per-year path. A system-wide path can still be
+infeasible: a solve year can put its share of a group's builds in a region where
+a later prescription doesn't need them, and meeting that prescription then
+exceeds the path. A regional path at `--headroom` ≥ 1 can't, since the reference
+run met every regional prescription in every solve year. `--scope both` doesn't
+get that guarantee: regions where the reference run built nothing have no
+regional path, and builds there still count against the system path. Those
+regions stay uncapped by the regional path, as they already are under the
+regional totals.
+
+Tested by compiling and running `a_createmodel.gms` on a copy of the
+`v20260925_VA_limitre` inputs. With a real harvest and the per-year path on:
+normal completion, and 18 system and 39 regional per-year values loaded, each
+path ending at its horizon total. Empty per-year files and a path missing 2029
+each hit their guardrail; the path off with the `none` files completed normally.
+Re-tested the same four cases after the fold into `GSw_CEPM_TgCap=2`, on a copy
+of the `v20261009precapex_st-AZNM_limitre` inputs: `2` with a real harvest
+completed normally, `2` with empty files and `2` with 2029 missing each hit their
+guardrail, and `1` with empty per-year files completed normally. **Not
+yet tested in a full solve.**
 
 No `copy_files.py` hook, deliberately: `runfiles.csv` changes by *added rows*
 across releases, while `copy_files.py` is the most-churned file in the tree.
 The two `GSw_` switches need no GAMS plumbing at all —
 `reeds.io.write_gswitches` auto-emits `scalar Sw_X` for every numeric `GSw_X`.
+
+### "Built + owed" accounting
+
+Added 2026-10-19. A prescription is a cumulative minimum per region, and builds
+elsewhere don't count toward it. A myopic solve can therefore spend its cap
+budget in one region and later be forced over the cap by a prescription in
+another, which makes the solve infeasible. `eq_cepm_tgcap_owed`,
+`eq_cepm_tg_cap_sys_owed` and `eq_cepm_tg_cap_reg_owed` make each solve year
+from `Sw_CEPM_TgCapStartYear` on also count, against every later cap, the
+prescriptions due by then that its builds don't yet cover. Prescriptions are
+inputs, so no foresight is needed, and the cap is still exactly the reference
+run's path. No switch: it applies under `GSw_CEPM_TgCap` 1 and 2.
+
+Evaluated on finished runs before implementing: inactive in AZNM (no
+prescriptions after 2026); in VA, `VA_baseline` satisfies it with slack and
+`VA_limitre`'s 2026 builds would not have been changed, so the VA 2029
+infeasibility is not a prescription overflow. Setup-tested on copies of the
+AZNM and VA `_limitre` inputs under `=0`, `=1` and `=2` (system and region
+scope). **Not yet tested in a solve.** Design, evaluation and test plan:
+[`guidance/tgcap-built-plus-owed.md`](guidance/tgcap-built-plus-owed.md).
+
+**State mandates (added 2026-11-11).** Prescriptions weren't the only forced
+builds. State offshore-wind requirements (`offshore_cap_req`, forced by
+`eq_RPS_OFSWind`) and state battery mandates (`batterymandate`, forced by
+`eq_batterymandate`) also force a capped group to build, and weren't counted as
+owed (the offshore case was raised in Copilot's review of PR #77). Both are now
+counted through one set, `cepm_mand` (`ofs`, `bat`), with
+`eq_cepm_tgcap_mand_owed` and `eq_cepm_tg_cap_st_mand_owed`, and a new term in
+`eq_cepm_tg_cap_sys_owed`. A mandate is a state-level *level*, not a per-region
+cumulative minimum, so the regional check is per state. The battery mandate
+also counts PV+battery hybrids (`pv` group), so the owed amount is split across
+the capped groups that can meet it, and the solver picks the split. Owed
+prescriptions are subtracted so a prescribed build isn't counted twice. VA's
+mandates rise between the 2029 and 2032 solve years (offshore 2,599 → 3,949.7
+MW, battery 275 → 1,350 MW), but in a single-state run with one group per
+mandate they can't push a cap over: every build in the group counts toward the
+mandate. The accounting matters for runs covering several states under a
+system-wide cap, and for the battery mandate once hybrids are on. No current
+multi-state CEPM region has a mandate; see the guidance doc's "When the mandate
+accounting actually matters". Setup-tested on the VA `_limitre` copy under
+`=1`; **not tested in a solve, and not tested with hybrids on (`GSw_PVB=1`)**.
 
 ### Departure from convention worth knowing: both rows are non-region rows
 
@@ -675,6 +815,23 @@ existing mechanisms don't fit), [`known-reeds-issues.md`](known-reeds-issues.md)
   cheap one and catches any accidental coupling. T3 — a run capped at its own
   harvested buildout must reproduce itself — is the one that proves units,
   tech-group mapping and upgrade inheritance all still line up.
+- **Repeat T3 with `GSw_CEPM_TgCap=2`.** A run capped at its own per-year
+  path must also reproduce itself. That checks the `yeart(tt) <= yeart(t)` bound
+  and the harvest's year alignment.
+- **Is `reeds.io.get_years()` still reading `modeledyears.csv`?** The per-year
+  harvest takes its solve years from it, and the missing-year guardrail assumes
+  those match the capped run's `tmodel_new`.
+- **Are `eq_forceprescription_power`, `eq_RPS_OFSWind` and `eq_batterymandate`
+  unchanged?** The "built + owed" equations count prescriptions and state
+  mandates exactly as these do: their `$` guards (copied into
+  `cepm_mand_lvl`), what counts toward them (`cepm_mand_w`: all `ofswind`;
+  `bcr(i)` of `battery` and `pvb`), and existing plus `inv_cond` capacity. If
+  upstream changes any of them, update the matching CEPM terms. A *new* upstream
+  constraint that forces a capped group's builds to a rising level needs a new
+  `cepm_mand` member, or a capped run can still be forced over its cap.
+- **Is `tg_i` membership unchanged for `ofswind`, `battery` and `pvb`?** The
+  mandate is charged to the groups holding its techs (`wind-ofs`; `battery` and
+  `pv`).
 
 ## Interconnection-queue penalty multiplier (`GSw_CapPenaltyMult`)
 
@@ -1138,7 +1295,7 @@ with a clear message naming the missing columns.
 Two things to know about the two-step columns. They are reached through
 `run_cepm.ps1 -m`, which uses `-s` and therefore overrides `ignore`, so they are
 marked `ignore=1` and never picked up by an ordinary `-c cepm` batch.
-`st-AZNM_limitre` also ships with `GSw_CEPM_TgCap=1` and `cepmtgcapscen=none`,
+`st-AZNM_limitre` also ships with `GSw_CEPM_TgCap=1` and inherits `cepmtgcapscen=none`,
 which means running it *without* `-m` (i.e. without a harvested ceiling)
 deliberately aborts at the empty-cap-files guardrail rather than solving
 uncapped — that is the safety property, not a misconfiguration.

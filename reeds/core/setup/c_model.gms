@@ -28,6 +28,10 @@ positive variables
   CAP(i,v,r,t)                             "--MW-- total generation capacity in MWac (MWdc for PV); PV capacity of hybrid PV+battery; max native, flexible EV load for EVMC"
   CAP_ENERGY(i,v,r,t)                      "--MWh-- battery capacity in terms of energy"
   CAP_ABOVE_LIM(tg,r,t)                    "--MW-- amount of capacity that is deployed above the interconnection queue limits"
+*>>> BEGIN CEPM ADDITION -- see CEPM/guidance/tgcap-built-plus-owed.md
+  CEPM_TGCAP_OWED(pcat,r,t,tt)             "--MW-- CEPM: prescriptions due by year tt that builds through solve year t don't yet cover"
+  CEPM_TGCAP_MAND_OWED(cepm_mand,tg,st,t,tt) "--MW_ac-- CEPM: tech group tg's share of a state mandate at year tt not covered by existing capacity, builds through t, or owed prescriptions"
+*<<< END CEPM ADDITION
   CAP_RSC(i,v,r,rscbin,t)                  "--MW-- total generation capacity in MWac (MWdc for PV) for wind-ons and upv"
   GROWTH_BIN(gbin,i,st,t)                  "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
   INV(i,v,r,t)                             "--MW-- generation capacity additions in year t"
@@ -175,9 +179,17 @@ EQUATION
 
 eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit based on interconnection queues"  
 
-* CEPM: cumulative new-investment caps by tech group (see CEPM/guidance/two-step-re-limited-runs.md)
+*>>> BEGIN CEPM ADDITION -- cumulative new-investment caps by tech group (see CEPM/guidance/two-step-re-limited-runs.md)
  eq_cepm_tg_cap_sys(tg)                   "--MW_ac-- CEPM: cumulative system-wide cap on new investment by tech group"
  eq_cepm_tg_cap_reg(tg,r)                 "--MW_ac-- CEPM: cumulative regional cap on new investment by tech group"
+ eq_cepm_tg_cap_sys_t(tg,t)               "--MW_ac-- CEPM: system-wide cap on new investment by tech group, cumulative through year t"
+ eq_cepm_tg_cap_reg_t(tg,r,t)             "--MW_ac-- CEPM: regional cap on new investment by tech group, cumulative through year t"
+ eq_cepm_tgcap_owed(pcat,r,t,tt)          "--MW-- CEPM: prescriptions due by year tt not yet covered by builds through solve year t"
+ eq_cepm_tg_cap_sys_owed(tg,t,tt)         "--MW_ac-- CEPM: system-wide cap at later year tt on investment through t plus prescriptions owed by tt"
+ eq_cepm_tg_cap_reg_owed(tg,r,t,tt)       "--MW_ac-- CEPM: regional cap at later year tt on investment through t plus prescriptions owed by tt"
+ eq_cepm_tgcap_mand_owed(cepm_mand,st,t,tt)        "--MW-- CEPM: state mandate at year tt not yet covered as of solve year t, split across capped groups"
+ eq_cepm_tg_cap_st_mand_owed(tg,cepm_mand,st,t,tt) "--MW_ac-- CEPM: a group's regional caps in a state at year tt must hold its builds through t plus its share of the mandate owed by tt"
+*<<< END CEPM ADDITION
 
 * storage capacity credit supply curves
  eq_cap_sdbin_balance(i,v,r,ccseason,t)             "--MW-- total binned storage power capacity must be greater than total storage capacity"
@@ -1406,6 +1418,7 @@ eq_interconnection_queues(tg,r,t)
         INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb] }
 ;
 
+*>>> BEGIN CEPM ADDITION ======================================================
 * ---------------------------------------------------------------------------
 * CEPM ADDITION -- not present upstream. See CEPM/guidance/two-step-re-limited-runs.md.
 *
@@ -1481,6 +1494,298 @@ eq_cepm_tg_cap_reg(tg,r)$[cepm_tg_cap_reg(tg,r)$Sw_CEPM_TgCap$(not Sw_PCM)]..
         * [UPGRADES(i,v,r,tt) - UPGRADES_RETIRE(i,v,r,tt)]
         / ilr(i) }
 ;
+
+* ---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+*
+* Per-year versions of the two caps above, active only with
+* GSw_CEPM_TgCap=2. The totals cap the horizon sum, and nothing stops a
+* sequential solve from spending all of it in the first capped year. These
+* equations also cap cumulative investment at each modeled year t at the
+* reference run's cumulative investment through t, so the capped run follows
+* the reference run's pace and not just its total.
+*
+* Same terms as the totals, with one addition: tt is also bounded by t, so in
+* an intertemporal solve each year's constraint counts only investment up to
+* that year. In the sequential solve that bound changes nothing, since later
+* years are in neither tmodel nor tfix.
+*
+* The totals stay active under GSw_CEPM_TgCap=2. The path's last value equals the
+* horizon total, so the two sets never conflict, and the totals still cap any
+* modeled year after the path's last year.
+* ---------------------------------------------------------------------------
+
+eq_cepm_tg_cap_sys_t(tg,t)
+    $[tmodel(t)$cepm_tg_cap_sys_t(tg,t)$(Sw_CEPM_TgCap=2)$(not Sw_PCM)]..
+
+* the system-wide ceiling on investment in this tech group through year t
+    cepm_tg_cap_sys_t(tg,t)
+
+    =g=
+
+* must be greater than new investment in the group, in MW_ac, from the start year through t
+    sum{(i,newv,r,tt)$[valinv(i,newv,r,tt)$tg_i(tg,i)
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(tt)<=yeart(t))
+                                    $(tmodel(tt) or tfix(tt))],
+        [INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+* [plus] capacity arriving by upgrade rather than new build, matching cap_new_out
+    + sum{(i,v,r,tt)$[valcap(i,v,r,tt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(tt)<=yeart(t))
+                                    $(tmodel(tt) or tfix(tt))],
+        (1 - upgrade_derate(i,v,r,tt))
+        * [UPGRADES(i,v,r,tt) - UPGRADES_RETIRE(i,v,r,tt)]
+        / ilr(i) }
+;
+
+eq_cepm_tg_cap_reg_t(tg,r,t)
+    $[tmodel(t)$cepm_tg_cap_reg_t(tg,r,t)$(Sw_CEPM_TgCap=2)$(not Sw_PCM)]..
+
+* the regional ceiling on investment in this tech group through year t
+    cepm_tg_cap_reg_t(tg,r,t)
+
+    =g=
+
+    sum{(i,newv,tt)$[valinv(i,newv,r,tt)$tg_i(tg,i)
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(tt)<=yeart(t))
+                                    $(tmodel(tt) or tfix(tt))],
+        [INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+* [plus] capacity arriving by upgrade rather than new build, matching cap_new_out
+    + sum{(i,v,tt)$[valcap(i,v,r,tt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(tt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(tt)<=yeart(t))
+                                    $(tmodel(tt) or tfix(tt))],
+        (1 - upgrade_derate(i,v,r,tt))
+        * [UPGRADES(i,v,r,tt) - UPGRADES_RETIRE(i,v,r,tt)]
+        / ilr(i) }
+;
+
+* ---------------------------------------------------------------------------
+* CEPM ADDITION -- not present upstream.
+*
+* "Built + owed": in each solve year t, every cap in force at a later modeled
+* year tt must also hold the prescriptions due by tt that the run's builds
+* through t don't yet cover. A prescription is a cumulative minimum per region
+* (eq_forceprescription_power), and builds elsewhere don't count toward it, so
+* without this a myopic solve can spend its budget in one region and later be
+* forced over the cap by a prescription in another -- an infeasible solve.
+* Prescriptions are exogenous, so this needs no foresight; it stops the run
+* from spending, now, budget that a later prescription will need.
+*
+* State capacity mandates -- the offshore wind requirement (eq_RPS_OFSWind) and
+* the battery mandate (eq_batterymandate) -- are forced builds too, and are
+* counted the same way through CEPM_TGCAP_MAND_OWED. See cepm_mand in
+* b_inputs.gms.
+*
+* The cap at tt is cepm_tg_cap_{sys,reg}_at (b_inputs.gms): the per-year path
+* under GSw_CEPM_TgCap=2, and the horizon total at the last modeled year. The
+* current-year check (tt = t) stays with the equations above. Only solve years
+* from Sw_CEPM_TgCapStartYear on: from an earlier solve year, the historical
+* prescriptions still to come would all count as owed against a cap that only
+* counts investment from the start year. See
+* CEPM/guidance/tgcap-built-plus-owed.md.
+* ---------------------------------------------------------------------------
+
+* owed = cumulative prescriptions through tt minus the category's builds
+* through t, counted exactly as in eq_forceprescription_power (all history)
+eq_cepm_tgcap_owed(pcat,r,t,tt)
+    $[tmodel(t)$(yeart(t)>=Sw_CEPM_TgCapStartYear)
+      $tmodel_new(tt)$(yeart(tt)>yeart(t))
+      $cepm_presc_cum(pcat,r,tt)
+      $sum{tg$cepm_tg_pcat(tg,pcat), cepm_tg_cap_sys_at(tg,tt) + cepm_tg_cap_reg_at(tg,r,tt) }
+      $Sw_CEPM_TgCap$(not Sw_PCM)]..
+
+    CEPM_TGCAP_OWED(pcat,r,t,tt)
+
+    =g=
+
+* prescribed through tt
+    cepm_presc_cum(pcat,r,tt)
+
+* [minus] built of this category in this region through t
+    - sum{(i,newv,ttt)$[valinv(i,newv,r,ttt)$prescriptivelink(pcat,i)
+                        $(yeart(ttt)<=yeart(t))$(tmodel(ttt) or tfix(ttt))],
+          INV(i,newv,r,ttt) + INV_REFURB(i,newv,r,ttt)$[refurbtech(i)$Sw_Refurb] }
+;
+
+* State mandate owed: the mandate at tt, minus what will already count toward
+* it -- existing capacity at tt and builds through t still online at tt, each
+* weighted as on the mandate equation's left-hand side -- minus the mandate's
+* prescriptions already counted as owed above. Subtracting those keeps a
+* prescribed build that also meets the mandate from being counted twice: owed
+* prescriptions + this = max(owed prescriptions, mandate shortfall).
+*
+* The owed amount is split across the capped groups that can build toward it
+* in the state at tt (battery mandate: 'battery', and 'pv' through PV+battery
+* hybrids), in each group's MW_ac; cepm_mand_k converts. The solver picks the
+* split, and any split it picks the run can follow later, so a mandate can't
+* force a cap over.
+*
+* Existing capacity follows the exogenous schedule and built capacity counts
+* until its lifetime ends (inv_cond), as in eq_RPS_OFSWind. The battery mandate
+* counts CAP instead, so a battery retired early would leave more to build than
+* is counted here. Early battery retirements aren't expected.
+eq_cepm_tgcap_mand_owed(cepm_mand,st,t,tt)
+    $[tmodel(t)$(yeart(t)>=Sw_CEPM_TgCapStartYear)
+      $tmodel_new(tt)$(yeart(tt)>yeart(t))
+      $cepm_mand_req(cepm_mand,st,tt)
+      $sum{(tg,r), cepm_mand_r(cepm_mand,tg,st,r,tt) }
+      $Sw_CEPM_TgCap$(not Sw_PCM)]..
+
+* owed, in mandate MW, split across the capped groups that can build toward it
+    sum{tg$sum{r, cepm_mand_r(cepm_mand,tg,st,r,tt) },
+        cepm_mand_k(cepm_mand,tg) * CEPM_TGCAP_MAND_OWED(cepm_mand,tg,st,t,tt) }
+
+    =g=
+
+* required at tt
+    cepm_mand_req(cepm_mand,st,tt)
+
+* [minus] existing capacity in the state at tt that counts toward it
+    - sum{(i,v,r)$[r_st(r,st)$cepm_mand_w(cepm_mand,i)],
+          cepm_mand_w(cepm_mand,i) * m_capacity_exog(i,v,r,tt) }
+
+* [minus] capacity built in the state through t, still online at tt, that counts toward it
+    - sum{(i,v,r,ttt)$[r_st(r,st)$cepm_mand_w(cepm_mand,i)$inv_cond(i,v,r,tt,ttt)
+                       $(yeart(ttt)<=yeart(t))$(tmodel(ttt) or tfix(ttt))],
+          cepm_mand_w(cepm_mand,i)
+          * [INV(i,v,r,ttt) + INV_REFURB(i,v,r,ttt)$[refurbtech(i)$Sw_Refurb]] }
+
+* [minus] the mandate's prescriptions already counted as owed. Only where
+* eq_cepm_tgcap_owed exists (same guard), so each OWED here is bounded below by
+* its own equation and can't be inflated to shrink this one; and only in regions
+* eq_cepm_tg_cap_st_mand_owed counts for that group (cepm_mand_r). A prescription
+* elsewhere just gets no credit.
+    - sum{(pcat,r)$[cepm_mand_pcat_w(cepm_mand,pcat)$cepm_presc_cum(pcat,r,tt)
+                    $sum{tg$[cepm_tg_pcat(tg,pcat)$cepm_mand_r(cepm_mand,tg,st,r,tt)], 1 }
+                    $sum{tg$cepm_tg_pcat(tg,pcat),
+                         cepm_tg_cap_sys_at(tg,tt) + cepm_tg_cap_reg_at(tg,r,tt) }],
+          cepm_mand_pcat_w(cepm_mand,pcat) * CEPM_TGCAP_OWED(pcat,r,t,tt) }
+;
+
+eq_cepm_tg_cap_sys_owed(tg,t,tt)
+    $[tmodel(t)$(yeart(t)>=Sw_CEPM_TgCapStartYear)
+      $tmodel_new(tt)$(yeart(tt)>yeart(t))
+      $cepm_tg_cap_sys_at(tg,tt)
+      $[sum{(pcat,r)$cepm_tg_pcat(tg,pcat), cepm_presc_cum(pcat,r,tt) }
+        + sum{(cepm_mand,st)$cepm_mand_k(cepm_mand,tg), cepm_mand_req(cepm_mand,st,tt) }]
+      $Sw_CEPM_TgCap$(not Sw_PCM)]..
+
+* the system-wide cap in force at tt
+    cepm_tg_cap_sys_at(tg,tt)
+
+    =g=
+
+* new investment in the group through t, in MW_ac (as eq_cepm_tg_cap_sys_t at t)
+    sum{(i,newv,r,ttt)$[valinv(i,newv,r,ttt)$tg_i(tg,i)
+                                    $(yeart(ttt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(ttt)<=yeart(t))
+                                    $(tmodel(ttt) or tfix(ttt))],
+        [INV(i,newv,r,ttt) + INV_REFURB(i,newv,r,ttt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+* [plus] capacity arriving by upgrade rather than new build, matching cap_new_out
+    + sum{(i,v,r,ttt)$[valcap(i,v,r,ttt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(ttt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(ttt)<=yeart(t))
+                                    $(tmodel(ttt) or tfix(ttt))],
+        (1 - upgrade_derate(i,v,r,ttt))
+        * [UPGRADES(i,v,r,ttt) - UPGRADES_RETIRE(i,v,r,ttt)]
+        / ilr(i) }
+
+* [plus] prescriptions owed by tt in any region, in MW_ac
+    + sum{(pcat,r)$[cepm_tg_pcat(tg,pcat)$cepm_presc_cum(pcat,r,tt)],
+          CEPM_TGCAP_OWED(pcat,r,t,tt) / cepm_pcat_ilr(pcat) }
+
+* [plus] this group's share of state mandates owed by tt, in MW_ac
+    + sum{(cepm_mand,st)$[cepm_mand_req(cepm_mand,st,tt)
+                          $sum{r, cepm_mand_r(cepm_mand,tg,st,r,tt) }],
+          CEPM_TGCAP_MAND_OWED(cepm_mand,tg,st,t,tt) }
+;
+
+eq_cepm_tg_cap_reg_owed(tg,r,t,tt)
+    $[tmodel(t)$(yeart(t)>=Sw_CEPM_TgCapStartYear)
+      $tmodel_new(tt)$(yeart(tt)>yeart(t))
+      $cepm_tg_cap_reg_at(tg,r,tt)
+      $sum{pcat$cepm_tg_pcat(tg,pcat), cepm_presc_cum(pcat,r,tt) }
+      $Sw_CEPM_TgCap$(not Sw_PCM)]..
+
+* the regional cap in force at tt
+    cepm_tg_cap_reg_at(tg,r,tt)
+
+    =g=
+
+    sum{(i,newv,ttt)$[valinv(i,newv,r,ttt)$tg_i(tg,i)
+                                    $(yeart(ttt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(ttt)<=yeart(t))
+                                    $(tmodel(ttt) or tfix(ttt))],
+        [INV(i,newv,r,ttt) + INV_REFURB(i,newv,r,ttt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+    + sum{(i,v,ttt)$[valcap(i,v,r,ttt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(ttt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(ttt)<=yeart(t))
+                                    $(tmodel(ttt) or tfix(ttt))],
+        (1 - upgrade_derate(i,v,r,ttt))
+        * [UPGRADES(i,v,r,ttt) - UPGRADES_RETIRE(i,v,r,ttt)]
+        / ilr(i) }
+
+* [plus] prescriptions owed by tt in this region only, in MW_ac
+    + sum{pcat$[cepm_tg_pcat(tg,pcat)$cepm_presc_cum(pcat,r,tt)],
+          CEPM_TGCAP_OWED(pcat,r,t,tt) / cepm_pcat_ilr(pcat) }
+;
+
+* A state mandate can be met in any of the state's regions, so a group's share
+* of it can't be charged to one regional cap. Instead, the group's regional caps
+* across the regions where it can build toward the mandate together must hold
+* its builds there, its owed prescriptions there (each region's own equation
+* above already holds those separately), and its share of the mandate owed.
+* Generated only when every such region has a regional cap at tt: if one
+* doesn't, the group's share can be met there, and only the system-wide cap
+* (above) can be forced over.
+eq_cepm_tg_cap_st_mand_owed(tg,cepm_mand,st,t,tt)
+    $[tmodel(t)$(yeart(t)>=Sw_CEPM_TgCapStartYear)
+      $tmodel_new(tt)$(yeart(tt)>yeart(t))
+      $cepm_mand_req(cepm_mand,st,tt)
+      $sum{r, cepm_mand_r(cepm_mand,tg,st,r,tt) }
+      $(not sum{r$[cepm_mand_r(cepm_mand,tg,st,r,tt)$(not cepm_tg_cap_reg_at(tg,r,tt))], 1 })
+      $Sw_CEPM_TgCap$(not Sw_PCM)]..
+
+* the group's regional caps in force at tt, summed over those regions
+    sum{r$cepm_mand_r(cepm_mand,tg,st,r,tt), cepm_tg_cap_reg_at(tg,r,tt) }
+
+    =g=
+
+* new investment in the group in those regions through t, in MW_ac (as eq_cepm_tg_cap_reg_owed)
+    sum{(i,newv,r,ttt)$[cepm_mand_r(cepm_mand,tg,st,r,tt)$valinv(i,newv,r,ttt)$tg_i(tg,i)
+                                    $(yeart(ttt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(ttt)<=yeart(t))
+                                    $(tmodel(ttt) or tfix(ttt))],
+        [INV(i,newv,r,ttt) + INV_REFURB(i,newv,r,ttt)$[refurbtech(i)$Sw_Refurb]]
+        / ilr(i) }
+
+    + sum{(i,v,r,ttt)$[cepm_mand_r(cepm_mand,tg,st,r,tt)$valcap(i,v,r,ttt)$tg_i(tg,i)$upgrade(i)$Sw_Upgrades
+                                    $(yeart(ttt)>=Sw_CEPM_TgCapStartYear)
+                                    $(yeart(ttt)<=yeart(t))
+                                    $(tmodel(ttt) or tfix(ttt))],
+        (1 - upgrade_derate(i,v,r,ttt))
+        * [UPGRADES(i,v,r,ttt) - UPGRADES_RETIRE(i,v,r,ttt)]
+        / ilr(i) }
+
+* [plus] prescriptions owed by tt in those regions, in MW_ac
+    + sum{(pcat,r)$[cepm_mand_r(cepm_mand,tg,st,r,tt)$cepm_tg_pcat(tg,pcat)$cepm_presc_cum(pcat,r,tt)],
+          CEPM_TGCAP_OWED(pcat,r,t,tt) / cepm_pcat_ilr(pcat) }
+
+* [plus] the group's share of the state mandate owed by tt, in MW_ac
+    + CEPM_TGCAP_MAND_OWED(cepm_mand,tg,st,t,tt)
+;
+*<<< END CEPM ADDITION ========================================================
 
 *===============================
 * --- SUPPLY DEMAND BALANCE ---
