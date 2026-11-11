@@ -23,7 +23,8 @@ caps are and how `run_cepm.ps1 -m` harvests them.
 - State capacity mandates are forced builds too and are counted the same way
   (section 4): the offshore-wind requirement (`eq_RPS_OFSWind`) and the battery
   mandate (`eq_batterymandate`), including battery mandates met with PV+battery
-  hybrids.
+  hybrids. This only changes a run that covers several states or has hybrids
+  on. In a single-state run like Virginia's it can't bind.
 - In the runs checked so far it doesn't bind. AZNM has no prescriptions after
   2026, and Virginia's (offshore wind and PV in `p99`) were covered in both
   `VA_baseline` and `VA_limitre`. It's a guarantee for cases where it would.
@@ -208,6 +209,30 @@ forces them; the forcing is in `eq_RPS_OFSWind`. The battery mandate is only in
 So about 1,300 MW of 2032 offshore wind, and the rise in the battery mandate,
 are forced by the mandates alone. The 2026 and 2029 solves don't see them.
 
+**When the mandate accounting actually matters.** In a run like Virginia's, it
+can't change anything. When a mandate covers the whole capped area (one state)
+and only one capped group can meet it, every build in that group counts toward
+the mandate. The baseline met the mandate, so the cap is at least the shortfall,
+and built + owed never exceeds max(builds so far, shortfall) ≤ cap. The mandate
+rows are generated but never bind. They matter in two situations:
+
+1. **A run covering several states under a system-wide cap.** The budget is
+   shared, but a mandate only counts builds in its own state. A capped run can
+   spend the budget in a state with no mandate and later be forced to build in
+   one that has one: the prescription problem, one level up.
+2. **A mandate more than one group can meet.** With PV+battery hybrids on, the
+   battery mandate can be met by `battery` or `pv`. If the baseline met it
+   partly with hybrids, the capped run could spend its `pv` budget on plain UPV
+   and be left unable to meet the mandate. This applies even to single-state
+   runs.
+
+States with a mandate in 2026-2032 (`inputs/state_policies/`): battery in CA,
+IL, MA, MD, MI, NJ, NV, NY, OR, RI and VA; offshore wind in CT, MA, MD, ME, NJ,
+NY, RI and VA. None of the current multi-state CEPM regions (`st-AZNM`,
+`st-MSALGA`) has one. So as of 2026-11-11 the accounting is a guarantee for
+future Northeast, Mid-Atlantic or Pacific regions and for runs with hybrids on,
+not a fix for a current case.
+
 **Mandates met by more than one group.** The battery mandate counts standalone
 batteries (`battery` group) and the battery share of PV+battery hybrids (`pv`
 group). Neither group is forced to build on its own; only their total is. So
@@ -245,8 +270,17 @@ for later modeled years `tt` with a cap in force, and only where the group has
 prescriptions due by `tt`. The start-year limit is essential. From the 2010
 solve, every historical prescription from 2011–2025 would count as owed against
 a cap that only counts investment from 2026, and the run would be infeasible
-straight away. `OWED` has no cost and is non-negative, so it settles at
-`max(0, …)`.
+straight away.
+
+`OWED` and `MAND_OWED` have no cost and are only bounded below, so a solve can
+put them anywhere between the true amount owed and whatever the cap leaves. They
+don't settle at `max(0, …)`. The constraint is right either way, because the
+cap holds at the lower bound. But **a solved level isn't the amount owed**. In a
+2026 re-solve of `v20261111mand_VA_limitre` (horizon caps), the battery mandate
+owed 1,075 MW (1,350 − 275), yet `MAND_OWED` came out at 3,682.7 MW, filling
+the battery cap. Offshore, which was tight, came out exactly right at 1,297.7 MW.
+To report owed amounts, compute them from each equation's right-hand side
+(requirement minus what's built), not from the variable's level.
 
 "New investment through `t`" uses the same terms as the existing cap equations:
 `INV`, `INV_REFURB`, and upgrades, each divided by `ilr`.
@@ -254,10 +288,11 @@ straight away. `OWED` has no cost and is non-negative, so it settles at
 ### Not added
 
 - **Reporting.** The owed amounts aren't written to `outputs/`. If they're
-  needed, add `cepm_tgcap_owed_out(pcat,r,t,tt) = CEPM_TGCAP_OWED.l(...)` to
-  `report.gms` and a row to `report_params.csv`. The name needs a suffix such as
-  `_out`, because GAMS names aren't case-sensitive and `cepm_tgcap_owed` would
-  clash with the variable.
+  needed, compute them in `report.gms` from each owed equation's right-hand side,
+  e.g. `max(0, cepm_presc_cum(pcat,r,tt) − builds through t)`, not from
+  `CEPM_TGCAP_OWED.l`, whose level isn't unique (see above). Add a row to
+  `report_params.csv`. The name needs a suffix such as `_out`, because GAMS names
+  aren't case-sensitive and `cepm_tgcap_owed` would clash with the variable.
 - **Energy prescriptions** (`eq_forceprescription_energy`, MWh for batteries).
   The caps are in MW, so only power prescriptions matter.
 
@@ -285,8 +320,11 @@ straight away. `OWED` has no cost and is non-negative, so it settles at
   elsewhere (hybrids are off in that run, so `pv` has none). `cepm_mand_req`
   matches the table in section 4. Offshore wind can be built in `p99` and
   `p124`, batteries in four VA regions. So the 2026 and 2029 solves should
-  generate `eq_cepm_tgcap_mand_owed` rows for 2032. **Not tested with hybrids
-  on** (`GSw_PVB=1`), which needs a run whose inputs were built with them.
+  generate `eq_cepm_tgcap_mand_owed` rows for 2032. Being single-state, they
+  shouldn't bind (zero duals) or change results, so a VA solve tests generation
+  and side effects, not the guarantee itself. **Not tested with hybrids on**
+  (`GSw_PVB=1`), which needs a run whose inputs were built with them, and **not
+  tested in a multi-state run with a mandate**.
 
 **Not yet tested: a solve.** Setup doesn't generate equations, so these haven't
 been exercised yet: equation generation (domains, the `/ ilr` division), the

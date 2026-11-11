@@ -392,8 +392,8 @@ neither is CEPM-specific — good candidates to contribute back.
 ### Files changed:
 
 - `runreeds.py` — the RA plot invocation now picks its background mechanism from
-  the existing `LINUXORMAC` global: `start /b "" ` on Windows, the original
-  trailing ` &` on Linux/macOS. The `""` is a window-title placeholder that
+  the existing `LINUXORMAC` global: `start /b ""` on Windows, the original
+  trailing `&` on Linux/macOS. The `""` is a window-title placeholder that
   `start` requires if the command is ever quoted.
 - `reeds/resource_adequacy/diagnostic_plots.py` — added the standard
   `reeds.log.makelog(scriptname=__file__, logpath=os.path.join(casedir,'gamslog.txt'))`
@@ -733,9 +733,14 @@ counted through one set, `cepm_mand` (`ofs`, `bat`), with
 cumulative minimum, so the regional check is per state. The battery mandate
 also counts PV+battery hybrids (`pv` group), so the owed amount is split across
 the capped groups that can meet it, and the solver picks the split. Owed
-prescriptions are subtracted so a prescribed build isn't counted twice. VA is
-the live case: offshore 2,599 → 3,949.7 MW and battery 275 → 1,350 MW between
-the 2029 and 2032 solve years. Setup-tested on the VA `_limitre` copy under
+prescriptions are subtracted so a prescribed build isn't counted twice. VA's
+mandates rise between the 2029 and 2032 solve years (offshore 2,599 → 3,949.7
+MW, battery 275 → 1,350 MW), but in a single-state run with one group per
+mandate they can't push a cap over: every build in the group counts toward the
+mandate. The accounting matters for runs covering several states under a
+system-wide cap, and for the battery mandate once hybrids are on. No current
+multi-state CEPM region has a mandate; see the guidance doc's "When the mandate
+accounting actually matters". Setup-tested on the VA `_limitre` copy under
 `=1`; **not tested in a solve, and not tested with hybrids on (`GSw_PVB=1`)**.
 
 ### Departure from convention worth knowing: both rows are non-region rows

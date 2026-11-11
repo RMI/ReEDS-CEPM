@@ -85,6 +85,14 @@ baseline year by year and fills the 2029 gap with gas, which raises its cost.
   inactive in AZNM because there are no prescriptions after 2026.
 - **Case change:** `GSw_CEPM_TgCap` 1 -> 2 in `limitre`. Removed
   `cepmtgcapscen` from `cases_cepm.csv`, since `run_cepm.ps1 -m` sets it.
+- **ReEDS change (2026-11-11, `80ae3fb2`):** "Built + owed" now also counts
+  state offshore-wind requirements (`eq_RPS_OFSWind`) and battery mandates
+  (`eq_batterymandate`), including battery mandates met by PV+battery hybrids.
+  Raised in Copilot's review of PR #77. It only binds in multi-state runs or with
+  hybrids on; no current CEPM region has a mandate it would change. It was a
+  no-op on AZNM in setup testing.
+- **ReEDS change (2026-11-11, `80ae3fb2`):** Every CEPM block in `b_inputs.gms`
+  and `c_model.gms` is now wrapped in `*>>> BEGIN CEPM` / `*<<< END CEPM` markers.
 
 ### Results
 
@@ -124,6 +132,25 @@ baseline year by year and fills the 2029 gap with gas, which raises its cost.
   `known-reeds-issues.md`, with a fix identified but not implemented.
 - **NEXT STEP:** Decide whether hydro (and any other uncapped group) belongs in
   the `limitre` ceiling.
+- **ISSUE (2026-11-11):** Data-center load starting in 2026 makes the first
+  capped year inconsistent. `limitre` and `optimized` carry state load sites from
+  2026 (6.6 GW in VA), but `baseline` has none, so `limitre`'s 2026 cap path comes
+  from a run with much less load. Test batch `v20261111mand` (VA, mode 2):
+  `VA_limitre` was infeasible in 2026. The conflict refiner points at the 2026
+  path caps, the data-center load, and the CSAPR NOx budget, with no imports in a
+  VA-only run. Re-solves show mode 2 alone causes it; the owed and mandate rows
+  don't. Starting data-center load in 2027 would make 2026 consistent but likely
+  moves the problem to 2029. Not addressed yet.
+- **DOCUMENTATION (2026-11-11):** Updated
+  `CEPM/guidance/st-AZNM/p47-stress-period-nonconvergence.md`: p47 fails in all
+  21 AZNM runs since 2026-10-09, `limitre`/`optimized` put New Mexico's
+  data-center load in p47, and per-sample PRAS shows the 200 MW tie is the
+  bottleneck. Candidate fixes: `GSw_PRM_UpdateMethod=2` and
+  `GSw_TransInvNearTerm=1`.
+- **DOCUMENTATION (2026-11-11):** New
+  `CEPM/guidance/loadsite-partial-state-allocation.md`, a design (not
+  implemented) for splitting state data-center forecasts by `state_lpf` when only
+  part of a state is in a run (e.g., El Paso in WECC-SW).
 
 ### Checklist
 
