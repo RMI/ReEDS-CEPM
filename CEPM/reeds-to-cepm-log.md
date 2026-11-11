@@ -658,7 +658,8 @@ have the same terms as the totals, plus `yeart(tt) <= yeart(t)` so an
 intertemporal solve counts each year's constraint correctly. The path's last
 value equals the horizon total, so the two sets never conflict; the totals stay
 active under `2` and still cap any modeled year after the path's last year. `0`
-and `1` behave exactly as before; no `cases_cepm.csv` case uses `2` yet. (This was
+and `1` behave exactly as before. Every `_limitre` case in `cases_cepm.csv` uses
+`2`; the `_baseline` and `_optimized` cases leave the caps off. (This was
 first written as a separate `GSw_CEPM_TgCapByYear` switch, and folded into
 `GSw_CEPM_TgCap=2` on 2026-10-19 so a single switch sets the cap mode.)
 
