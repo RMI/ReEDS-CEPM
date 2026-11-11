@@ -91,8 +91,6 @@ baseline year by year and fills the 2029 gap with gas, which raises its cost.
   Raised in Copilot's review of PR #77. It only binds in multi-state runs or with
   hybrids on; no current CEPM region has a mandate it would change. It was a
   no-op on AZNM in setup testing.
-- **ReEDS change (2026-11-11, `80ae3fb2`):** Every CEPM block in `b_inputs.gms`
-  and `c_model.gms` is now wrapped in `*>>> BEGIN CEPM` / `*<<< END CEPM` markers.
 
 ### Results
 
@@ -120,14 +118,16 @@ baseline year by year and fills the 2029 gap with gas, which raises its cost.
 
 ### Documentation, decisions, next steps, & issues
 
-- **PROPOSED DECISION:** Use `GSw_CEPM_TgCap=2` for `limitre` going forward.
+- **DECISION:** Use `GSw_CEPM_TgCap=2` for `limitre` going forward.
   Mode 1 lets a myopic solve front-load the ceiling, which understates the cost
   of limiting RE.
 - **DOCUMENTATION:** `CEPM/guidance/tgcap-built-plus-owed.md` (owed
   accounting) and the per-year path section of `reeds-to-cepm-log.md`.
 - **ISSUE:** The stress-period non-convergence from `tfnewq` persists. All
   three cases hit `GSw_PRM_StressIterateMax=5` in 2029 and 2032 (see
-  `CEPM/guidance/st-AZNM/p47-stress-period-nonconvergence.md`).
+  `CEPM/guidance/st-AZNM/p47-stress-period-nonconvergence.md`). Main
+  candidate is a GAMS<->PRAS issue; added a comment on C4-395 to better
+  characterize this issue.
 - **ISSUE:** `plot_stressors()` produces no stress-day maps. Documented in
   `known-reeds-issues.md`, with a fix identified but not implemented.
 - **NEXT STEP:** Decide whether hydro (and any other uncapped group) belongs in
@@ -140,17 +140,21 @@ baseline year by year and fills the 2029 gap with gas, which raises its cost.
   path caps, the data-center load, and the CSAPR NOx budget, with no imports in a
   VA-only run. Re-solves show mode 2 alone causes it; the owed and mandate rows
   don't. Starting data-center load in 2027 would make 2026 consistent but likely
-  moves the problem to 2029. Not addressed yet.
+  moves the problem to 2029. Not addressed yet. In JIRA at C4-558.
 - **DOCUMENTATION (2026-11-11):** Updated
   `CEPM/guidance/st-AZNM/p47-stress-period-nonconvergence.md`: p47 fails in all
   21 AZNM runs since 2026-10-09, `limitre`/`optimized` put New Mexico's
   data-center load in p47, and per-sample PRAS shows the 200 MW tie is the
   bottleneck. Candidate fixes: `GSw_PRM_UpdateMethod=2` and
   `GSw_TransInvNearTerm=1`.
-- **DOCUMENTATION (2026-11-11):** New
-  `CEPM/guidance/loadsite-partial-state-allocation.md`, a design (not
-  implemented) for splitting state data-center forecasts by `state_lpf` when only
-  part of a state is in a run (e.g., El Paso in WECC-SW).
+- **IDEA**: We use EPRI's state-level data center forecasts. Without addditional
+  manipulation, this makes it difficult to model non-state-size regions. We could
+  allocate data center load to partial states based on load participation to help us
+  model partial states as part of larger regions. Discussed in
+  `loadsite-partial-state-allocation.md`. Captured in C4-559.
+- **NOTE**: Current settings don't allow transmission to be built until 2033, which
+  mean transmission is effectively fixed in our analysis period. Switch is called
+  `GSw_TransInvNearTerm`.
 
 ### Checklist
 
