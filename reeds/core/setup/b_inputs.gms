@@ -3339,7 +3339,7 @@ transmission_line_fom(r,rr,"VSC")$sum{t, routes(r,rr,"VSC",t) } = transmission_l
 * --- Transmission switches ---
 * Sw_TransInvMax: According to
 *    https://www.energy.gov/eere/wind/articles/land-based-wind-market-report-2021-edition-released
-*    the maximum annual growth rate since 2009 was in 2013, with 543 miles of ≤230 kV,
+*    the maximum annual growth rate since 2009 was in 2013, with 543 miles of â‰¤230 kV,
 *    3632 miles of 345 kV, and 466 miles of 500 kV. Using the WECC/TEPPC assumption of
 *    1500 MW for 500 kV, 750 MW for 345 kV, and 400 MW for 230 kV (all single-circuit)
 *    [https://www.wecc.org/Administrative/TEPPC_TransCapCostCalculator_E3_2019_Update.xlsx]
@@ -3968,11 +3968,11 @@ cost_vom(i,v,r,t)$[valcap(i,v,r,t)$dr_shed(i)] = vom_dr_shed(i,r,t) ;
 
 * Assign hybrid PV+battery to have the same value as UPV
 parameter cost_vom_pvb_p(i,v,r,t) "--2004$/MWh-- variable OM for the PV portion of hybrid PV+battery " ;
-cost_vom_pvb_p(i,v,r,t)$pvb(i) =  sum{ii$[upv(ii)$rsc_agg(ii,i)], cost_vom(ii,v,r,t) } ;
+cost_vom_pvb_p(i,v,r,t)$[pvb(i)$valgen(i,v,r,t)] = 0.01 ;
 
 * Assign hybrid PV+battery to have the same value as Battery_li
 parameter cost_vom_pvb_b(i,v,r,t) "--2004$/MWh-- variable OM for the battery portion of hybrid PV+battery " ;
-cost_vom_pvb_b(i,v,r,t)$pvb(i) =  cost_vom("battery_li",v,r,t) ;
+cost_vom_pvb_b(i,v,r,t)$[pvb(i)$valgen(i,v,r,t)] = 0.01 ;
 
 * Assign hybrid plant to have the same value as UPV
 parameter cost_vom_hybrid_plant(i,v,r,t) "--2004$/MWh-- variable OM for the plant portion of hybrid" ;
@@ -6144,6 +6144,8 @@ Set
     h_preh(allh, allh)                     "mapping set between one timeslice and all other timeslices earlier in that period"
     h_rep(allh)                            "representative timeslices"
     h_stress(allh)                         "stress timeslices"
+    drevent(*)                              "DR reliability events in current solve"
+    dr_event_h(drevent,allh)                "mapping of DR reliability events to stress hours"
     h_t(allh,allt)                         "representative and stress timeslices by model year"
     h_stress_t(allh,allt)                  "stress timeslices by model year"
 * "Seasons" (both seasons and representative days/weks)
@@ -6163,6 +6165,7 @@ Set
     nexth_actualszn(allszn,allh,allszn,allh) "mapping between one timeslice and the next for actual periods (szns)"
 * Chronology
     nexth(allh,allh)                       "Mapping set between one timeslice (first) and the following (second)"
+    dr_5hour_window(allh,allh)             "representative-hour 5-hour rolling DR window"
     starting_hour_nowrap(allh)             "Flag for whether allh is the first chronological hour by day type"
     final_hour(allh)                       "Flag for whether allh is the last chronological hour in a day type" 
     final_hour_nowrap(allh)                "Flag for whether allh is the last chronological hour in a day type"
@@ -6170,6 +6173,7 @@ Set
     nextpartition(allszn,allszn)           "Mapping between one partition (allszn) and the next"
 * Peak demand
     maxload_szn(r,allh,t,allszn)           "hour with highest load within each szn"
+    dr_peak_h(r,allh,t,allszn)             "peak-load hour used for conditional DR response"
     h_ccseason_prm(allh,ccseason)          "peak-load hour for the entire modeled system by ccseason"
 * Operating reserves
     opres_periods(allszn)                  "Periods within which the operating reserve constraint applies"
@@ -6182,7 +6186,7 @@ Set
     hour_szn_group(allh,allh)              "h and hh in the same season - used in minloading constraint"
 ;
 
-alias(h,hh,hhh) ;
+alias(h,hh,hhh,hhhh,hhhhh) ;
 alias(szn,sznn) ;
 alias(actualszn,actualsznn,actualsznnn) ;
 

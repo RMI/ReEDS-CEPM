@@ -1,5 +1,5 @@
 ,Default Value,st-AZNM_baseline,st-AZNM_limitre,st-AZNM_optimized,st-MSALGA_baseline,st-MSALGA_limitre,st-MSALGA_optimized,VA_baseline,VA_limitre,VA_optimized
-ignore,1,0,1,1,1,1,1,1,1,1
+ignore,1,0,0,0,1,1,1,1,1,1
 GSw_Region,cendiv/Pacific,st/AZ.NM,st/AZ.NM,st/AZ.NM,st/MS.AL.GA,st/MS.AL.GA,st/MS.AL.GA,st/VA,st/VA,st/VA
 GSw_ZoneSet,,z132,z132,z132,z132,z132,z132,z132,z132,z132
 startyear,2010,,,,,,,,,
@@ -59,8 +59,8 @@ GSw_DAC,,,,,,,,,,
 GSw_NoFossilOffsetCDR,,,,,,,,,,
 GSw_Biopower,,,,,,,,,,
 GSw_BECCS,1,,,,,,,,,
-GSw_HourlyChunkLengthRep,,4,4,4,4,4,4,4,4,4
-GSw_HourlyChunkLengthStress,,4,4,4,4,4,4,4,4,4
+GSw_HourlyChunkLengthRep,,1,1,1,4,4,4,4,4,4
+GSw_HourlyChunkLengthStress,,1,1,1,4,4,4,4,4,4
 GSw_LfillGas,,,,,,,,,,
 GSw_Nuclear,,,,,,,,,,
 GSw_OpRes,,,,,,,,,,
@@ -69,7 +69,8 @@ GSw_H2,,0,0,0,0,0,0,0,0,0
 GSw_H2Combustion,0,,,,,,,,,
 GSw_H2CombinedCycle,0,,,,,,,,,
 GSw_H2_PTC,,0,0,0,0,0,0,0,0,0
-GSw_DRShed,,,,,,,,,,
+GSw_DRShed,0,1,1,1,,,,,,
+GSw_DRShedMaxEventHours,4,0,0,0,,,,,,
 GSw_OffshoreZones,,,,,,,,,,
 GSw_OffshoreBackbone,,,,,,,,,,
 GSw_OffshoreBackflow,,,,,,,,,,
@@ -85,3 +86,7 @@ reeds_to_rev,0,,,,,,,,,
 cleanup_level,0,0,0,0,0,0,0,0,0,0
 GSw_CEPM_TgCap,,,1,,,1,,,1,
 cepmtgcapscen,,,none,,,none,,,none,
+GSw_PVB,0,1,1,1,,,,,,
+GSw_EFS_Flex,0,0,0,0,,,,,,
+GSw_EFS2_FlexCase,EFS_MEDIUM_EnhancedflexStretch2046,EFS_MEDIUM_EnhancedflexStretch2046,EFS_MEDIUM_EnhancedflexStretch2046,EFS_MEDIUM_EnhancedflexStretch2046,,,,,,
+GSw_PRM_StressThresholdNEUE,transgrp_1,country_1,country_1,country_1,,,,,,

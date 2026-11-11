@@ -108,7 +108,7 @@ def make_fake_profiles(
     seed:None|int=17,
 ) -> pd.DataFrame:
     """
-    Make a dataframe of fake CF profiles, len(timeindex) rows × len(sitecf) columns.
+    Make a dataframe of fake CF profiles, len(timeindex) rows Ã— len(sitecf) columns.
     To make them somewhat realistic in terms of min/mean/max (but not temporal shape),
     we randomly sample from the two-state [0,1] array, where probaility(1) = CF [fraction].
     These profiles should NOT be used for any kind of analysis; they are just for testing
@@ -120,7 +120,7 @@ def make_fake_profiles(
         seed (int): (optional) Random number generator (RNG) seed
 
     Returns:
-        pd.DataFrame: len(timeindex) rows × len(sitecf) columns
+        pd.DataFrame: len(timeindex) rows Ã— len(sitecf) columns
 
     Inputs for testing:
         sitecf = pd.Series{{36432:0.24, 37116:0.59, 37787:0.07, 38464:0.27})
@@ -408,13 +408,20 @@ def main(reeds_path, inputs_case):
     )
     for pvb_type in GSw_PVB_Types:
         ilr = int(pvb_ilr['pvb{}'.format(pvb_type)] * 100)
-        # If PVB uses same ILR as UPV then use its profile
-        infile = 'recf_upv' if ilr == scalars['ilr_utility'] * 100 else f'recf_upv_{ilr}AC'
-        df_pvb[pvb_type] = reeds.io.read_file(
-            os.path.join(inputs_case,infile+'.h5'),
-        )
-        df_pvb[pvb_type].columns = [f'pvb{pvb_type}_{c}'
-                                    for c in df_pvb[pvb_type].columns]
+        # If PVB uses the same ILR as UPV, reuse the UPV profile already calculated above
+        if ilr == scalars['ilr_utility'] * 100:
+            df_pvb[pvb_type] = df_upv.copy()
+        else:
+            infile = f'recf_upv_{ilr}AC'
+            df_pvb[pvb_type] = reeds.io.read_file(
+                os.path.join(inputs_case, infile+'.h5'),
+            )
+
+        # df_upv columns already contain "upv_"; strip it before adding the PVB prefix
+        df_pvb[pvb_type].columns = [
+            f'pvb{pvb_type}_{c.removeprefix("upv_")}'
+            for c in df_pvb[pvb_type].columns
+        ]
         df_pvb[pvb_type].index = df_upv.index.copy()
 
     ### Concat RECF data

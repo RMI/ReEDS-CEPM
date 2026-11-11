@@ -196,6 +196,10 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_dhyd_dispatch(i,v,r,allszn,t)              "--MWh-- dispatchable hydro seasonal energy constraint (when not allowing seasonal enregy shifting)"
  eq_min_cf(i,r,t)                              "--MWh-- minimum capacity factor constraint for each generator fleet, applied to (i,r)"
  eq_max_daily_cf(i,r,allszn,t)                 "--MWh-- maximum daily capacity factor constraint for any technology with maxdailycf(i,t) specified"
+ eq_dr_shed_event_limit(i,r,drevent,t)        "--MWh-equivalent-- maximum DR shed response within each reliability event"
+ eq_dr_shed_peak_dispatch(i,r,allszn,t)    "--MW-- minimum peak-hour DR response conditional on representative-day DR use"
+ eq_dr_shed_daily_limit(i,r,allszn,t)      "--MWh-equivalent-- maximum DR shed response per representative day"
+ eq_dr_shed_rolling_limit(i,r,allh,t)       "--MWh-equivalent-- maximum DR shed response within any 5 consecutive representative hours"
  eq_mingen_fixed(i,v,r,allh,t)                 "--MW-- Generation in each timeslice must be greater than mingen_fixed * available capacity"
  eq_mingen_lb(r,allh,allszn,t)                 "--MW-- lower bound on minimum generation level"
  eq_mingen_ub(r,allh,allszn,t)                 "--MW-- upper bound on minimum generation level"
@@ -255,7 +259,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_h2_transport_caplimit(r,rr,allh,t)                "--metric tons per hour-- H2 flow cannot exceed cumulative pipeline investment"
  eq_h2_storage_flowlimit(h2_stor,r,allh,t)            "--metric tons per hour-- H2 storage injection or withdrawal cannot exceed cumulative storage investment"
  eq_h2_storage_capacity(h2_stor,r,t)                  "--metric tons-- H2 storage capacity is sum of H2 storage investments"
- eq_h2_min_storage_cap(r,t)                           "--metric tons-- H2 storage capacity must be ≥ Sw_H2_MinStorHours * H2 usage capacity"
+ eq_h2_min_storage_cap(r,t)                           "--metric tons-- H2 storage capacity must be â‰¥ Sw_H2_MinStorHours * H2 usage capacity"
  eq_h2_ptc_region_balance(h2ptcreg,t)                 "--MWh-- clean generation for hydrogen production must be more than electricity required for electrolytic H2 production in that region and year"
  eq_h2_ptc_region_hour_balance(h2ptcreg,allh,t)       "--MWh-- clean generation for hydrogen production must be more than electricity required for electrolytic H2 production in that region, hour and year"
  eq_h2_ptc_creditgen(i,v,r,allh,t)                    "--MWh-- total generation must be greater than clean generation for hydrogen production"
@@ -1355,6 +1359,127 @@ eq_max_daily_cf(i,r,szn,t)$[maxdailycf(i,t)
 
     sum{(v,h)$[valgen(i,v,r,t)$h_szn(h,szn)], hours(h) * GEN(i,v,r,h,t) }
 ;
+
+* ---------------------------------------------------------------------------
+* DR shed event-duration constraint
+*
+* Limit DR to Sw_DRShedMaxEventHours equivalent full-output hours
+* within each consecutive reliability stress event.
+*
+* Do not use hours(h) here. Stress-period hours(h) are normalized for
+* annual weighting, while dr_event_h maps actual chronological stress hours.
+
+eq_dr_shed_event_limit(i,r,drevent,t)$[
+    dr_shed(i)
+    $(Sw_DRShedMaxEventHours > 0)
+    $tmodel(t)
+    $valgen_irt(i,r,t)
+    $sum{h$dr_event_h(drevent,h), 1}
+]..
+
+    sum{(v,h)$[
+        valgen(i,v,r,t)
+        $dr_event_h(drevent,h)
+    ],
+        GEN(i,v,r,h,t)
+    }
+
+    =l=
+
+    %GSw_DRShedMaxEventHours%
+    * sum{v$valgen(i,v,r,t),
+        CAP(i,v,r,t)
+    }
+;
+
+* ---------------------------------------------------------------------------
+* Representative-day DR operating constraints
+*
+
+* Daily DR energy ceiling: at most 8 equivalent full-output hours
+* across each representative day.
+
+* Conditional representative-day peak response.
+* Peak-hour DR must equal at least 10% of average hourly DR use
+* implied by the day's total DR dispatch divided by the 8-hour daily ceiling.
+* If no DR is dispatched that day, this requirement is zero.
+
+eq_dr_shed_peak_dispatch(i,r,szn,t)$[
+    dr_shed(i)
+    $tmodel(t)
+    $valgen_irt(i,r,t)
+    $sum{h$dr_peak_h(r,h,t,szn), 1}
+]..
+
+    sum{(v,h)$[
+        valgen(i,v,r,t)
+        $dr_peak_h(r,h,t,szn)
+    ],
+        GEN(i,v,r,h,t)
+    }
+
+    =g=
+
+    (0.10 / 8)
+    * sum{(v,h)$[
+        valgen(i,v,r,t)
+        $h_rep(h)
+        $h_szn(h,szn)
+    ],
+        GEN(i,v,r,h,t)
+    }
+;
+
+eq_dr_shed_daily_limit(i,r,szn,t)$[
+    dr_shed(i)
+    $tmodel(t)
+    $valgen_irt(i,r,t)
+    $sum{h$[h_rep(h)$h_szn(h,szn)], 1}
+]..
+
+    sum{(v,h)$[
+        valgen(i,v,r,t)
+        $h_rep(h)
+        $h_szn(h,szn)
+    ],
+        GEN(i,v,r,h,t)
+    }
+
+    =l=
+
+    8 * sum{v$valgen(i,v,r,t), CAP(i,v,r,t) }
+;
+
+* Rolling DR event-duration approximation.
+* Any five consecutive representative hours may contain no more
+* than four equivalent full-output hours of DR response.
+
+eq_dr_shed_rolling_limit(i,r,h,t)$[
+    dr_shed(i)
+    $tmodel(t)
+    $valgen_irt(i,r,t)
+    $h_rep(h)
+]..
+
+    sum{(v,hh)$[
+        valgen(i,v,r,t)
+        $dr_5hour_window(h,hh)
+    ],
+        GEN(i,v,r,hh,t)
+    }
+
+    =l=
+
+    4 * sum{v$valgen(i,v,r,t), CAP(i,v,r,t) }
+;
+
+
+* Rolling DR event-duration approximation
+* In any five consecutive representative hours within the same day,
+* DR dispatch cannot exceed four equivalent full-output hours.
+
+
+
 
 * ---------------------------------------------------------------------------
 

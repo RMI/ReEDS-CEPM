@@ -127,6 +127,10 @@ $onlisting
 
 nexth(allh,allh) "Mapping set between one timeslice (first) and the following (second)"
 /
+
+
+
+
 $offlisting
 $ondelim
 $include inputs_case%ds%%temporal_inputs%%ds%nexth.csv
@@ -134,6 +138,29 @@ $include inputs_case%ds%stress%stress_year%%ds%nexth.csv
 $offdelim
 $onlisting
 /
+
+
+
+$ONEMPTY
+drevent(*) "DR reliability events for current model year"
+/
+$offlisting
+$include inputs_case%ds%stress%stress_year%%ds%set_dr_event.csv
+$onlisting
+/
+$OFFEMPTY
+
+$ONEMPTY
+dr_event_h(drevent,allh) "mapping of DR reliability events to stress hours"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%stress%stress_year%%ds%dr_event.csv
+$offdelim
+$onlisting
+/
+$OFFEMPTY
+
 
 nextszn(actualszn,actualszn) "Mapping between one actual period (actualszn) and the next"
 /
@@ -155,6 +182,43 @@ $onlisting
 /
 $OFFEMPTY
 ;
+
+* Five-hour rolling windows for representative-period DR.
+* Each starting hour maps to itself plus its next four hours.
+
+dr_5hour_window(allh,allh) = no ;
+
+dr_5hour_window(h,hh)$[
+    h_rep(h)
+    $h_rep(hh)
+    $sum(szn$[h_szn(h,szn)$h_szn(hh,szn)],1)
+    $(
+        sameas(h,hh)
+        or nexth(h,hh)
+        or sum(hhh$[
+            h_rep(hhh)
+            $nexth(h,hhh)
+            $nexth(hhh,hh)
+        ],1)
+        or sum((hhh,hhhh)$[
+            h_rep(hhh)
+            $h_rep(hhhh)
+            $nexth(h,hhh)
+            $nexth(hhh,hhhh)
+            $nexth(hhhh,hh)
+        ],1)
+        or sum((hhh,hhhh,hhhhh)$[
+            h_rep(hhh)
+            $h_rep(hhhh)
+            $h_rep(hhhhh)
+            $nexth(h,hhh)
+            $nexth(hhh,hhhh)
+            $nexth(hhhh,hhhhh)
+            $nexth(hhhhh,hh)
+        ],1)
+    )
+] = yes ;
+
 
 * Record the stress periods for each model year
 h_t(allh,t)$[tmodel(t)] = no ;
@@ -398,8 +462,20 @@ $onlisting
 / ;
 $offempty
 
-* DR Shed resources are only available during stress periods
-avail(i,r,h)$[dr_shed(i)$h_rep(h)] = 0 ;
+* Representative-period DR availability by solve year
+$onempty
+parameter dr_shed_out_rep(i,r,allh,allt) "--fraction-- DR shed capacity availability in representative hours by solve year"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%%temporal_inputs%%ds%dr_shed_out_rep.csv
+$offdelim
+$onlisting
+/ ;
+$offempty
+
+* DR Shed resources are available during representative and stress periods
+avail(i,r,h)$[dr_shed(i)$h_rep(h)] = sum(t$tmodel(t), dr_shed_out_rep(i,r,h,t)) ;
 avail(i,r,h)$[dr_shed(i)$h_stress(h)] = dr_shed_out(i,r,h) ;
 
 *upgrade plants assume the same availability of what they are upgraded to
@@ -810,6 +886,19 @@ maxload_szn(r,h,t,szn)
     $[(smax(hh$[h_szn(hh,szn)], load_exog_static(r,hh,t))
        = load_exog_static(r,h,t))
     $h_szn(h,szn)$Sw_OpRes] = yes ;
+
+* Peak-load hour(s) within each representative day for conditional DR response.
+* If multiple hours tie for peak load, treat each tied hour as a peak.
+
+dr_peak_h(r,allh,t,allszn) = no ;
+
+dr_peak_h(r,h,t,szn)$[
+    h_rep(h)
+    $h_szn(h,szn)
+    $(load_exog_static(r,h,t)
+        = smax(hh$[h_rep(hh)$h_szn(hh,szn)],
+               load_exog_static(r,hh,t)))
+] = yes ;
 
 set h_ccseason_prm(allh,ccseason) "peak-load hour for the entire modeled system by ccseason"
 /
