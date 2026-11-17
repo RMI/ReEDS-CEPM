@@ -271,7 +271,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_h2_transport_caplimit(r,rr,allh,t)                "--metric tons per hour-- H2 flow cannot exceed cumulative pipeline investment"
  eq_h2_storage_flowlimit(h2_stor,r,allh,t)            "--metric tons per hour-- H2 storage injection or withdrawal cannot exceed cumulative storage investment"
  eq_h2_storage_capacity(h2_stor,r,t)                  "--metric tons-- H2 storage capacity is sum of H2 storage investments"
- eq_h2_min_storage_cap(r,t)                           "--metric tons-- H2 storage capacity must be â‰¥ Sw_H2_MinStorHours * H2 usage capacity"
+ eq_h2_min_storage_cap(r,t)                           "--metric tons-- H2 storage capacity must be ≥ Sw_H2_MinStorHours * H2 usage capacity"
  eq_h2_ptc_region_balance(h2ptcreg,t)                 "--MWh-- clean generation for hydrogen production must be more than electricity required for electrolytic H2 production in that region and year"
  eq_h2_ptc_region_hour_balance(h2ptcreg,allh,t)       "--MWh-- clean generation for hydrogen production must be more than electricity required for electrolytic H2 production in that region, hour and year"
  eq_h2_ptc_creditgen(i,v,r,allh,t)                    "--MWh-- total generation must be greater than clean generation for hydrogen production"

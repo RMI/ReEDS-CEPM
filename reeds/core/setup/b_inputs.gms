@@ -3440,7 +3440,7 @@ transmission_line_fom(r,rr,"VSC")$sum{t, routes(r,rr,"VSC",t) } = transmission_l
 * --- Transmission switches ---
 * Sw_TransInvMax: According to
 *    https://www.energy.gov/eere/wind/articles/land-based-wind-market-report-2021-edition-released
-*    the maximum annual growth rate since 2009 was in 2013, with 543 miles of â‰¤230 kV,
+*    the maximum annual growth rate since 2009 was in 2013, with 543 miles of ≤230 kV,
 *    3632 miles of 345 kV, and 466 miles of 500 kV. Using the WECC/TEPPC assumption of
 *    1500 MW for 500 kV, 750 MW for 345 kV, and 400 MW for 230 kV (all single-circuit)
 *    [https://www.wecc.org/Administrative/TEPPC_TransCapCostCalculator_E3_2019_Update.xlsx]

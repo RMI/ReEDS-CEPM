@@ -108,7 +108,7 @@ def make_fake_profiles(
     seed:None|int=17,
 ) -> pd.DataFrame:
     """
-    Make a dataframe of fake CF profiles, len(timeindex) rows Ã— len(sitecf) columns.
+    Make a dataframe of fake CF profiles, len(timeindex) rows × len(sitecf) columns.
     To make them somewhat realistic in terms of min/mean/max (but not temporal shape),
     we randomly sample from the two-state [0,1] array, where probaility(1) = CF [fraction].
     These profiles should NOT be used for any kind of analysis; they are just for testing
@@ -120,7 +120,7 @@ def make_fake_profiles(
         seed (int): (optional) Random number generator (RNG) seed
 
     Returns:
-        pd.DataFrame: len(timeindex) rows Ã— len(sitecf) columns
+        pd.DataFrame: len(timeindex) rows × len(sitecf) columns
 
     Inputs for testing:
         sitecf = pd.Series{{36432:0.24, 37116:0.59, 37787:0.07, 38464:0.27})
