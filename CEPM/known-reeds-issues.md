@@ -35,7 +35,7 @@ chasing a crash, start with them.
 |---|---|---|
 | [GAMS 44.4.0: `Error 579` on model compile](#gams-4440-compile-failure-error-579-in-autocodeb_load_setsgms-fixed) | Fixed | Blocked every run at model compile on our pinned GAMS. Fixed in `h5_to_gdx.py`. |
 | [`GSw_GrowthAbsCon=1`: final solve year infeasible](#gsw_growthabscon1-makes-the-final-solve-year-infeasible-eq_growthlimit_absolute) | Open — workaround | Last modeled year goes infeasible from a year-gap sign error. Use a sacrificial final year, or the cumulative caps instead. |
-| [`GSw_CEPM_TgCap=1`: Virginia 2029 infeasible](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found) | Open — cause unknown | VA `limitre` dies at 2029 with 1665 infeasible rows. Cap is the trigger; the colliding constraint is not yet identified. Disabling the RPS is **not** expected to help. |
+| [`GSw_CEPM_TgCap=1`: Virginia 2029 infeasible](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found) | Open — cause unknown | VA `limitre` dies at 2029 with 1665 infeasible rows. Cap is the trigger; the colliding constraint is not yet identified. The 2026 solve spent the whole wind budget, the leading suspect. Disabling the RPS is **not** expected to help. |
 | [H2 infeasibility with `GSw_H2=2` (unverified)](#possible-h2-infeasibility-with-gsw_h22-in-national-runs-unverified) | Open — untested | A 2026-07 national run went infeasible in DE. Root cause never traced; every CEPM case sets `GSw_H2=0`. |
 | [`cendivweights.csv` domain violation at cendiv borders](#cendivweightscsv-domain-violation-near-census-division-borders-fixed) | Fixed — not on `main` | Sub-national runs near a census-division border fail GAMS compile. Fixed on `dev`; `main` still has it. |
 | [`recf.py` crashes when offshore wind is disabled](#recfpy-crashes-when-offshore-wind-is-disabled-fixed) | Fixed | `GSw_OfsWind=0` left `df_windofs` undefined before a concat. |
@@ -45,6 +45,7 @@ chasing a crash, start with them.
 | [Retail-rate module crashes on single-BA runs](#retail_rate_calculationspy-crashes-on-single-ba-runs-keyerror-res_marg_ann_flow) | Open — fix identified | `KeyError: 'res_marg_ann_flow'`; `retail_rate_components.csv` is never written. Multi-region runs unaffected. |
 | [`report_dump.py` leaves GAMS sets out of `outputs.h5`](#report_dumppy-leaves-gams-sets-out-of-outputsh5-could-not-convert-string-to-float-) | Open — fixed in `2026.09.08` | **Silent.** `read_output()` returns an empty table for sets such as `hierarchy`; read `outputs/<set>.csv`. Solve unaffected. |
 | [`single_case_plots.py` plots fail on reduced-region cases](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases) | Open — partly by design | Several diagnostic maps fail on single-region or reduced-hierarchy runs. Each is caught; core outputs unaffected. |
+| [RA diagnostic plots: `plot_stressors()` never produces maps](#ra-diagnostic-plots-plot_stressors-never-produces-stress-day-maps) | Open — fix identified | `KeyError: '2021.0-6.0-18.0'` in the final year. `map_stressors()` expects a `new_stress_periods.csv` schema that `stress_periods.py` no longer writes, so no stress-day maps are made in any year. Other outputs unaffected. |
 | [bokehpivot: every map section fails on an aggregated zoneset](#bokehpivot-html-report-every-map-type-section-fails-on-an-aggregated-zoneset) | Open | No boundary file exists for aggregated zonesets, so all map sections of the HTML report are missing. |
 | [Retail rate module: pandas-3 no-ops](#retail-rate-module-chained-assignments-are-no-ops-under-pandas-3) | Open | Some retail-rate fills and replacements silently do nothing, so retail outputs may be off. Capacity and dispatch unaffected. |
 | [`compare_cases.py` crashes on a shared-prefix glob](#compare_casespy-crashes-when-comparing-cases-via-a-shared-prefix-glob-typeerror-in-parse_caselist-fixed) | Fixed | `TypeError` in `parse_caselist()` blocked the comparison report entirely. |
@@ -53,6 +54,7 @@ chasing a crash, start with them.
 | [`timetype=int`/`win` call GAMS files that don't exist](#runreedspy-timetypeint-and-timetypewin-call-gams-solve-files-that-dont-exist) | Open — fix identified | `runreeds.py` points both solve calls at pre-restructure paths. `seq` (every CEPM case) is unaffected. |
 | [`runreeds.py` reports success on failure, hangs on multi-case `-s`](#runreedspy-reports-success-on-a-failed-case-and-hangs-on-a-multi-case--s) | Open — worked around | **Silent.** Exit code 0 despite an aborted solve; interactive prompts hang under a wrapper. Check for `outputs.h5`, not the exit code. |
 | [`z_rep` dominated by the interconnection-queue penalty](#z_rep-is-dominated-by-the-interconnection-queue-penalty-and-does-not-match-systemcostcsv) | Not a bug | `z_rep` is unusable as a cost figure and the penalty does shift buildout. Use `systemcost.csv`. |
+| [Queue constraint charges historical prescribed builds](#interconnection-queue-constraint-charges-historical-prescribed-builds-against-near-term-queue-headroom-fixed) | Fixed — not upstream | **Silent.** The queue filter goes by solve year, so a sparse yearset charges 15 years of prescriptions against the 2026 limit. `GSw_CEPM_QueueExempt=1` counts them by online year. What's left comes from the queue and prescription data sources disagreeing (e.g. SunZia), which mode `3` handles. Upstream `main` also appears never to generate the constraint under defaults. |
 | [Operating reserves effectively off by default](#operating-reserves-are-effectively-off-under-default-switches) | Expected | Reserve constraints have 0 rows under default switches (upstream design with stress periods), so the `opRes` outputs are empty and one bokehpivot section fails. |
 | [`reeds2pras` `BoundsError` for `hydud`/`hydund`](#reeds2pras-boundserror-for-hydudhydund-hydro-capacity--no-monthly-profile-data) | Open — non-fatal | Hydro-upgrade categories have no monthly profile data, so PRAS zeroes their contribution. Diagnostic layer only. |
 | [PRAS crashes on single-zone regions](#pras-crashes-on-single-zone-regions-boundserror--0-element-vectorline) | Open | A one-zone region has no lines, so `make_pras_interfaces()` throws after the solve. Use ≥ 2 zones. |
@@ -233,11 +235,45 @@ primal, not a numerical or scaling problem.
   load (`GSw_LoadSiteTrajectory=st_epri_medium_extended_to_2032`,
   `GSw_LoadSiteCF=1`, `GSw_LoadSiteRA=1`) and solves through 2032 cleanly. So the
   infeasibility is created by `eq_cepm_tg_cap_sys`, not by the load scenario.
+- **The 2026 solve spent the entire onshore and offshore wind budget.** The cap
+  covers the 2026-2032 total, and nothing stops a sequential solve from using all of
+  it at once (see the
+  [per-year path in `reeds-to-cepm-log.md`](reeds-to-cepm-log.md#per-year-path-gsw_cepm_tgcap2)).
+  From `inv_ivrt` in `handoff/reeds_data/reeds_data_2026.gdx` (MW_ac):
+
+  | tech group | cap (2026-2032) | `VA_limitre` 2026 | `VA_baseline` 2026 | left for 2029-2032 |
+  | --- | ---: | ---: | ---: | ---: |
+  | wind-ons | 11,866.4 | 11,866.4 | 78.0 | **0** |
+  | wind-ofs | 3,949.7 | 3,949.7 | 2,599.0 | **0** |
+  | pv | 23,976.6 | 10,798.1 | 6,700.7 | 13,178.5 |
+  | battery | 2,980.2 | 321.9 | 275.0 | 2,658.3 |
+
+  So the 2029 solve could add no wind at all while data-center load kept growing.
+  This is the leading suspect, but it isn't shown to cause the infeasibility: gas is
+  uncapped, so on the face of it the model should still be able to meet load. The
+  direct test is to re-run with `GSw_CEPM_TgCap=2`, which holds each solve
+  year to the baseline's cumulative path.
 - **Not a prescribed-build collision.** The obvious failure mode for a cumulative
-  investment cap is a forced build that exceeds it, but prescribed capacity from 2026
-  on fits comfortably inside every cap: wind-ofs 2,640 MW against a 3,949.7 MW cap
-  (the CVOW build in 2027), upv 1,465.6 against 23,976.6, wind-ons 78.0 against
-  11,866.4. Ruled out.
+  investment cap is a forced build that exceeds it. The prescriptions that apply
+  from 2026 on fit inside every cap: upv 1,465.6 against 23,976.6, wind-ons 78.0
+  against 11,866.4, and wind-ofs 2,640 (the CVOW build in 2027) against 3,949.7.
+  Ruled out. The wind-ofs prescription is in `p99`, from the hourlize file
+  `prescribed_builds_wind-ofs.csv` (12 MW in 2021, 2,639.99 MW in 2027);
+  `b_inputs.gms:1356-1378` replaces the `p124` wind rows of `prescribed_rsc.csv`
+  with it. (A previous edit of this bullet said the hourlize file had only the
+  2021 entry; it has both.) Evaluating the "built + owed" rule on `VA_limitre`'s
+  2026 builds confirms it: its 2026 offshore builds already covered the 2027
+  prescription. See [`guidance/tgcap-built-plus-owed.md`](guidance/tgcap-built-plus-owed.md).
+- **Not a state-mandate collision (checked 2026-11-11).** VA's state mandates
+  are also forced builds of capped groups, and before 2026-11-11 the "built +
+  owed" accounting didn't count them (see
+  [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md#built--owed-accounting)). They
+  don't explain 2029. The offshore-wind requirement is 2,599 MW in 2026 and 2029,
+  and the 2026 solve had already built 3,949.7 MW. The battery mandate is 275 MW
+  in 2026 and 2029, against 321.9 MW built in 2026. Both mandates only rise for
+  the 2032 solve (offshore to 3,949.7, battery to 1,350), and both would still
+  have fit: offshore exactly, and battery within the 2,658.3 MW left. Now counted
+  either way.
 - **Not the state RPS.** This was the first hypothesis and it does not hold up. VA's
   RPS rises 14.5% (2026) → 19.7% (2029) → 25.8% (2032), so capping RE while
   data-center load grows does make it harder to meet — but `eq_REC_Requirement`
@@ -275,7 +311,10 @@ below: the batch still reports success. Check for `outputs/cap.csv` and
 specifically, the intuitive one (disable the state RPS) is expected not to work, per
 above. Until the conflict refiner is run, the honest summary is: the cumulative cap
 makes VA's 2029 LP infeasible and we do not yet know which constraint it collides
-with.
+with. Two next steps, either of which would narrow it: the refiner re-solve
+described above, and a `VA_limitre` re-run with `GSw_CEPM_TgCap=2` (and
+`--scope region` in `make_tg_cap.py`), which removes the 2026 front-loading. If the
+re-run solves, front-loading was at least a necessary ingredient.
 
 Worth checking once the refiner names the rows: whether this is specific to VA's
 cap *values* (harvested from `VA_baseline` by `CEPM/scripts/make_tg_cap.py`) or a
@@ -738,6 +777,76 @@ tag `2026.08.03`:
   `TypeError`/`ValueError`/`KeyError` variants haven't been traced to a function,
   so they're unconfirmed either way.
 
+## RA diagnostic plots: `plot_stressors()` never produces stress-day maps
+
+**Symptom:** after the final solve year, `gamslog.txt` shows
+```
+diagnostic_plots.py | ... | plot_stressors() failed:
+...
+pandas._libs.tslibs.parsing.DateParseError: Unknown datetime string format, unable to parse: 2021.0-6.0-18.0
+...
+  File ".../reeds/reedsplots.py", line 6400, in map_stressors
+    dfba['load'] = load.loc[timestamp].max() / load.max()
+KeyError: '2021.0-6.0-18.0'
+```
+The date in the key is whichever seed stress day comes first, so it varies by
+run. No `stress{t}i{n}-*.png` maps appear in
+`outputs/figures/resource_adequacy/` for any year. Seen in all six
+`v20261019noqpen` and `v20261020tfnewq` AZNM runs. It is not specific to
+reduced-region cases, unlike the
+[`single_case_plots.py` entry](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases).
+
+**Root cause:** `map_stressors()` (`reeds/reedsplots.py`) concatenates two frames
+with different schemas, then formats a label from `y`/`m`/`d`:
+```python
+plot_days['timestamp'] = plot_days.apply(lambda row: f'{row.y}-{row.m:02}-{row.d:02}', axis=1)
+```
+- The seed days (`stress{t}i0/forceperiods.csv`, loaded only when `t` is
+  `endyear`) get `y`, `m`, `d`, `r` and `szn` columns.
+- The added stress days (`stress{t}i{n+1}/new_stress_periods.csv`) come from
+  `stress_periods.py` as `periodtype, metric, criterion, num, region, period,
+  value`. They have no `y`/`m`/`d`, and the renames (`actual_period`→`szn`)
+  match nothing. The day loop below also expects `r`, an `EUE_MWh` column and
+  `reason` values containing `EUE` or `before`/`after`, none of which this file
+  has. `periodtype` is `stress`, which the loop would skip as
+  `Invalid stress period`.
+
+So the plot fails one of two ways:
+- **Final year (seed + new days):** the concat leaves NaN in `y`/`m`/`d` for the
+  new rows, which upcasts those columns to float. The first seed row then
+  formats as `'2021.0-6.0-18.0'` (`:02` doesn't pad a float), and
+  `load.loc[...]` raises `KeyError`.
+- **Earlier years that added stress days (new days only):** there is no `y`
+  column at all, so it raises `AttributeError: 'Series' object has no attribute
+  'y'`. This reproduces when `map_stressors()` is called directly, for example
+  for 2029 in `v20261020tfnewq_st-AZNM_baseline`. In these runs, though, it never
+  reached `gamslog.txt`, even though that year's `diagnostic_plots.py` ran to
+  completion (`netloadhours-histogram-2029.png` was written). That process runs
+  in the background while the next year solves. Why its traceback is missing
+  hasn't been traced.
+- Years that added no stress days and aren't `endyear` have nothing to plot, and
+  return quietly.
+
+Casting `y`/`m`/`d` to `int` alone won't fix it. The new-day rows have no
+values to cast, and the loop can't label them. A fix needs to map
+`new_stress_periods.csv` onto the schema the loop expects before the concat:
+`period`→`szn`, `region`→`r`, `y`/`m`/`d` from `szn` via
+`reeds.timeseries.h2timestamp` (as the seed branch does), and a labelling branch
+for `reason == 'stress'`.
+
+**Impact:** the stress-day maps (load, PV/wind CF, temperature and outage for
+each stress day) are missing. Every other RA diagnostic plot is written, and
+solve and CSV outputs are unaffected.
+
+**Status:** open. Fix approach identified, not implemented.
+
+**Fixed upstream?** No. The `_plot_days` block and the `timestamp` line are
+unchanged at tag `2026.08.03` and on upstream `main` as of 2026-10-19
+(`reedsplots.py:6544` there). Upstream's `cfbe5f5d` ("fix
+reedsplots.map_stressors()", in `2026.08.03` and already in this fork) fixed
+other parts of the function and didn't touch this block. Inherited, not
+RMI-introduced.
+
 ## bokehpivot HTML report: every map-type section fails on an aggregated zoneset
 
 **Symptom:** in the `reeds-report`/`reeds-report-reduced` `report.html`/`report.log`
@@ -1048,6 +1157,160 @@ one year of queue headroom), the one *voluntary* violation found, and options fo
 and the `report.gms` reconciliation are byte-identical at `upstream/main`
 (`1f73bd23`). The collision is specific to CEPM's short horizon and wide
 `startyear`→first-solve-year gap, which upstream's 2010-2050 runs do not have.
+The mechanism behind that collision is an upstream bug in its own right, and is
+now addressed in this fork; see the next entry.
+
+## Interconnection-queue constraint charges historical prescribed builds against near-term queue headroom (FIXED)
+
+**Symptom:** `cap_above_limit.csv` shows large overages in the first solve year
+after `startyear`, in cells where the model built nothing voluntarily. The
+overage is no larger than prescribed capacity minus the queue limit, and often
+exactly that. For `runs/v20261019noqpen_st-AZNM_baseline`, every 2026 and 2029
+overage is covered by the zone's 2011-2026 prescriptions. Several are exactly
+prescriptions minus limit: p31 onshore wind is 5,202 MW over (5,602 MW
+prescribed against a 400 MW limit), p27 wind 360 MW, z28 wind 746 MW, p29 coal
+762 MW. With the queue penalty on, the cumulative overage carries into later
+years, so new builds in those cells are blocked until the queue data runs out.
+In that run p31 builds **no new wind in 2029** and makes it up in 2032, where the
+constraint does not exist. That was a −3.1 GW / +1.7 GW swing against an
+otherwise identical penalty-off baseline.
+
+**Root cause:** `eq_interconnection_queues` (`reeds/core/setup/c_model.gms`)
+decides which investment counts against the queue by the **solve year**:
+
+```gams
+sum{(i,newv,tt)$[... $(yeart(tt)>=interconnection_start) $(tmodel(tt) or tfix(tt))],
+    INV(i,newv,r,tt) + ... }
+```
+
+But `noncumulative_prescriptions` (`b_inputs.gms`) puts every prescription
+into the first solve year at or after its **online year**. With solve years
+2010 → 2026, everything that came online 2011-2025 lands in the 2026 solve, passes
+`yeart(2026) >= 2025`, and is charged against the 2026 queue limit. The filter
+was meant to exclude exactly those pre-2025 builds. How big the error is depends
+on the solve years, not on the data: the bigger the gap before the first solve
+year at or after 2025, the more historical capacity uses up queue headroom.
+
+Upstream's documentation (`docs/source/model_documentation.md`, "Interconnection
+queues") makes clear the counting is wrong rather than a modelling choice. The
+queue data is LBNL's snapshot as of the **end of 2024**. The 2026 limits are plants
+with a signed interconnection agreement, and the 2030 limits are all capacity
+seeking interconnection. Projects online before 2025 had already left the queue,
+so they are not in the limit they are charged against.
+
+**Contributing cause: the two sides come from different data sources.** Even
+with the counting fixed, the constraint compares two datasets that don't measure
+the same thing:
+
+- **Different snapshots.** The queue is LBNL queue requests through end-2024.
+  The prescriptions come from the EIA NEMS / 860M generator database, which our
+  docs date to Oct 2025.
+- **Different scope.** The queue lists projects *requesting* interconnection
+  from utility and ISO queues. The prescriptions list plants that are operating
+  or under construction, including projects that never went through such a queue.
+- **A smaller-than-described 2026 limit.** In every cell, the queue's 2026
+  column is exactly half of 2027, so it is half the signed-agreement total
+  upstream's docs describe.
+
+So 2025-2026 prescriptions can legitimately exceed the 2026 limit. That
+explains the residual under mode `1` below. Vintages and file-level details are
+in
+[interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
+§2.1.
+
+**Impact:** silent. The run completes, and the result depends on which solve
+years were picked: two cases with identical inputs but different solve years
+get different queue headroom. It is easy to miss because the overage cells look
+like ordinary penalty-on behaviour, and `systemcost.csv` does not carry the
+penalty (see the `z_rep` entry above). The full measurement, including the
+WECC-SW 2026 breakdown (~16.5 GW of pre-2025 prescriptions against 11.8 GW of
+2026 headroom), is in
+[interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
+§4.1.
+
+**Fix (this fork):** `GSw_CEPM_QueueExempt` (2026-10-19). A block in
+`b_inputs.gms` counts prescriptions by online year and adds the exempt amount,
+`queue_exempt_prescrip(tg,r,t)`, to the queue limit. Prescribed `INV` is pinned
+by `eq_forceprescription_power`, so this is the same as removing them from the
+build side.
+
+- `0` — upstream behaviour (`cases.csv` default).
+- `1` — exempt prescriptions online before `interconnection_start`. This is
+  what the filter intends, independent of the solve years.
+- `2` — exempt all prescriptions. Not recommended: per upstream's docs, 2025-2026
+  prescribed projects are likely what the 2026 signed-agreement limit counts, so
+  exempting them frees headroom for builds that are already happening.
+- `3` — mode `1`, plus 2025+ prescriptions only where they exceed the queue
+  limit (`cases_cepm.csv` default). Prescriptions never cause an overage, but
+  they use up headroom up to the limit. In the AZNM baseline this clears the
+  residual below while exempting only 1.9 GW more than mode `1` (mode `2`:
+  14.2 GW more).
+
+The equation itself is untouched. The limit is only raised in years that already
+have queue data, so the equation's guard and `5_varfix.gms` are unchanged. The
+block picks `queue_limit` or `cap_limit` at compile time, so it survives
+upstream's rename (below) without edits. Checked by rebuilding the AZNM
+baseline's inputs under each mode: the adjusted limit equals the original plus
+the exemption in every cell, and mode `0` is identical to upstream.
+
+**Residual under mode `1`:** about 7.2 GW of the AZNM baseline's 27.4 GW
+overage remains, almost all in p31 wind (3,650 MW prescribed for 2026 alone
+against limits of 400 MW in 2026 and 1,734 MW in 2029) and z28 batteries. These
+are 2025-2026 prescriptions that are larger than the queue's 2026 limit. Mode
+`3` clears them.
+
+The p31 wind residual is traced (2026-10-19): the two datasets describe
+different projects. All 3,650.2 MW is **SunZia Wind South (2,561.2 MW) and
+North (1,089.0 MW)**, EIA plant 56545, both listed in Torrance County with a
+2026 start in the generator database. Hourlize spreads it over supply-curve
+sites in Torrance and Lincoln counties. The queue has 201 MW of wind in
+Torrance for 2026 (804 MW by 2030) and nothing in Lincoln, so even p31's full
+2030 queue (2,202 MW) is 60% of SunZia alone. SunZia Wind connects through
+Pattern Energy's own SunZia HVDC line to Arizona. That line went through CAISO's
+Subscriber Participating Transmission Owner process
+([CAISO, May 2024](https://www.caiso.com/Documents/DecisiononSubscriberParticipatingTransmissionOwnerApplication-SunZiaTransmissionLLC-Memo-May2024.pdf)),
+not a utility generator queue, so it most likely isn't in the queue snapshot at
+all. That's an inference: SunZia's absence from the LBNL data is not directly
+confirmed. The p31 counties are the same in both datasets, so it's not a mapping
+problem. The z28 battery residual is not traced.
+
+For a project that bypasses the queue, the correct treatment is a full
+exemption, as in mode `2` for that project only. Mode `3` is the cautious
+version: it removes the overage but gives p31 no new wind headroom until the
+queue passes SunZia's size, which it never does through 2030. A per-project
+exemption list would be exact, but isn't implemented.
+
+**Not yet confirmed by a solve.** The input builds above check the limit
+arithmetic. A baseline run should show 2026 `cap_above_limit.csv` dropping to the
+residual above. Runs before 2026-10-19 use the old behaviour, and each batch's
+`_limitre` case takes its caps from its baseline, so both need rerunning.
+
+**Fixed upstream?** No. Checked against `upstream/main` at `eb75a6bc`
+(2026-10-14), not just the `2026.08.03` tag. The equation still filters on
+solve year. Upstream has changed things nearby, which affects how often its own
+runs hit the bug:
+
+- **Default solve years.** `2026.08.03` defaulted to `2010_2015_2020..2050..3`
+  (… 2020, 2023, 2026 …), which charges 2024 prescriptions against the 2026
+  limit. That is a small version of the same error. `2026.09.08` switched to
+  `2010..2050..5` (… 2020, 2025, 2030 …). 2025 has no queue column, so the
+  equation is dropped in 2025. The 2030 solve then counts all 2021-2030 investment,
+  including 2021-2024 prescriptions, against the 2030 limit.
+- **`GSw_QueueConstraintYears`** (`main` only, commit `0dc01add`, not in any tag
+  yet; default 3) keeps queue columns only through `this_year + 3` = 2029. Under
+  the 5-year default no solve year falls in 2026-2029, so on `main` the queue
+  constraint **appears never to be generated at all** in a default run. That is
+  from reading the code, not a run, and it contradicts upstream's docs ("starting
+  in by default in 2025 and ending in 2030"). It looks like an oversight from the
+  two changes landing six weeks apart. With CEPM's 2026/2029 solve years, the
+  default keeps both.
+- **Rename** (`main` only, commit `7c39fc98`): `cap_limit` became `queue_limit`
+  in `b_inputs.gms`, `c_model.gms`, `5_varfix.gms` and `copy_files.py`, and the
+  input is now written through `write_to_h5`. Our block handles either name.
+
+Worth reporting upstream: the online-year vs solve-year counting, and the
+constraint never being generated on `main` under default switches. Both can be
+shown from the code alone.
 
 ## Operating reserves are effectively off under default switches
 

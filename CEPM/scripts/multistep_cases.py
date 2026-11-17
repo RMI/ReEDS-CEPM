@@ -25,7 +25,8 @@ Two modes:
 
   --mode generate --token <BatchName> --out <path>
       Copy the cases file with `cepmtgcapscen` for the `_limitre` column set to
-      <BatchName>, so that case picks up
+      <BatchName> (adding the row if the cases file leaves it out, as it should),
+      so that case picks up
       inputs/growth_constraints/cepm_tg_cap_{sys,reg}_<BatchName>.csv. Nothing
       else is touched. The generated file is deleted by run_cepm.ps1 in a
       `finally`; see 5.2(b) of the guidance doc for why this is preferred over a
@@ -63,10 +64,11 @@ import reeds  # noqa: E402
 
 SUFFIXES = ('baseline', 'limitre', 'optimized')
 
-# Expected GSw_CEPM_TgCap value per case, once defaults are resolved. This is the
+# Allowed GSw_CEPM_TgCap values per case, once defaults are resolved. This is the
 # whole point of the factorial in section 1 of the guidance doc: exactly one of the
-# three cases may carry a ceiling.
-EXPECTED_TGCAP = {'baseline': 0, 'limitre': 1, 'optimized': 0}
+# three cases may carry a ceiling. _limitre may use the horizon total (1) or the
+# horizon total plus the per-year path (2).
+EXPECTED_TGCAP = {'baseline': {0}, 'limitre': {1, 2}, 'optimized': {0}}
 
 
 def fail(msg):
@@ -106,11 +108,14 @@ def validate(cases_filename, stem):
         try:
             got = int(float(str(raw).strip()))
         except (TypeError, ValueError):
-            problems.append(f'  {name}: GSw_CEPM_TgCap is {raw!r}, which is not 0 or 1')
+            problems.append(f'  {name}: GSw_CEPM_TgCap is {raw!r}, which is not 0, 1 or 2')
             continue
         want = EXPECTED_TGCAP[sfx]
-        if got != want:
-            problems.append(f'  {name}: GSw_CEPM_TgCap is {got}, expected {want}')
+        if got not in want:
+            problems.append(
+                f'  {name}: GSw_CEPM_TgCap is {got}, expected '
+                + ' or '.join(str(v) for v in sorted(want))
+            )
 
     if problems:
         return fail(
@@ -177,16 +182,14 @@ def generate(cases_filename, stem, token, out_path):
         return fail(f'{cases_filename} has no case column {limitre}')
 
     if 'cepmtgcapscen' not in df.index:
-        # Legal but unexpected -- the switch may be inherited from cases.csv only.
-        # Add the row so the token has somewhere to live.
+        # The normal case: cases files leave this row out and every case inherits
+        # `none` from cases.csv. Add the row so the token has somewhere to live; the
+        # other cases' cells stay blank and still resolve to `none`.
         df.loc['cepmtgcapscen'] = pd.NA
-        print(
-            f'[multistep_cases] note: added a cepmtgcapscen row to {out_path} '
-            f'({cases_filename} did not have one).',
-            file=sys.stderr,
-        )
 
     previous = df.loc['cepmtgcapscen', limitre]
+    if pd.isna(previous):
+        previous = 'none (inherited from cases.csv)'
     df.loc['cepmtgcapscen', limitre] = token
 
     out_abs = out_path if os.path.isabs(out_path) else os.path.join(reeds.io.reeds_path, out_path)

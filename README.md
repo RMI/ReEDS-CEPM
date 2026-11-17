@@ -9,6 +9,7 @@ The below are links and buttons that were created by the NLR team for their ReED
 ![Static Badge](https://img.shields.io/badge/python-3.14-blue)
 ![GitHub License](https://img.shields.io/github/license/ReEDS-Model/ReEDS)
 [![DOI](https://zenodo.org/badge/189060033.svg)](https://doi.org/10.5281/zenodo.20314874)
+-->
 
 This GitHub repository contains the source code for a modified version of the National Laboratory of the Rockies' Regional Energy Deployment (ReEDS) model, customized for use for RMI's Clean Energy Portfolio Model (CEPM).
 

@@ -514,7 +514,7 @@ should use `bannew(i)` instead.
 | `reeds/input_processing/runfiles.csv` | +2 rows (below) |
 | `cases.csv` | +3 rows (below) |
 | `inputs/growth_constraints/cepm_tg_cap_{sys,reg}_none.csv` | new, header-only (the defaults) |
-| `cases_cepm.csv` | +2 rows (`GSw_CEPM_TgCap`, `cepmtgcapscen`) and +2 case columns (`<stem>_limitre`, `<stem>_optimized`) |
+| `cases_cepm.csv` | +1 row (`GSw_CEPM_TgCap`; a `cepmtgcapscen` row was also here until 2026-10-19, see below) and +2 case columns (`<stem>_limitre`, `<stem>_optimized`) |
 | `CEPM/reeds-to-cepm-log.md` | inventory rows + a section |
 
 Orchestration-side files, added later and covered in §5.3-5.4 rather than here:
@@ -595,11 +595,17 @@ GSw_CEPM_TgCapStartYear,CEPM: first solve year whose investment counts against t
 
 One `cepmtgcapscen` value selects both the system and regional files, so a
 scenario is always a matched pair — you cannot accidentally pair this batch's
-system cap with last batch's regional cap.
+system cap with last batch's regional cap. (Both rows' text in `cases.csv` has
+since changed: `GSw_CEPM_TgCap` now takes `0; 1; 2`, with `2` adding the
+per-year path, and `cepmtgcapscen` is described as internal.)
 
 `cases_cepm.csv` per case: `_baseline` and `_optimized` get
-`GSw_CEPM_TgCap=0`; `_limitre` gets `GSw_CEPM_TgCap=1` and a `cepmtgcapscen`
-value naming the generated file.
+`GSw_CEPM_TgCap=0`; `_limitre` gets `GSw_CEPM_TgCap=1` (or `2`).
+`cepmtgcapscen` is **not** set in the cases file: every case inherits `none` from
+`cases.csv`, and `run_cepm.ps1 -m` sets `_limitre`'s value to the batch name in a
+generated copy (§5.2b), adding the row there. Until 2026-10-19 `cases_cepm.csv`
+carried an explicit `cepmtgcapscen,...,none,...` row; it was dropped because the
+value is only ever set by the orchestrator, and a visible row invited editing it.
 
 The `{switch}` pattern in `runfiles.csv` is deliberately chosen over a
 `copy_files.py` hook: `runfiles.csv` changed only by *added rows* in 2026.08.03,

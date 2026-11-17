@@ -86,3 +86,5 @@ inputs/growth_constraints/cepm_tg_cap_sys_*.csv
 inputs/growth_constraints/cepm_tg_cap_reg_*.csv
 !inputs/growth_constraints/cepm_tg_cap_sys_none.csv
 !inputs/growth_constraints/cepm_tg_cap_reg_none.csv
+!inputs/growth_constraints/cepm_tg_cap_sys_yr_none.csv
+!inputs/growth_constraints/cepm_tg_cap_reg_yr_none.csv

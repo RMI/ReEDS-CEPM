@@ -10,6 +10,18 @@ CSVs consumed by `eq_cepm_tg_cap_sys` / `eq_cepm_tg_cap_reg` (see
 Both are always written; the one not selected by --scope is header-only, so a
 scenario token always names a matched pair and the unused equation stays inert.
 
+It also writes the per-year pair consumed by `eq_cepm_tg_cap_sys_t` /
+`eq_cepm_tg_cap_reg_t` (active only with `GSw_CEPM_TgCap=2`):
+
+    inputs/growth_constraints/cepm_tg_cap_sys_yr_{token}.csv   *tg,t,MW
+    inputs/growth_constraints/cepm_tg_cap_reg_yr_{token}.csv   *tg,r,t,MW
+
+where each value is the reference run's cumulative new capacity from
+--from-year through solve year t. The totals above cap only the horizon sum,
+which a myopic sequential solve can spend early; the per-year path also holds
+the reference run's pace. The last solve year's per-year value equals the
+horizon total, so turning the per-year path on never loosens the cap.
+
 Units
 -----
 Output is MW_ac, matching `cap_new_out` exactly -- the equations divide `INV`
@@ -35,6 +47,17 @@ for a zero, so an explicit 0 is indistinguishable from an absent row and the
 equation's `$` guard drops it. Any requested group whose reference buildout is
 genuinely zero therefore gets `--zero-floor` (default 0.001 MW) instead, and is
 flagged in the summary. For a permanent, intentional zero use `bannew(i)`.
+
+Prefer --scope region with the per-year path. A system-wide path still lets a
+solve year place its share of a group's builds in any region. If a region then
+has a prescribed build in a later year that its earlier builds don't already
+cover, meeting it pushes the group past the path. The cap has no slack, so that
+solve is infeasible. A regional path at --headroom >= 1 avoids this when the
+capped run has the reference run's prescriptions and solve years: the reference
+run's own buildout met every regional prescription at every solve year, and any
+region with a prescription has a path because the reference run built there.
+--scope both does not get that guarantee. Regions with no reference builds have
+no regional path, and builds there still count against the system path.
 
 Usage
 -----
@@ -201,11 +224,55 @@ def harvest(case, tgs, from_year, to_year, headroom, zero_floor,
     sys_caps = sys_caps.sort_index().round(3)
     reg_caps['Value'] = reg_caps['Value'].round(3)
 
+    # Per-year cumulative path. Indexed by the reference run's own solve years,
+    # not by the years that happen to have builds, so a group that builds nothing
+    # until 2032 is still held near zero in 2026 and 2029 rather than left
+    # uncapped there. Solve years come from modeledyears.csv.
+    solve_years = [int(y) for y in reeds.io.get_years(case)
+                   if from_year <= int(y) <= to_year]
+    sys_path = path_by_year(
+        df.groupby(['tg', 't']).Value.sum(), list(sys_caps.index), solve_years,
+        headroom, zero_floor, floor_sys if clamp_to_floor else None)
+    reg_path = path_by_year(
+        df.groupby(['tg', 'r', 't']).Value.sum(),
+        list(zip(reg_caps.tg, reg_caps.r)), solve_years,
+        headroom, zero_floor, floor_reg if clamp_to_floor else None)
+
     return sys_caps, reg_caps, {'unmapped': unmapped, 'floored': floored,
                                 'inherited': inherited,
                                 'infeasible_sys': infeasible_sys,
                                 'infeasible_reg': infeasible_reg,
-                                'first_year': int(first_year)}
+                                'first_year': int(first_year),
+                                'solve_years': solve_years,
+                                'sys_path': sys_path,
+                                'reg_path': reg_path}
+
+
+def path_by_year(builds, keys, solve_years, headroom, zero_floor, floor=None):
+    """Return {key: [(t, MW), ...]}, the cumulative ceiling at each solve year.
+
+    `builds` is new capacity indexed by (*key, t). Each key gets a value for
+    every solve year: the running sum through t, times headroom. With `floor`
+    (the first-year prescribed builds), the first year is raised to it, as
+    --clamp-to-floor does for the totals. The running max then keeps the path
+    non-decreasing, since a cumulative ceiling that fell between years would
+    demand negative investment. Values at or below zero get `zero_floor`, because
+    a 0 means "no cap" to GAMS, not "no builds".
+    """
+    out = {}
+    for key in keys:
+        key_t = key if isinstance(key, tuple) else (key,)
+        running, prev, rows = 0.0, 0.0, []
+        for n, t in enumerate(solve_years):
+            running += float(builds.get(key_t + (t,), 0.0))
+            v = running * headroom
+            if n == 0 and floor is not None:
+                v = max(v, float(floor.get(key, 0.0)))
+            v = max(v, prev)
+            prev = v
+            rows.append((t, round(v, 3) if v > 0.0 else zero_floor))
+        out[key] = rows
+    return out
 
 
 def main():
@@ -271,8 +338,17 @@ def main():
               f'cap_new_out map to no tech group (expected for distpv, o-g-s, '
               f'lfill-gas, can-imports, smr, dac, evmc): {diag["unmapped"]}')
 
+    print(f'[make_tg_cap] per-year path (MW_ac, cumulative from {args.from_year}; '
+          f'used only with GSw_CEPM_TgCap=2), solve years '
+          f'{diag["solve_years"]}:')
+    for tg in tgs:
+        path = ', '.join(f'{t}: {v:,.1f}' for t, v in diag['sys_path'].get(tg, []))
+        print(f'    {tg:14s} {path}')
+
     sys_path = os.path.join(args.out_dir, f'cepm_tg_cap_sys_{args.token}.csv')
     reg_path = os.path.join(args.out_dir, f'cepm_tg_cap_reg_{args.token}.csv')
+    sys_yr_path = os.path.join(args.out_dir, f'cepm_tg_cap_sys_yr_{args.token}.csv')
+    reg_yr_path = os.path.join(args.out_dir, f'cepm_tg_cap_reg_yr_{args.token}.csv')
     if args.print_only:
         print('[make_tg_cap] --print-only: no files written')
         return 0
@@ -289,9 +365,21 @@ def main():
         if args.scope in ('region', 'both'):
             for _, row in reg_caps.sort_values(['tg', 'r']).iterrows():
                 f.write(f'{row.tg},{row.r},{row.Value:.3f}\n')
+    with open(sys_yr_path, 'w', newline='') as f:
+        f.write('*tg,t,MW\n')
+        if args.scope in ('system', 'both'):
+            for tg in sorted(diag['sys_path']):
+                for t, v in diag['sys_path'][tg]:
+                    f.write(f'{tg},{t},{v:.3f}\n')
+    with open(reg_yr_path, 'w', newline='') as f:
+        f.write('*tg,r,t,MW\n')
+        if args.scope in ('region', 'both'):
+            for (tg, r) in sorted(diag['reg_path']):
+                for t, v in diag['reg_path'][(tg, r)]:
+                    f.write(f'{tg},{r},{t},{v:.3f}\n')
 
-    print(f'[make_tg_cap] wrote {sys_path}')
-    print(f'[make_tg_cap] wrote {reg_path}')
+    for path in (sys_path, reg_path, sys_yr_path, reg_yr_path):
+        print(f'[make_tg_cap] wrote {path}')
     return 0
 
 
