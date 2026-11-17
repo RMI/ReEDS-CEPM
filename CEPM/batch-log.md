@@ -205,490 +205,151 @@ exempt certain resource builds from the interconnection limits.
 - [X] I edited LLM-generated text to keep this entry short and to the point
 - [X] I opened a pull request and add results of a recent run as an attachment
 
-Batch entry: 20261106gt_DRConditionalPeak
-Author: Gabriella Tosado
-
-Summary: Updated DR so it can participate in representative and stress hours while respecting daily/event-duration limits and targeting peak hours. Replaced the earlier mandatory peak requirement tied to installed DR capacity with a conditional requirement tied to actual daily DR use. This preserved ~4.2 GW of DR while ensuring DR was used at the peak on all representative days. PVB remains enabled.
-Batch details
-- Built from: 20261106gt_AllHourDR
-- Space and Time: st-AZNM, 2026–2032 every 3 years, 1-hour representative periods
-- Cases: baseline, limitre, optimized
-- Run comments: All three cases completed successfully.
-Change log
-- ReEDS change: Made DR available during both representative and stress hours.
-- ReEDS change: Added a maximum of 8 equivalent full-output hours of DR per representative day.
-- ReEDS change: Added a maximum of 4 equivalent full-output hours within any rolling 5-hour window.
-- ReEDS change: Added conditional peak targeting: Peak DR >= (10% / 8) × total daily DR dispatch. If DR is used during a representative day, some DR must therefore occur during the peak hour.
-- ReEDS change: Replaced the previous 10% × installed DR capacity peak requirement, which caused the model to stop building DR.
-- Case change: GSw_PVB = 1.
-Results
-- Compare cases file: 20261106gt_DRConditionalPeak_st-AZNM_baseline/outputs/comparisons/results-st-AZNM_baseline,st-AZNM_limitre,st-AZNM_optimized.pptx
-- 2032 DR capacity: 4.156 GW Baseline, 4.265 GW LimitRE, 4.140 GW Optimized.
-- Baseline DR operates during 79 representative + 114 stress hours.
-- DR is used on all 7 representative days and occurs at the peak on 7/7, compared with 5/7 without conditional peak targeting.    Pasted text(20261106-194934)
-- Baseline total gas capacity: 16.483 GW.
-- Baseline system NPV: $246.319B.    Pasted text(20261106-195012)
-- Conditional peak targeting materially changes DR timing without materially changing the capacity solution.
-Documentation, decisions, next steps, & issues
-- PROPOSED DECISION: Use Conditional Peak rather than the mandatory installed-capacity peak constraint for DR modeling.
-- DOCUMENTATION: Conditional peak targeting requires peak DR based on actual daily DR use, not installed DR capacity.
-- NEXT STEP: Use the NoPVB version as the primary DR sensitivity against Base to remove the PVB confounder.
-- ISSUE: The previous mandatory 10% × installed DR capacity peak requirement caused DR builds to fall to zero and should not be used.
-Checklist
-- [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
-- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
-- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
-- [x] I moved batch results to the VM-Outputs folder
-- [ ] I added any issues we found to the JIRA issues epic
-- [ ] I edited LLM-generated text to keep this entry short and to the point
-- [ ] Open a pull request and add results of a recent run as an attachment
-Batch entry: 20261106gt_DRConditionalPeak_NoPVB
-Author: Gabriella Tosado
-
-Summary: Reran the finalized Conditional Peak DR formulation with PVB disabled. This provides a cleaner comparison with Base because both runs exclude PVB. DR remains ~4.2 GW across scenarios, indicating the DR build is robust to removing PVB.
-Batch details
-- Built from: 20261106gt_DRConditionalPeak
-- Space and Time: st-AZNM, 2026–2032 every 3 years, 1-hour representative periods
-- Cases: baseline, limitre, optimized
-- Run comments: All three cases completed successfully.
-Change log
-- Case change: Changed GSw_PVB from 1 to 0 for st-AZNM_baseline, st-AZNM_limitre, and st-AZNM_optimized.    Pasted text(20261106-195012)
-- ReEDS change: None relative to DRConditionalPeak; retained all-hour DR, daily/rolling duration limits, and conditional peak targeting.
-Results
-- Compare cases file: 20261106gt_DRConditionalPeak_NoPVB_st-AZNM_baseline/outputs/comparisons/results-st-AZNM_baseline,st-AZNM_limitre,st-AZNM_optimized.pptx    Pasted text(20261106-204819)
-- 2032 DR capacity: 4.156 GW Baseline, 4.265 GW LimitRE, 4.198 GW Optimized.
-- Compared with Base, Baseline builds 0.515 GW more total gas but 0.641 GW less total capacity.
-- Baseline system NPV falls from $251.978B → $248.039B, a $3.939B (1.56%) reduction.
-- LimitRE system NPV falls by $5.899B (2.00%).
-- Optimized system NPV falls by $7.962B (2.69%).    Pasted text(20261106-204958)
-- Removing PVB does not materially reduce DR builds, suggesting the ~4.2 GW DR result is not dependent on PVB availability.    Pasted text(20261106-204958)
-Documentation, decisions, next steps, & issues
-- PROPOSED DECISION: Use DRConditionalPeak_NoPVB as the primary DR sensitivity against Base because PVB is disabled in both.
-- DOCUMENTATION: Describe cost differences as the effect of the DR/hourly modeling package, not DR alone, because temporal treatment also differs from Base.
-- NEXT STEP: Use this run for the primary Base-vs-DR capacity and cost comparisons.
-- ISSUE: None identified in this run.
-Checklist
-- [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
-- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
-- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
-- [x] I moved batch results to the VM-Outputs folder
-- [ ] I added any issues we found to the JIRA issues epic
-- [ ] I edited LLM-generated text to keep this entry short and to the point
-- [ ] Open a pull request and add results of a recent run as an attachment
-
-## Batch entry: `20261105gt_AZNM_RA`
+## Batch entry: 20261106gt_DRConditionalPeak
 **Author: Gabriella Tosado**
 
-Summary: Changed the AZ/NM resource-adequacy criterion so PRAS evaluates the combined AZ/NM study system against **1 ppm NEUE**, rather than requiring the WestConnect-South and SPP-South portions to independently meet 1 ppm. This reduced the number of stress periods required while leaving the capacity portfolio largely unchanged and modestly reducing system costs.
+Summary: Developed the AZ/NM demand-response configuration from the original CEPM Base through targeted tests of temporal resolution, PRAS reliability geography, operational DR availability, and DR operating constraints. The final default uses **1-hour representative and stress periods, PVB, all-hour DR availability, an 8-equivalent-hour daily DR limit, a 4-of-5 rolling-hour limit, conditional peak targeting, and `country_1` PRAS reliability evaluation**.
+
+The final 2032 Baseline builds approximately **4.16 GW of DR**, compared with no DR in Base. Relative to Base, it has approximately **0.87 GW more gas capacity, 5.98 GW less combined solar + wind + battery + PVB capacity, and $5.66B lower system NPV**.
 
 ### Batch details
 
-- **Built from:** `v20261105gt_DRshed_1hr_PVB`
+- **Built from:** `v20261030gt_base`, with development through `v20261105gt_DRshed_1hr_PVB`, `20261105gt_AZNM_RA`, `20261105gt_1hrRep`, `20261106gt_AllHourDR`, and `20261106gt_DRConditionalPeak`
 - **Space and Time:** `st-AZNM, 2026–2032 every 3 years`
 - **Cases:** `baseline, limitre, optimized`
-- **Run comments:** Completed successfully. Results moved to `C:\Users\gtosado\OneDrive - RMI\Runs\`.
+- **Final default:** `20261106gt_DRConditionalPeak` configuration@'
+
 
 ### Change log
 
-- **Case change:** Changed `GSw_PRM_StressThresholdNEUE` from the ReEDS default `transgrp_1` to `country_1` for the three AZ/NM cases.
-- **Reliability change:** PRAS now requires the **combined AZ/NM modeled system** to achieve NEUE ≤ 1 ppm instead of separately applying the criterion to `WestConnect_South` and `SPP_South`.
-- **Case change:** Retained the **12% initial planning reserve margin** with `GSw_PRM_UpdateMethod = 0`, so PRAS does not increase the PRM.
-- **Case change:** Retained `GSw_PRM_StressIterateMax = 5`.
-- **Case change:** Retained the prior **1-hour DR + PVB** configuration.
-- **Geography:** No change to the `z132` physical transmission geography. NM `p47` remains physically mapped to SPP; only the geographic level used to evaluate the PRAS reliability criterion changed.
+#### Case/configuration changes
+
+- **Starting point — Base:** Began from `v20261030gt_base`, which serves as the reference configuration without the new DR treatment.
+
+- **DR + hourly stress periods:** Set `GSw_DRShed=1`, enabled PVB, and changed reliability/stress periods to **1-hour resolution**. DR remained restricted to PRAS reliability/stress periods.
+
+- **AZ/NM reliability geography:** Changed `GSw_PRM_StressThresholdNEUE` from `transgrp_1` to **`country_1`**. The 1 ppm NEUE criterion is therefore evaluated across the combined modeled AZ/NM system rather than independently for the WestConnect-South and SPP-South transmission groups. This changes the geography at which reliability is evaluated but does not change the underlying physical transmission topology.
+
+- **Representative-period resolution:** Changed `GSw_HourlyChunkLengthRep` to **1 hour**, giving both representative and stress periods 1-hour temporal resolution.
+
+- **PVB:** Retained `GSw_PVB=1` as the final default. A NoPVB sensitivity was run separately.
+
+#### ReEDS code changes
+
+- **Representative-hour DR availability — `reeds/input_processing/hourly_writetimeseries.py`:** Removed the previous restriction that generated DR availability only when processing stress periods. Extended the DR availability processing to representative periods and generated representative-period DR availability so the same DR resource can be used during normal modeled operations.
+
+- **DR availability in the model — GAMS setup/model files:** Updated the DR availability treatment so `dr_shed` can participate in both **representative hours (`h_rep`) and stress hours (`h_stress`)**. As a result, DR enters the normal hourly `GEN` balance and can directly reduce the generation required to serve load during representative periods.
+
+- **Peak-hour mapping — `reeds/core/setup/b_inputs.gms` and `reeds/core/solve/2_temporal_params.gms`:** Added the new set:
+
+  `dr_peak_h(r,allh,t,allszn)`
+
+  This identifies the maximum-load hour(s) within each representative day for each region and model year. If multiple hours have the same maximum load, all tied hours are treated as peak hours.
+
+- **Daily DR limit — `reeds/core/setup/c_model.gms`:** Added `eq_dr_shed_daily_limit`. Representative-period DR dispatch is limited to **8 equivalent full-output hours per representative day**:
+
+  `Daily DR dispatch <= 8 × installed DR capacity`
+
+  This prevents DR from behaving like a resource that can operate continuously throughout the day.
+
+- **Rolling DR window — `b_inputs.gms` and `2_temporal_params.gms`:** Added:
+
+  `dr_5hour_window(allh,allh)`
+
+  The mapping uses ReEDS's existing `nexth` chronological-hour relationship to identify each representative hour and its following four hours.
+
+- **Rolling duration constraint — `c_model.gms`:** Added `eq_dr_shed_rolling_limit`. Within any rolling five-hour representative-period window:
+
+  `DR dispatch <= 4 × installed DR capacity`
+
+  This limits DR to a maximum of **4 equivalent full-output hours in any consecutive 5-hour window**.
+
+- **Initial mandatory peak formulation — subsequently removed:** Initially added a requirement approximately equivalent to:
+
+  `Peak DR >= 10% × installed DR capacity`
+
+  Because installing DR itself created a mandatory dispatch requirement on every representative day, the model responded by building **0 GW of DR**. This formulation was removed and is not part of the final code.
+
+- **Conditional peak formulation — `c_model.gms`:** Replaced the installed-capacity-based requirement with:
+
+  `Peak DR >= (0.10 / 8) × total daily DR dispatch`
+
+  The peak requirement therefore scales with **actual DR use that day**, rather than installed capacity. If no DR is dispatched during a representative day, the required peak response is zero. If DR is used, a portion of the response must occur during the day's peak hour(s).
+
+- **Stress-event infrastructure:** Added/retained the DR stress-event mapping and `GSw_DRShedMaxEventHours` infrastructure for limiting consecutive reliability-event operation. The current AZ/NM default sets `GSw_DRShedMaxEventHours=0`; representative-period operation is instead controlled by the daily and rolling constraints above.
+
+- **PVB processing:** Retained the PVB profile-processing fix needed for the PVB-enabled configuration.
 
 ### Results
 
-- Compared against `v20261105gt_DRshed_1hr_PVB`, which used the default `transgrp_1` reliability criterion.
-- The `country_1` treatment substantially reduced the number of stress periods required to satisfy the reliability criterion.
-- The 2032 capacity portfolio remained largely unchanged.
-- System costs decreased modestly relative to the `transgrp_1` run.
-- The results indicate that requiring each transmission group to independently satisfy 1 ppm was more restrictive than evaluating reliability across the combined AZ/NM study system.
+**2032 Baseline progression:**
 
-### Documentation, decisions, next steps, & issues
-
-- **PROPOSED DECISION:** Use `country_1` as the AZ/NM PRAS reliability criterion when the modeling question concerns reliability of the combined AZ/NM study system.
-- **DOCUMENTATION:** `country_1` changes the geographic level at which NEUE ≤ 1 ppm is evaluated; it does **not** alter the underlying physical transmission geography.
-- **NEXT STEP:** Carry the combined AZ/NM reliability treatment forward into subsequent AZ/NM DR and hourly-modeling sensitivities.
-- **ISSUE:** `transgrp_1` effectively requires both `WestConnect_South` and `SPP_South` to independently satisfy 1 ppm, which can generate substantially more stress periods than the combined-system criterion.
-
-### Checklist
-
-- [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
-- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
-- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
-- [x] I moved batch results to the VM-Outputs folder
-- [ ] I added any issues we found to the JIRA issues epic
-- [ ] I edited LLM-generated text to keep this entry short and to the point
-- [ ] Open a pull request and add results of a recent run as an attachment
+| Run | DR Capacity | DR Active Modeled Hours | Total Gas | Solar + Wind + Battery + PVB | System NPV | Primary change |
+|---|---:|---:|---:|---:|---:|---|
+| Base | 0 GW | 0 | 15.61 GW | **43.09 GW** | $251.98B | Reference configuration |
+| 1hr DR + PVB | 3.88 GW | 141 stress | 15.97 GW | **38.45 GW** | $251.15B | DR + PVB; 1-hour stress periods |
+| AZ/NM RA `country_1` | 3.88 GW | 65 stress | 15.96 GW | **38.46 GW** | $251.14B | Combined AZ/NM PRAS reliability evaluation |
+| 1hr Rep | 3.88 GW | 63 stress | 15.36 GW | **38.52 GW** | $249.68B | 1-hour representative periods |
+| All-hour DR | 4.16 GW | 73 rep + 116 stress | 16.48 GW | **37.11 GW** | $246.32B | DR available during normal operations |
+| **Conditional Peak + PVB `country_1`** | **4.16 GW** | **79 rep + 114 stress** | **16.48 GW** | **37.11 GW** | **$246.32B** | **Final default operating constraints** |
 
 
-## Batch entry: `20261105gt_1hrRep`
-**Author: Gabriella Tosado**
+“DR Active Modeled Hours” counts representative/stress timeslices with positive DR dispatch and should not be interpreted as chronological hours out of an 8,760-hour year.
 
-Summary: Changed the normal representative periods used for capacity-expansion and dispatch optimization to **1-hour temporal resolution**. This tests the effect of hourly operating conditions throughout the capacity-expansion problem separately from the later change that allows DR to operate during representative hours. DR remains restricted to stress/reliability periods in this batch.
+#### Base to final default capacity change
 
-### Batch details
-
-- **Built from:** `v20261105gt_DRshed_1hr_PVB`
-- **Space and Time:** `st-AZNM, 2026–2032 every 3 years, 1-hour representative periods`
-- **Cases:** `baseline, limitre, optimized`
-- **Run comments:** Completed successfully. Results moved to `C:\Users\gtosado\OneDrive - RMI\Runs\`.
-
-### Change log
-
-- **ReEDS change:** Changed normal representative-period granularity to **1 hour**, allowing capacity-expansion and dispatch optimization to see hourly operating conditions rather than multi-hour representative chunks.
-- **Case change:** Retained **1-hour stress-period granularity**.
-- **Case change:** Retained the existing **DR shed + PVB** configuration.
-- **DR treatment:** DR remains restricted to stress/reliability periods; it is not yet available during normal representative hours.
-- **Reliability change:** Retained the updated AZ/NM reserve-margin treatment from `20261105gt_AZNM_RA`.
-
-### Results
-
-- 2032 Baseline DR capacity: **3.880 GW**.
-- DR operates during **63 stress hours** and zero representative hours.
-- Baseline system NPV: **$249.68B**.
-- Compared with the prior `1hr DR + PVB` run, DR capacity is essentially unchanged while DR is called during fewer stress hours.
-- This run provides the control for the subsequent `AllHourDR` change: differences between `1hrRep` and `AllHourDR` can be attributed primarily to making DR operational during representative hours rather than changing representative-period resolution.
-
-### Documentation, decisions, next steps, & issues
-
-- **PROPOSED DECISION:** Retain 1-hour representative-period resolution for subsequent AZ/NM DR sensitivities.
-- **DOCUMENTATION:** This batch changes temporal resolution for the broader capacity-expansion problem but does **not** change where DR is allowed to dispatch.
-- **NEXT STEP:** Allow DR to participate in normal representative hours and compare against this batch to isolate the operational value of all-hour DR.
-- **ISSUE:** None identified in this run.
-
-### Checklist
-
-- [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
-- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
-- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
-- [x] I moved batch results to the VM-Outputs folder
-- [ ] I added any issues we found to the JIRA issues epic
-- [ ] I edited LLM-generated text to keep this entry short and to the point
-- [ ] Open a pull request and add results of a recent run as an attachment
-
-## Batch entry: `20261106gt_AllHourDR`
-**Author: Gabriella Tosado**
-
-Summary: Extended DR shed from a reliability/stress-only resource into an **operational demand-side resource available during normal representative hours**. This is the first run where DR can directly reduce generation requirements during normal modeled operations and serves as the unconstrained all-hour DR benchmark for subsequent DR operating restrictions.
-
-### Batch details
-
-- **Built from:** `20261105gt_1hrRep`
-- **Space and Time:** `st-AZNM, 2026–2032 every 3 years, 1-hour representative periods`
-- **Cases:** `baseline, optimized`
-- **Run comments:** Completed successfully. Baseline and Optimized moved to `C:\Users\gtosado\OneDrive - RMI\Runs\`. No LimitRE folder was present locally when the batch was moved.
-
-### Change log
-
-- **ReEDS change:** Added representative-period hourly DR availability through `dr_shed_out_rep.csv`.
-- **ReEDS change:** Modified `avail(i,r,h)` so DR shed is available during both representative hours (`h_rep`) and reliability/stress hours (`h_stress`).
-- **ReEDS change:** Representative-hour DR availability is selected for the active solve year using `tmodel(t)`.
-- **ReEDS change:** DR dispatch now enters the normal hourly `GEN` supply-demand balance, allowing dispatched DR to directly offset generation required to serve load in that hour.
-- **ReEDS change:** Retained the existing stress-period DR treatment separately.
-- **Case change:** Retained **1-hour representative-period and stress-period granularity**.
-- **Case change:** Retained PVB.
-- **DR treatment:** No daily event-count, mandatory peak-event, or representative-period event-duration constraints were imposed.
-
-### Results
-
-- 2032 Baseline DR capacity: **4.156 GW**, up from 3.880 GW in `1hrRep`.
-- Baseline DR operates during **189 modeled hours: 73 representative + 116 stress hours**.
-- Baseline system NPV: **$246.32B**, compared with $249.68B in `1hrRep`.
-- Moving from `1hrRep` to AllHourDR therefore reduced Baseline system cost by approximately **$3.37B**.
-- The run demonstrates that DR has additional value when it can participate in normal operations rather than being limited to reliability/stress events.
-- This run provides the **unconstrained all-hour DR benchmark** for subsequent daily-duration, rolling-event, and peak-targeting constraints.
-
-### Documentation, decisions, next steps, & issues
-
-- **PROPOSED DECISION:** Allow DR to participate in representative hours in subsequent DR sensitivities rather than restricting it to stress periods.
-- **DOCUMENTATION:** Representative-hour DR is modeled through normal hourly `GEN`, so DR directly offsets the generation required to satisfy the hourly supply-demand balance.
-- **NEXT STEP:** Add realistic daily/event-duration and peak-targeting restrictions while testing whether they materially change DR investment or dispatch.
-- **ISSUE:** This run does not constrain how frequently or for how long DR can operate during representative periods, so it should be treated as an unconstrained operational DR benchmark.
-
-### Checklist
-
-- [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
-- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
-- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
-- [x] I moved batch results to the VM-Outputs folder
-- [ ] I added any issues we found to the JIRA issues epic
-- [ ] I edited LLM-generated text to keep this entry short and to the point
-- [ ] Open a pull request and add results of a recent run as an attachment
-
-## Batch entry: `v20261105gt_DRshed_1hr_PVB`
-**Author: Gabriella Tosado**
-
-Summary: Tested DR shedding at **1-hour stress-period granularity with PVB enabled** for the AZ/NM cases. This tests whether preserving hourly DR availability during reliability stress periods changes capacity expansion and system costs relative to the prior 4-hour DR + PVB representation. DR capacity remained similar, but the optimized portfolio shifted substantially and system NPV fell by $5.36B relative to the 4-hour representation.
-
-### Batch details
-
-- **Built from:** Prior CEPM DR/PVB work, including `v20261102gt_DRshed_PVB` and `v20261104gt_DRshed_1hrStress`
-- **Space and Time:** `st-AZNM, 2026–2032 every 3 years`
-- **Cases:** `baseline, limitre, optimized`
-- **Run comments:** Completed successfully. PVB enabled and DR shedding represented at 1-hour stress-period granularity.
-
-### Change log
-
-- **ReEDS change:** Changed DR shed availability during reliability stress periods from the previous **4-hour aggregation to 1-hour granularity**.
-- **Case change:** Enabled PVB alongside DR shedding.
-- **Case change:** Retained the **12% initial planning reserve margin**.
-- **Reliability change:** Retained PRAS stress-period iteration with `GSw_PRM_StressThresholdNEUE = transgrp_1`.
-- **DR treatment:** DR remains a reliability/stress-period resource in this batch; it is not yet available during normal representative hours.
-- **DR treatment:** No 4-hour maximum event-duration constraint was imposed, allowing this batch to isolate the effect of hourly DR availability with PVB enabled.
-
-### Results
-
-Comparison runs:
-- Base: `v20261030gt_base`
-- 4-hour DR + PVB: `v20261102gt_DRshed_PVB`
-- 1-hour DR + PVB: `v20261105gt_DRshed_1hr_PVB`
-
-**2032 optimized capacity [GW]:**
-
-| Technology | Base | 4hr DR + PVB | 1hr DR + PVB |
+| Technology | Base | Final default | Change |
 |---|---:|---:|---:|
-| DR | 0.00 | 3.81 | 3.85 |
-| PVB | 0.00 | 1.37 | 1.37 |
-| Gas CC | 12.67 | 12.81 | 12.82 |
-| Gas CT | 4.67 | 7.04 | 5.82 |
-| Solar | 23.92 | 19.68 | 18.01 |
-| Wind | 14.20 | 14.48 | 14.79 |
-| Battery | 7.98 | 7.33 | 7.37 |
-| Pumped Hydro | 3.97 | 2.01 | 0.81 |
+| DR | 0.00 GW | 4.16 GW | **+4.16 GW** |
+| Gas CC + CT | 15.61 GW | 16.48 GW | **+0.87 GW** |
+| Solar | 21.48 GW | 18.58 GW | **−2.90 GW** |
+| Wind | 13.71 GW | 9.92 GW | **−3.79 GW** |
+| Battery | 7.89 GW | 7.24 GW | **−0.65 GW** |
+| PVB | 0.00 GW | 1.37 GW | **+1.37 GW** |
+| **Solar + Wind + Battery + PVB** | **43.09 GW** | **37.11 GW** | **−5.98 GW** |
 
-Relative to 4-hour DR + PVB, the 1-hour representation produces approximately **1.22 GW less gas CT, 1.67 GW less solar, and 1.20 GW less pumped hydro**, while DR and PVB capacity remain essentially unchanged.
+System NPV falls from **$251.98B to $246.32B**, a reduction of approximately **$5.66B (2.25%)**.
 
-**System NPV [billion $]:**
+The progression shows that introducing DR changes the broader capacity mix rather than simply replacing gas capacity. Relative to Base, the final configuration builds approximately 4.16 GW of DR and 0.87 GW more gas while requiring approximately 5.98 GW less combined solar, wind, battery, and PVB capacity.
 
-| Case | Base | 4hr DR + PVB | 1hr DR + PVB | 1hr vs Base | 1hr vs 4hr |
-|---|---:|---:|---:|---:|---:|
-| Baseline | 251.978 | 248.249 | 251.151 | -0.827 | +2.902 |
-| LimitRE | 295.722 | 292.658 | 292.939 | -2.782 | +0.281 |
-| Optimized | 296.498 | 296.129 | **290.766** | **-5.732** | **-5.363** |
+The final Conditional Peak constraints have very little effect on the overall capacity portfolio relative to unconstrained All-hour DR. Their primary purpose is therefore to make DR operation more realistic rather than materially alter the investment solution.
 
-The strongest result is in Optimized: moving from 4-hour to 1-hour DR stress-period representation reduces system NPV by **$5.36B**, despite similar DR capacity.
+
+### Final default configuration
+
+- `GSw_HourlyChunkLengthRep = 1`
+- `GSw_HourlyChunkLengthStress = 1`
+- `GSw_DRShed = 1`
+- `GSw_PVB = 1`
+- `GSw_PRM_StressThresholdNEUE = country_1`
+- PRAS reliability criterion = **1 ppm NEUE**
+- DR available during both representative and stress periods
+- Maximum **8 equivalent full-output hours per representative day**
+- Maximum **4 equivalent full-output hours within any rolling 5-hour window**
+- Conditional representative-day peak response based on **actual daily DR dispatch**
+- Physical `z132` transmission geography retained
 
 ### Documentation, decisions, next steps, & issues
 
-- **PROPOSED DECISION:** Retain 1-hour DR availability in reliability/stress periods for subsequent AZ/NM DR runs.
-- **DOCUMENTATION:** This batch changes the temporal representation of DR during stress periods only; DR is not yet an operational resource during normal representative hours.
-- **NEXT STEP:** Test 1-hour granularity in the normal representative periods (`20261105gt_1hrRep`) before allowing DR to dispatch during those periods.
-- **ISSUE:** No explicit representative-period event-duration constraint is included, so this run should not be treated as the final DR operating formulation.
+- **DECISION:** Use `country_1` as the default PRAS reliability geography for the AZ/NM study.
+- **DECISION:** Retain 1-hour representative and stress-period resolution.
+- **DECISION:** Allow DR to participate during representative hours as an operational resource.
+- **DECISION:** Retain the 8-hour daily and 4-of-5 rolling-hour DR operating limits.
+- **DECISION:** Use the conditional dispatch-based peak requirement rather than the rejected installed-capacity-based requirement.
+- **DECISION:** Retain PVB in the default configuration.
+- **DOCUMENTATION:** `transgrp_1` and NoPVB runs are retained as sensitivities rather than defaults.
+- **NEXT STEP:** Begin a separate DR-flex/load-shifting workstream using the EFS Flexible Load Profiles and ReEDS's native `FLEX` framework.
 
 ### Checklist
 
 - [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
-- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
-- [ ] I
-
-## Batch entry: v20261104gt_DRshed_1hrStress
-**Author: Gabriella Tosado**
-
-**Summary:** Tested demand response shedding using 1-hour rather than 4-hour stress-period resolution to better preserve hourly DR availability during reliability events. The higher-resolution representation materially changed the resulting capacity portfolio and generally reduced system costs relative to the base run. This run does not impose an explicit maximum DR event duration or event-frequency constraint and serves as the reference case for unconstrained hourly DR.
-
-### Batch details
-
-- **Built from:** `v20261030gt_DRshed`
-- **Space and Time:** `st-AZNM, 2026–2032 every 3 years`
-- **Cases:** `baseline`, `limitre`, `optimized`
-- **Run comments:** Sequential CEPM run with hourly stress periods and DR shed enabled.
-
-### Change log
-
-- **Case change:** Set `GSw_DRShed = 1` for all three AZNM cases.
-- **Case change:** Changed `GSw_HourlyChunkLengthStress` from `4` to `1` to represent reliability stress periods at hourly resolution.
-- **Case change:** `GSw_PVB = 0`.
-- **ReEDS change:** No DR event-duration or event-frequency constraint was imposed in this run. DR availability continues to be determined by the hourly `dr_shed_out` availability profile.
-
-### Results
-
-- Compare-cases results are located in:
-  `runs/v20261104gt_DRshed_1hrStress_st-AZNM_baseline/outputs/comparisons/results-st-AZNM_baseline,st-AZNM_limitre,st-AZNM_optimized.pptx`
-- 2032 DR capacity:
-  - Baseline: **3.88 GW `dr_shed_1`**
-  - LimitRE: **3.81 GW `dr_shed_1` + 0.23 GW `dr_shed_2` = 4.03 GW**
-  - Optimized: **3.81 GW `dr_shed_1`**
-- Moving from 4-hour to 1-hour stress resolution materially changed the capacity mix even though total DR capacity remained similar.
-- Relative to the original 4-hour DR run, the 1-hour formulation generally reduced solar and pumped-hydro capacity and substantially reshuffled gas and wind builds.
-- In the optimized case, the 1-hour run reduced gas CT capacity by approximately **1.14 GW**, solar by **1.16 GW**, and pumped hydro by **0.44 GW** relative to the 4-hour DR run, while changing the mix of wind resources.
-- Hourly stress resolution better preserves when DR is actually available during system peaks rather than averaging availability across 4-hour stress chunks.
-
-### Documentation, decisions, next steps, & issues
-
-- **PROPOSED DECISION:** Use 1-hour stress resolution when evaluating DR because it better represents the hourly coincidence between DR availability and system reliability needs.
-- **ISSUE:** This run does not explicitly constrain how long or how frequently DR can be dispatched. DR can therefore potentially be called repeatedly during long or multi-day reliability events as long as the hourly availability profile permits it.
-- **NEXT STEP:** Test a more operationally constrained hourly DR representation that limits DR to four equivalent full-output hours per reliability event.
-- **NEXT STEP:** Test hourly DR jointly with PVB to evaluate whether DR and hybrid solar-storage act as substitutes or complements in the capacity portfolio.
-- **DOCUMENTATION:** This run should be retained as the unconstrained hourly-DR reference case for comparison with the original 4-hour stress run and subsequent event-limited DR sensitivities.
-
-### Checklist
-
-- [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
-- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
-- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
-- [x] I moved batch results to the VM-Outputs/OneDrive results folder
-- [ ] I added any issues we found to the JIRA issues epic
+- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with changes to ReEDS files
+- [ ] I added final decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
+- [x] I moved completed batch results to the VM-Outputs/OneDrive Runs folder
+- [X] I added relevant issues to the JIRA issues epic
 - [ ] I edited LLM-generated text to keep this entry short and to the point
-- [ ] Open a pull request and add results of a recent run as an attachment
+- [X] Open a pull request and attach results from the final validated run
 
-## Batch entry: v20261103gt_PVB_BIR
-**Author: Gabriella Tosado**
-
-Summary: Expanded the PVB sensitivity to allow ReEDS to choose among three PV+battery configurations with different battery-to-inverter ratios (BIR). ReEDS consistently selected the original 25% BIR configuration; allowing larger batteries did not change the capacity portfolio.
-
-### Batch details
-
-- **Built from:** `v20261029gt_PVB6`
-- **Space and Time:** `AZ/NM, 2026–2032 every 3 years`
-- **Cases:** `st-AZNM_baseline`, `st-AZNM_limitre`, `st-AZNM_optimized`
-- **Run comments:** Run completed successfully.
-
-### Change log
-
-- **Case change:** Set `GSw_PVB_Types = 1_2_3`.
-- **Case change:** Set `GSw_PVB_BIR = 25_50_75`, allowing 25%, 50%, and 75% battery-to-inverter ratios.
-- **Case change:** Set `GSw_PVB_ILR = 134_134_134`, holding ILR constant at 1.34.
-- **Case change:** Held battery duration constant at 4 hours.
-- **Case change:** `GSw_DRShed = 0` and `GSw_EFS_Flex = 0`.
-- **ReEDS change:** No additional ReEDS code or cost changes. PVB costs scale automatically with BIR.
-
-### Results
-
-- Comparison file: `runs/v20261103gt_PVB_BIR_st-AZNM
-
-## Batch entry: v20261102gt_DRshed_PVB
-**Author: Gabriella Tosado**
-
-Summary: Enabled both demand-response shedding and hybrid PV+battery resources to test how the two solutions interact and whether their combined availability changes gas and other capacity needs relative to the base, DR-shed-only, and PVB-only cases.
-
-### Batch details
-
-- **Built from:** `v20261030gt_base`, incorporating the tested DR-shed and PVB configurations
-- **Space and Time:** `AZ/NM, 2026–2032 every 3 years`
-- **Cases:** `st-AZNM_baseline`, `st-AZNM_limitre`, `st-AZNM_optimized`
-- **Run comments:** Run completed successfully.
-
-### Change log
-
-- **Case change:** Set `GSw_DRShed = 1` for baseline, limitre, and optimized.
-- **Case change:** Set `GSw_PVB = 1` for baseline, limitre, and optimized.
-- **Case change:** Kept `GSw_EFS_Flex = 0`.
-- **PVB assumptions:** PVB type 1 with `GSw_PVB_BIR = 25`, `GSw_PVB_Dur = 4`, and 1.34 ILR.
-- **DR assumptions:** Uses ReEDS' default DR-shed potential, costs, and hourly availability.
-- **ReEDS change:** No additional ReEDS code changes for this sensitivity.
-
-### Results
-
-- Comparison results are under `runs/v20261102gt_DRshed_PVB_st-AZNM_baseline/outputs/comparisons/`.
-- The run successfully allows **DR shedding and PV+battery hybrids to compete simultaneously** with conventional generation, standalone renewables, and storage.
-- The DR input represents finite modeled DR potential rather than unrestricted load shedding: the underlying inputs contain ~4.32 GW of `dr_shed_1` and ~2.21 GW of `dr_shed_2` potential across AZ and NM before year-specific adjustments.
-- PVB type 1 represents a hybrid configuration with a 25% battery/inverter ratio and four-hour battery duration.
-- **Capacity impacts relative to the base, DR-shed-only, and PVB-only runs still need to be quantified.**
-
-### Documentation, decisions, next steps, & issues
-
-- **PROPOSED DECISION:** Use the combined case to evaluate whether DR shedding and PV+battery hybrids are complementary or substitutive solutions for meeting load growth and reducing conventional capacity needs.
-- **NEXT STEP:** Compare 2032 capacity, particularly DR, PVB, standalone solar, standalone battery, gas CC, and gas CT, against `v20261030gt_base`, `v20261030gt_DRshed`, and `v20261029gt_PVB6`.
-- **ISSUE:** No run-breaking issue identified in the combined sensitivity.
-
-### Checklist
-
-- [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
-- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
-- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
-- [x] I moved batch results to the OneDrive Runs folder
-- [ ] I added any issues we found to the JIRA issues epic
-- [x] I edited LLM-generated text to keep this entry short and to the point
-- [ ] Open a pull request and add results of a recent run as an attachment
-
-## Batch entry: v20261030gt_DRshed
-**Author: Gabriella Tosado**
-
-Summary: Enabled ReEDS' default demand-response shedding resource to test how allowing load curtailment changes the AZ/NM capacity mix. ReEDS selected ~3.8 GW of DR shed by 2032 and materially changed capacity builds relative to the base case.
-
-### Batch details
-
-- **Built from:** `v20261030gt_base`
-- **Space and Time:** `AZ/NM, 2026–2032 every 3 years`
-- **Cases:** `st-AZNM_baseline`, `st-AZNM_limitre`, `st-AZNM_optimized`
-- **Run comments:** Run completed successfully.
-
-### Change log
-
-- **Case change:** Set `GSw_DRShed = 1` for baseline, limitre, and optimized.
-- **Case change:** Kept `GSw_PVB = 0`.
-- **Case change:** Kept `GSw_EFS_Flex = 0`.
-- **ReEDS change:** None for this sensitivity.
-
-### Results
-
-- Comparison results are under `runs/v20261030gt_DRshed_st-AZNM_baseline/outputs/comparisons/`.
-- ReEDS builds approximately **3.8 GW of `dr_shed_1`** by 2032 across the modeled AZ/NM system. LimitRE additionally builds ~94 MW of `dr_shed_2`.
-- Relative to the base case, the baseline DR-shed case has approximately **463 MW less gas CC, 17 MW less gas CT, and 242 MW less pumped hydro**, while adding ~660 MW solar and ~212 MW wind.
-- The default DR inputs provide finite, region- and hour-specific DR potential rather than allowing unrestricted load shedding. The underlying supply curve includes ~4.32 GW of `dr_shed_1` and ~2.21 GW of `dr_shed_2` potential across AZ and NM before year-specific adjustments.
-- DR costs and hourly availability vary by resource tier and geography.
-
-### Documentation, decisions, next steps, & issues
-
-- **PROPOSED DECISION:** Treat `GSw_DRShed = 1` as a full-default-DR-potential sensitivity, not as an assumption that 100% of demand can be shed.
-- **NEXT STEP:** Compare this run with the combined DR-shed + PVB sensitivity to understand whether demand response and PV+battery hybrids complement or substitute for one another.
-- **ISSUE:** None identified that prevented DR shedding from operating; unlike EFS load flexibility, DR shedding successfully enters the capacity optimization.
-
-### Checklist
-
-- [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with any run-breaking issues I encountered
-- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with any changes to ReEDS files
-- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
-- [x] I moved batch results to the OneDrive Runs folder
-- [ ] I added any issues we found to the JIRA issues epic
-- [x] I edited LLM-generated text to keep this entry short and to the point
-- [ ] Open a pull request and add results of a recent run as an attachment
-
-## Batch entry: v20261029gt_PVB6
-**Author: Gaby Tosado**
-
-Summary: Tested enabling PV+battery hybrid (PVB) builds in the AZNM CEPM cases. Enabling PVB exposed two existing ReEDS compatibility issues: PVB renewable profiles were looking for a standalone `recf_upv.h5` that is not produced by the current preprocessing workflow, and zero-valued PVB component VOM parameters were treated as missing by the input checker. After addressing both issues, the baseline, limitre, and optimized cases completed successfully with PVB enabled.
-
-### Batch details
-
-- **Built from:** `dr_testing`, based on clean `dev` synced October 29, 2026
-- **Space and Time:** `st-AZNM, 2026–2032 every 3 years`
-- **Cases:** `st-AZNM_baseline`, `st-AZNM_limitre`, `st-AZNM_optimized`
-- **Run comments:** Successful three-case run after debugging PVB preprocessing and VOM handling.
-
-### Change log
-
-- **ReEDS change:** Updated `reeds/input_processing/recf.py` so that when PVB uses the same ILR as UPV, it reuses the UPV profile already calculated in memory rather than attempting to read a nonexistent `recf_upv.h5`. PVB columns are also renamed from the UPV resource naming convention to the corresponding PVB resource names.
-- **ReEDS change:** Updated `reeds/core/setup/b_inputs.gms` to assign a small `0.01 $/MWh` VOM to the PV and battery components of PVB for valid PVB `valgen` combinations. This avoids the input checker interpreting legitimate zero-valued PVB VOM parameters as missing.
-- **Case change:** Set `GSw_PVB = 1` for `st-AZNM_baseline`, `st-AZNM_limitre`, and `st-AZNM_optimized`.
-- **Case change:** PVB type 1 uses an ILR of `1.34`, matching the utility-scale PV ILR.
-
-### Results
-
-- Comparison PowerPoint and the three completed run folders were copied to `C:\Users\gtosado\OneDrive - RMI\Runs`.
-- All three AZNM cases completed successfully with PVB enabled.
-- The run demonstrates that PVB can be enabled in the current CEPM workflow once the PVB profile and VOM compatibility issues are addressed.
-- Compare the PVB6 results against the corresponding PVB-off base run to quantify changes in PVB builds, standalone PV/storage builds, gas capacity, system cost, and generation.
-
-### Documentation, decisions, next steps, & issues
-
-- **PROPOSED DECISION:** Retain PVB as an available resource for the VPP/DER sensitivity work, while treating the two ReEDS modifications as testing fixes until they are reviewed for integration into `dev`.
-- **NEXT STEP:** Run an otherwise identical PVB-off case and compare capacity, generation, system costs, and gas builds against `v20261029gt_PVB6`.
-- **ISSUE:** Current PVB preprocessing expects `recf_upv.h5` when PVB and UPV share an ILR, although the current workflow calculates the UPV profile directly rather than retaining that standalone file.
-- **ISSUE:** UPV VOM is explicitly zero in the ATB plant-characteristic inputs. Because GAMS does not retain zero-valued parameter records, the derived PVB component VOM parameters are empty and `check_inputs.py` interprets them as missing. For this test, both PVB components were assigned `0.01 $/MWh`.
-- **ISSUE:** These fixes should be reviewed before being merged into `dev`; the `0.01 $/MWh` PVB VOM should be treated as a numerical/input-checking workaround rather than a substantive cost assumption.
-
-### Checklist
-
-- [ ] I updated [`known-reeds-issues.md`](CEPM/known-reeds-issues.md) with the PVB run-breaking issues encountered
-- [ ] I updated [`reeds-to-cepm-log.md`](CEPM/reeds-to-cepm-log.md) with the `recf.py` and `b_inputs.gms` changes
-- [ ] I added any decisions to [`CEPM/decisions/`](CEPM/decisions/) and linked to them here
-- [x] I moved batch results to the OneDrive `Runs` folder
-- [ ] I added any issues we found to the JIRA issues epic
-- [x] I edited LLM-generated text to keep this entry short and to the point
-- [ ] Open a pull request and add results of a recent run as an attachment
 
 ## Batch entry: v20261009postcapex**
 **Author: Tyler Fitch**
