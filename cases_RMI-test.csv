@@ -1,0 +1,13 @@
+,Default Value,USA_fasterish
+ignore,1,0
+GSw_Region,cendiv/Pacific,country/USA
+endyear,2032,2050
+yearset,,2010..2050..10
+GSw_ZoneSet,,z54
+GSw_GasCurve,2,1
+GSw_HourlyChunkLengthRep,,4
+GSw_HourlyChunkLengthStress,,4
+GSw_StartCost,,0
+GSw_H2,,0
+GSw_H2_PTC,,0
+pras_samples,,10

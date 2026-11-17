@@ -150,7 +150,7 @@ def main(case, overwrite=True, verbose=1):
     write_declare_and_load(case, declare_sets, 'set')
     write_declare_and_load(case, declare_parameters, 'parameter')
 
-
+    
 #%% Procedure
 if __name__ == '__main__':
     #%% Time the operation of this script

@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ReEDS"
+version = "2024.0.0"
+requires-python = "==3.14.*"
+description = "ReEDS-2.0 Python environment managed with uv"
+readme = "README.md"
+dependencies = [
+  "bokeh==3.9.*",
+  "click==8.4.*",
+  "gitpython==3.1.*",
+  "h5py==3.16.*",
+  "matplotlib==3.11.*",
+  "numpy==2.5.*",
+  "openpyxl==3.1.*",
+  "pandas==3.0.*",
+  "tables==3.11.1",
+  "pytest==9.1.*",
+  "requests==2.34.*",
+  "scikit-learn==1.9.*",
+  "scipy==1.18.*",
+  "tqdm==4.68.*",
+  "cmocean==4.0.*",
+  "gdxpds==4.0.0",
+  "geopandas==1.1.*",
+  "pulp==3.3.2",
+  "shapely==2.1.*",
+  "pyyaml==6.0.*",
+]
+
+[project.optional-dependencies]
+interactive = [
+  "ipykernel==7.3.*",
+  "ipywidgets==8.1.*",
+  "notebook==7.6.*",
+]
+
+maps = [
+  # No Windows wheel for Python 3.14 yet (build needs GDAL on PATH); geopandas
+  # itself doesn't need fiona (uses pyogrio), and nothing in this repo imports
+  # fiona directly. See CEPM/reeds-to-cepm-log.md for details and what to
+  # recheck once a Windows/cp314 wheel ships.
+  "fiona==1.10.*; sys_platform != 'win32' or python_full_version != '3.14.*'",
+  "folium==0.20.*",
+  "mapclassify==2.10.*",
+  "pyproj==3.8.0",  # bumped from 3.6.1 -- no Python 3.14 Windows wheel at 3.6.1; no environment.yml pin to stay consistent with
+]
+
+reporting = [
+  "python-pptx==1.0.*",
+  # explicit override -- python-pptx's own resolution pulls in pillow==9.5.0,
+  # whose old setup.py fails to build on Python 3.14; forcing a newer release
+  # with a real cp314 wheel instead.
+  "pillow==12.3.*",
+]
+
+network = [
+  "networkx==3.4.*",
+]
+
+testing = [
+  "gamspy-base==53.5.0",
+  "gamsapi[transfer]==53.5.0",
+]
+
+dev = [
+  "ipykernel==7.3.*",
+  "ipywidgets==8.1.*",
+  "notebook==7.6.*",
+  "fiona==1.10.*; sys_platform != 'win32' or python_full_version != '3.14.*'",
+  "folium==0.20.*",
+  "mapclassify==2.10.*",
+  "pyproj==3.8.0",  # bumped from 3.6.1 -- no Python 3.14 Windows wheel at 3.6.1; no environment.yml pin to stay consistent with
+  "python-pptx==1.0.*",
+  "pillow==12.3.*",
+  "networkx==3.4.*",
+  "gamspy-base==53.5.0",
+  "gamsapi[transfer]==53.5.0",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hourlize*", "reeds*"]
+exclude = ["inputs*"]

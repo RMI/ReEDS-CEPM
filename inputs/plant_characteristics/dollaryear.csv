@@ -28,6 +28,9 @@ evmc_storage_Baseline,2020
 h2fuelcell_advanced,2022
 h2fuelcell_moderate,2022
 h2fuelcell_conservative,2022
+gas-ccgt_CEPM_all,2022
+gas-ccgt_CEPM_low,2022
+gas-ccgt_CEPM_high,2022
 gas_ATB_2024_moderate,2022
 gas-ccs_ATB_2024_advanced,2022
 gas-ccs_ATB_2024_conservative,2022
