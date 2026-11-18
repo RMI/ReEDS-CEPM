@@ -24,7 +24,7 @@ What this script does:
    base case is specified, so compare_cases.py defaults to the first
    alphabetically-sorted completed case as the base -- not necessarily the
    leftmost case in the cases file. compare_cases.py's --startyear is set
-   from the first 4 digits of the `yearset` switch for the first
+   from the first year after 2010 in the `yearset` switch for the first
    non-ignored case (left to right) in the cases file used for this batch,
    via CEPM/scripts/get_batch_info.py; if that can't be determined,
    compare_cases.py's own default (2020) is used instead.
@@ -853,7 +853,7 @@ if ($x -or $o) {
             Write-Host "[run] postprocessing/compare_cases.py for batch '$BatchName'"
 
             # Derive --startyear from the first non-ignored case in the cases file used
-            # for this batch (first 4 digits of that case's `yearset` switch), so the
+            # for this batch (first year after 2010 in that case's `yearset` switch), so the
             # comparison plots start at the model's actual start year instead of
             # compare_cases.py's hardcoded default (2020). Best-effort: if this fails
             # (e.g. an unusual yearset format), warn and fall back to that default.
