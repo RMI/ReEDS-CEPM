@@ -122,34 +122,53 @@ $include autocode%ds%report_params.gms
 h(h)$[not h_rep(h)] = no ;
 szn(szn)$[not szn_rep(szn)] = no ;
 
-*=================================================
-* -- CAPACITY ABOVE INTERCONNECTION QUEUE LIMIT --
-*=================================================
+*=====================================
+* -- Parameters moved to Python --
+*=====================================
 
-cap_above_limit(tg,r,t)$tmodel_new(t) = CAP_ABOVE_LIM.l(tg,r,t) ;
+$ontext
+The calculation of the following output parameters occurs in report_calcs.py:
 
-*=====================
-* -- CO2 Reporting --
-*=====================
+Interconnection queue
+    cap_above_limit
 
-CO2_CAPTURED_out(r,h,t)$tmodel_new(t) = CO2_CAPTURED.l(r,h,t) ;
-CO2_CAPTURED_out_ann(r,t)$tmodel_new(t) = sum(h,hours(h) * CO2_CAPTURED.l(r,h,t) );
-CO2_STORED_out(r,cs,h,t)$[tmodel_new(t)$csfeas(cs)] = CO2_STORED.l(r,cs,h,t) ;
-CO2_STORED_out_ann(r,cs,t)$[tmodel_new(t)$csfeas(cs)] = sum(h,hours(h) * CO2_STORED.l(r,cs,h,t) );
-CO2_TRANSPORT_INV_out(r,rr,t)$tmodel_new(t) = CO2_TRANSPORT_INV.l(r,rr,t) ;
-CO2_SPURLINE_INV_out(r,cs,t)$[tmodel_new(t)$csfeas(cs)] = CO2_SPURLINE_INV.l(r,cs,t) ;
+CO2 storage and flows
+    CO2_CAPTURED_out
+    CO2_CAPTURED_out_ann
+    CO2_FLOW_neg_out
+    CO2_FLOW_neg_out_ann
+    CO2_FLOW_net_out
+    CO2_FLOW_net_out_ann
+    CO2_FLOW_out
+    CO2_FLOW_out_ann
+    CO2_FLOW_pos_out
+    CO2_FLOW_pos_out_ann
+    CO2_SPURLINE_INV_out
+    CO2_STORED_out
+    CO2_STORED_out_ann
+    CO2_TRANSPORT_INV_out
 
-CO2_FLOW_out(r,rr,h,t)$[(ord(r) < ord(rr))$tmodel_new(t)] = CO2_FLOW.l(r,rr,h,t) + CO2_FLOW.l(rr,r,h,t) ;
-CO2_FLOW_out_ann(r,rr,t)$[(ord(r) < ord(rr))$tmodel_new(t)] = sum{h, hours(h) * (CO2_FLOW.l(r,rr,h,t) + CO2_FLOW.l(rr,r,h,t)) } ;
-
-CO2_FLOW_pos_out(r,rr,h,t)$[(ord(r) < ord(rr))$tmodel_new(t)] = CO2_FLOW.l(r,rr,h,t) ;
-CO2_FLOW_pos_out_ann(r,rr,t)$[(ord(r) < ord(rr))$tmodel_new(t)] = sum{h, hours(h) * CO2_FLOW.l(r,rr,h,t) } ;
-
-CO2_FLOW_neg_out(r,rr,h,t)$[(ord(r) < ord(rr))$tmodel_new(t)] = -1 * CO2_FLOW.l(rr,r,h,t) ;
-CO2_FLOW_neg_out_ann(r,rr,t)$[(ord(r) < ord(rr))$tmodel_new(t)] = -1 * sum{h, hours(h) * CO2_FLOW.l(rr,r,h,t) } ;
-
-CO2_FLOW_net_out(r,rr,h,t)$[(ord(r) < ord(rr))$tmodel_new(t)] = CO2_FLOW.l(r,rr,h,t) - CO2_FLOW.l(rr,r,h,t) ;
-CO2_FLOW_net_out_ann(r,rr,t)$[(ord(r) < ord(rr))$tmodel_new(t)] = sum{h, hours(h) * (CO2_FLOW.l(r,rr,h,t) - CO2_FLOW.l(rr,r,h,t)) } ;
+Transmission
+    cap_converter_out
+    invtran_out
+    tran_cap_energy
+    tran_cap_grp
+    tran_cap_prm
+    tran_flow_all_rep
+    tran_flow_all_stress
+    tran_flow_rep
+    tran_flow_rep_ann
+    tran_flow_stress
+    tran_mi_out
+    tran_mi_out_detail
+    tran_out
+    tran_prm_mi_out
+    tran_prm_out
+    tran_util_ann_rep
+    tran_util_ann_stress
+    tran_util_h_rep
+    tran_util_h_stress
+$offtext
 
 *=========================
 * LCOE
@@ -182,7 +201,7 @@ lcoe(i,v,r,t,"bin1")$[(not rsc_i(i))$valcap_init(i,v,r,t)$ivt(i,v,t)$avg_avail(i
 ;
 
 gen_rsc(i,v,r,t)$[valcap_init(i,v,r,t)$ivt(i,v,t)$rsc_i(i)] =
-    sum{h, m_cf(i,v,r,h,t) * hours(h) } ;
+    sum{(h,c)$i_c(i,c), m_cf(i,c,v,r,h,t) * hours(h) } ;
 
 lcoe(i,v,r,t,rscbin)$[valcap_init(i,v,r,t)$ivt(i,v,t)$rsc_i(i)$m_rscfeas(r,i,rscbin)$gen_rsc(i,v,r,t)] =
 * cost of capacity divided by generation
@@ -635,13 +654,13 @@ gen_h(i,r,h,t)$[tmodel_new(t)$valgen_irt(i,r,t)] =
 * UPV capacity is already in MWac at this point (matching csp-ns),
 * so don't need to account for ILR.
 gen_h("csp-ns",r,h,t)$[cap_cspns(r,t)$tmodel_new(t)]
-    = cap_cspns(r,t) * m_cf("upv_6","new1",r,h,t) ;
-* We have to take csp-ns generation from somewhere, so take it from upv_6 (which all the
+    = cap_cspns(r,t) * sum{c$i_c("upv_5",c), m_cf("upv_5",c,"new1",r,h,t) } ;
+* We have to take csp-ns generation from somewhere, so take it from upv_5 (which all the
 * csp-ns-containing regions have)
-gen_h("upv_6",r,h,t)$[cap_cspns(r,t)$tmodel_new(t)]
-    = gen_h("upv_6",r,h,t) - gen_h("csp-ns",r,h,t) ;
+gen_h("upv_5",r,h,t)$[cap_cspns(r,t)$tmodel_new(t)]
+    = gen_h("upv_5",r,h,t) - gen_h("csp-ns",r,h,t) ;
 * Make sure it doesn't go negative, just in case
-gen_h("upv_6",r,h,t)$[cap_cspns(r,t)$tmodel_new(t)$(gen_h("upv_6",r,h,t) < 0)] = 0 ;
+gen_h("upv_5",r,h,t)$[cap_cspns(r,t)$tmodel_new(t)$(gen_h("upv_5",r,h,t) < 0)] = 0 ;
 gen_h_nat(i,h,t)$tmodel_new(t) = sum{r, gen_h(i,r,h,t) } ;
 
 * Do it again for stress periods
@@ -661,7 +680,7 @@ gen_ann_nat(i,t)$tmodel_new(t) = sum{r, gen_ann(i,r,t) } ;
 * Report generation without the charging and production included as above
 gen_ivrt(i,v,r,t)$valgen(i,v,r,t) = sum{h, GEN.l(i,v,r,h,t) * hours(h) } ;
 gen_ivrt_uncurt(i,v,r,t)$[(vre(i) or storage_hybrid(i)$(not csp(i)))$valgen(i,v,r,t)] =
-  sum{h, m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) } ;
+  sum{(h,c)$i_c(i,c), m_cf(i,c,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) } ;
 
 * Report generation that will be used as a denominator in outputs, where VRE uses uncurtailed gen and storage uses GEN
 gen_uncurtailed(i,r,t)$[valgen_irt(i,r,t)$(not vre(i))] = sum{v, gen_ivrt(i,v,r,t) } ;
@@ -739,14 +758,13 @@ opres_trade(ortype,r,rr,t)$[opres_routes(r,rr,t)$tmodel_new(t)] =
 *=========================
 
 gen_new_uncurt(i,r,h,t)$[(vre(i) or storage_hybrid(i)$(not csp(i)))$valcap_irt(i,r,t)] =
-      sum{v$valinv(i,v,r,t), (INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)) * m_cf(i,v,r,h,t) * hours(h) }
+      sum{(v,c)$[valinv(i,v,r,t)$i_c(i,c)], (INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)) * m_cf(i,c,v,r,h,t) * hours(h) }
 ;
 
-* Formulation follows eq_curt_gen_balance(r,h,t); since it uses =g= there may be extra curtailment
-* beyond CURT.l(r,h,t) so we recalculate as (availability - generation - operating reserves)
+* curtailment = (availability - generation - operating reserves)
 curt_h(r,h,t)$tmodel_new(t) =
-      sum{(i,v)$[valcap(i,v,r,t)$(vre(i) or storage_hybrid(i)$(not csp(i)))],
-          m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) }
+      sum{(i,v,c)$[valcap(i,v,r,t)$(vre(i) or storage_hybrid(i)$(not csp(i)))$i_c(i,c)],
+          m_cf(i,c,v,r,h,t) * CAP.l(i,v,r,t) }
     - sum{(i,v)$[valgen(i,v,r,t)$vre(i)], GEN.l(i,v,r,h,t) }
     - sum{(i,v)$[valgen(i,v,r,t)$storage_hybrid(i)$(not csp(i))], GEN_PLANT.l(i,v,r,h,t) }$Sw_HybridPlant
     - sum{(ortype,i,v)$[Sw_OpRes$opres_h(h)$reserve_frac(i,ortype)$valgen(i,v,r,t)$vre(i)],
@@ -756,8 +774,8 @@ curt_h(r,h,t)$tmodel_new(t) =
 curt_ann(r,t)$tmodel_new(t) = sum{h, curt_h(r,h,t) * hours(h) } ;
 
 curt_tech(i,r,t)$[tmodel_new(t)$vre(i)] =
-      sum{(v,h)$valcap(i,v,r,t),
-          m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) }
+      sum{(v,h,c)$[valcap(i,v,r,t)$i_c(i,c)],
+          m_cf(i,c,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) }
     - sum{(v,h)$valgen(i,v,r,t),
           GEN.l(i,v,r,h,t) * hours(h) }
     - sum{(ortype,v,h)$[Sw_OpRes$opres_h(h)$reserve_frac(i,ortype)$valgen(i,v,r,t)],
@@ -797,9 +815,9 @@ losses_tran_h(rr,r,h,trtype,t)$[routes(r,rr,trtype,t)$tmodel_new(t)]
 
 cap_deg_ivrt(i,v,r,t)$valcap(i,v,r,t) = CAP.l(i,v,r,t) / ilr(i) ;
 
-cap_ivrt(i,v,r,t)$[(not (upv(i) or wind(i)))$valcap(i,v,r,t)] = cap_deg_ivrt(i,v,r,t) ;
-*upv, and wind have degradation, so use INV rather than CAP to get the reported capacity
-cap_ivrt(i,v,r,t)$[(upv(i) or wind(i))$valcap(i,v,r,t)] = (
+cap_ivrt(i,v,r,t)$[(not (upv(i) or wind(i) or distpv(i)))$valcap(i,v,r,t)] = cap_deg_ivrt(i,v,r,t) ;
+*upv, wind, and distpv have degradation, so use INV rather than CAP to get the reported capacity
+cap_ivrt(i,v,r,t)$[(upv(i) or wind(i) or distpv(i))$valcap(i,v,r,t)] = (
   m_capacity_exog(i,v,r,t)$tmodel_new(t)
   + sum{tt$[inv_cond(i,v,r,t,tt)$[tmodel(tt) or tfix(tt)]],
         INV.l(i,v,r,tt) + INV_REFURB.l(i,v,r,tt)$[refurbtech(i)$Sw_Refurb]}) / ilr(i) ;
@@ -811,9 +829,9 @@ cap_out(i,r,t)$[valcap_irt(i,r,t)$tmodel_new(t)] = sum{v$valcap(i,v,r,t), cap_iv
 cap_out("csp-ns",r,t)$[cap_cspns(r,t)$tmodel_new(t)] = cap_cspns(r,t) ;
 * We have to take csp-ns capacity from somewhere, so take it from upv_6 (which all the
 * csp-ns-containing regions have)
-cap_out("upv_6",r,t)$[cap_cspns(r,t)$tmodel_new(t)] = cap_out("upv_6",r,t) - cap_cspns(r,t) ;
+cap_out("upv_5",r,t)$[cap_cspns(r,t)$tmodel_new(t)] = cap_out("upv_5",r,t) - cap_cspns(r,t) ;
 * Make sure it doesn't go negative, just in case
-cap_out("upv_6",r,t)$[cap_cspns(r,t)$tmodel_new(t)$(cap_out("upv_6",r,t) < 0)] = 0 ;
+cap_out("upv_5",r,t)$[cap_cspns(r,t)$tmodel_new(t)$(cap_out("upv_5",r,t) < 0)] = 0 ;
 cap_nat(i,t)$tmodel_new(t) = sum{r, cap_out(i,r,t) } ;
 
 * Exogenous capacity (used by reeds_to_rev)
@@ -994,10 +1012,10 @@ revenue_en(rev_cat,i,r,t)
 
 revenue_en(rev_cat,i,r,t)
     $[tmodel_new(t)
-    $sum{(v,h)$[valcap(i,v,r,t)], m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) }
+    $sum{(v,h,c)$[valcap(i,v,r,t)$i_c(i,c)], m_cf(i,c,v,r,h,t) * CAP.l(i,v,r,t) }
     $vre(i)] =
-    revenue(rev_cat,i,r,t) / sum{(v,h)$valcap(i,v,r,t),
-      m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) } ;
+    revenue(rev_cat,i,r,t) / sum{(v,h,c)$[valcap(i,v,r,t)$i_c(i,c)],
+      m_cf(i,c,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) } ;
 
 revenue_en_nat(rev_cat,i,t)
     $[tmodel_new(t)
@@ -1007,10 +1025,10 @@ revenue_en_nat(rev_cat,i,t)
 
 revenue_en_nat(rev_cat,i,t)
     $[tmodel_new(t)
-    $sum{(v,r,h)$[valcap(i,v,r,t)], m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) }
+    $sum{(v,r,h,c)$[valcap(i,v,r,t)$i_c(i,c)], m_cf(i,c,v,r,h,t) * CAP.l(i,v,r,t) }
     $vre(i)] =
-    revenue_nat(rev_cat,i,t) / sum{(v,r,h)$valcap(i,v,r,t),
-      m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) } ;
+    revenue_nat(rev_cat,i,t) / sum{(v,r,h,c)$[valcap(i,v,r,t)$i_c(i,c)],
+      m_cf(i,c,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) } ;
 
 revenue_cap(rev_cat,i,r,t)$[tmodel_new(t)$cap_out(i,r,t)] =
   revenue(rev_cat,i,r,t) / cap_out(i,r,t) ;
@@ -1358,7 +1376,7 @@ systemcost_techba("op_fuelcosts_objfn",i,r,t)$tmodel_new(t)  =
 *cost of coal and nuclear fuel (except coal used for cofiring)
               + sum{(v,h)$[valgen(i,v,r,t)$heat_rate(i,v,r,t)
                          $(not gas(i))$(not bio(i))$(not cofire(i))
-                         $((not h2_combustion(i)) or h2_combustion(i)$[(Sw_H2=0) or h_stress(h)])],
+                         $((not h2_gen(i)) or h2_gen(i)$[(Sw_H2=0) or h_stress(h)])],
                    hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN.l(i,v,r,h,t) }
 
 *cofire coal consumption - cofire bio consumption already accounted for in accounting of BIOUSED
@@ -1387,7 +1405,7 @@ systemcost_techba("op_h2_fuel_costs",i,r,t)$tmodel_new(t)  =
                   hours(h) * h2_fuel_cost(i,v,r,t) * PRODUCE.l(p,i,v,r,h,t) }
 ;
 
-systemcost_techba("op_h2combustion_fuel_costs",i,r,t)$[tmodel_new(t)$h2_combustion(i)$Sw_H2]  =
+systemcost_techba("op_h2combustion_fuel_costs",i,r,t)$[tmodel_new(t)$h2_gen(i)$Sw_H2]  =
 * fuel costs for H2-CT/CC techs
               + (1 / cost_scale) * (1 / pvf_onm(t))
 * when using national demand, calculate total annual demand and multiply by national average price
@@ -1564,7 +1582,7 @@ systemcost_ba("inv_h2_storage",r,t)$[tmodel_new(t)$(Sw_H2 = 2)] =
 *===============
 
 systemcost_ba("op_co2_storage",r,t)$[tmodel_new(t)$Sw_CO2_Detail] =
-              + sum{(h,cs)$r_cs(r,cs), hours(h) * CO2_STORED.l(r,cs,h,t) * cost_co2_stor_bec(cs,t) }
+              + sum{(h,cs)$r_cs(r,cs), hours(h) * CO2_STORED.l(r,cs,h,t) * cost_co2_stor_bec(cs) }
 ;
 
 * here following same logic of transmission pipelines
@@ -1689,8 +1707,6 @@ error_check('z') = (
         - pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)$Sw_RetirePenalty],
             cost_fom(i,v,r,t) * retire_penalty(t)
             * (CAP.l(i,v,r,t) - INV.l(i,v,r,t) - INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb] - UPGRADES.l(i,v,r,t)$[upgrade(i)$Sw_Upgrades]) }
-* Revenue from purchases of curtailed VRE
-        - pvf_onm(t) * sum{(r,h), CURT.l(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
 * Hurdle costs
         + pvf_onm(t) * sum{(r,rr,trtype)$cost_hurdle(r,rr,t), tran_hurdle_cost_ann(r,rr,trtype,t) }
 * Penalty cost for dropped/excess load before Sw_StartMarkets
@@ -1774,75 +1790,6 @@ excess_load(r,h,t) = EXCESS.l(r,h,t) ;
 *======================
 * Transmission
 *======================
-
-invtran_out(r,rr,trtype,t)$routes_inv(r,rr,trtype,t) = INVTRAN.l(r,rr,trtype,t) ;
-
-tran_cap_energy(r,rr,trtype,t)$routes(r,rr,trtype,t) = CAPTRAN_ENERGY.l(r,rr,trtype,t) ;
-tran_cap_prm(r,rr,trtype,t)$routes(r,rr,trtype,t) = CAPTRAN_PRM.l(r,rr,trtype,t) ;
-tran_cap_grp(transgrp,transgrpp,t)$trancap_init_transgroup(transgrp,transgrpp,"AC")
-    = CAPTRAN_GRP.l(transgrp,transgrpp,t) ;
-
-tran_out(r,rr,trtype,t)$[(ord(r)<ord(rr))$routes(r,rr,trtype,t)] =
-  (tran_cap_energy(r,rr,trtype,t) + tran_cap_energy(rr,r,trtype,t)) / 2 ;
-
-tran_prm_out(r,rr,trtype,t)$[(ord(r)<ord(rr))$routes(r,rr,trtype,t)] =
-  (tran_cap_prm(r,rr,trtype,t) + tran_cap_prm(rr,r,trtype,t)) / 2 ;
-
-tran_mi_out_detail(r,rr,trtype,t)$routes(r,rr,trtype,t) = tran_out(r,rr,trtype,t) * distance(r,rr,trtype) ;
-
-tran_mi_out(trtype,t)$tmodel_new(t) =
-  sum{(r,rr)$routes(r,rr,trtype,t), tran_mi_out_detail(r,rr,trtype,t) } ;
-tran_prm_mi_out(trtype,t)$tmodel_new(t) =
-  sum{(r,rr)$routes(r,rr,trtype,t), tran_prm_out(r,rr,trtype,t) * distance(r,rr,trtype) } ;
-
-cap_converter_out(r,t)$tmodel_new(t) = CAP_CONVERTER.l(r,t) ;
-
-tran_flow_all_rep(r,rr,h,trtype,t)
-    $[tmodel_new(t)$routes(r,rr,trtype,t)] = FLOW.l(r,rr,h,t,trtype) ;
-
-tran_flow_all_stress(r,rr,allh,trtype,t)
-    $[tmodel_new(t)$routes(r,rr,trtype,t)$h_stress_t(allh,t)] = FLOW.l(r,rr,allh,t,trtype) ;
-
-tran_flow_rep(r,rr,h,trtype,t)
-    $[tmodel_new(t)$routes(r,rr,trtype,t)$(ord(r) < ord(rr))] =
-    FLOW.l(r,rr,h,t,trtype) - FLOW.l(rr,r,h,t,trtype)
-;
-
-tran_flow_stress(r,rr,allh,trtype,t)
-    $[tmodel_new(t)$routes(r,rr,trtype,t)$(ord(r) < ord(rr))$h_stress_t(allh,t)] =
-    FLOW.l(r,rr,allh,t,trtype) - FLOW.l(rr,r,allh,t,trtype)
-;
-
-tran_flow_rep_ann(r,rr,trtype,t)
-  $[sum{h, tran_flow_rep(r,rr,h,trtype,t)}] =
-  sum{h, hours(h) * tran_flow_rep(r,rr,h,trtype,t) }
-;
-
-tran_util_h_rep(r,rr,h,trtype,t)
-    $[tmodel_new(t)$routes(r,rr,trtype,t)$tran_cap_energy(r,rr,trtype,t)] =
-    FLOW.l(r,rr,h,t,trtype) / tran_cap_energy(r,rr,trtype,t)
-;
-
-tran_util_h_stress(r,rr,allh,trtype,t)
-    $[tmodel_new(t)$routes(r,rr,trtype,t)$tran_cap_prm(r,rr,trtype,t)$h_stress_t(allh,t)] =
-    FLOW.l(r,rr,allh,t,trtype) / tran_cap_prm(r,rr,trtype,t)
-;
-
-tran_util_ann_rep(r,rr,trtype,t)
-    $[tmodel_new(t)$routes(r,rr,trtype,t)$tran_cap_energy(r,rr,trtype,t)] =
-    sum{h, FLOW.l(r,rr,h,t,trtype) * hours(h) / tran_cap_energy(r,rr,trtype,t) }
-    / sum{h, hours(h) }
-;
-
-tran_util_ann_stress(r,rr,trtype,t)
-    $[tmodel_new(t)
-    $routes(r,rr,trtype,t)$tran_cap_prm(r,rr,trtype,t)
-    $sum{allh$h_stress_t(allh,t), hours_t(allh,t)}] =
-    sum{allh$h_stress_t(allh,t),
-        FLOW.l(r,rr,allh,t,trtype) * hours_t(allh,t) / tran_cap_prm(r,rr,trtype,t) }
-    / sum{allh$h_stress_t(allh,t), hours_t(allh,t) }
-;
-
 import_h_rep(r,h,t)
     $[tmodel_new(t)] =
 * Imports with losses
@@ -1986,7 +1933,7 @@ prod_SMR_emit(e,r,t)$tmodel_new(t) =
 
 * calculate exogenous H2 supply and H2-CT/CC consumption
 h2_demand_by_sector("cross-sector",t) = sum{p, h2_exogenous_demand(p,t) } ;
-h2_demand_by_sector("electricity",t) = sum{(i,v,r,h)$[valgen(i,v,r,t)$h2_combustion(i)],
+h2_demand_by_sector("electricity",t) = sum{(i,v,r,h)$[valgen(i,v,r,t)$h2_gen(i)],
         GEN.l(i,v,r,h,t) * hours(h) * h2_combustion_intensity * heat_rate(i,v,r,t) } ;
 
 * Marginal cost of H2 production by timeslice [$/kg]
@@ -2078,7 +2025,7 @@ h2_trans_cap(r,rr,t)$[(ord(r) < ord(rr))$tmodel_new(t)] = sum{tt$[(yeart(tt)<=ye
 h2_usage(r,h,t)$tmodel_new(t) =
     h2_exogenous_demand_regional(r,'h2',h,t)
 * [MW] * [metric tons/MMBtu] * [MMBtu/MWh] = [metric tons/h]
-    + sum{(i,v)$[valgen(i,v,r,t)$h2_combustion(i)],
+    + sum{(i,v)$[valgen(i,v,r,t)$h2_gen(i)],
           GEN.l(i,v,r,h,t) * h2_combustion_intensity * heat_rate(i,v,r,t) } ;
 
 *=========================
@@ -2151,6 +2098,10 @@ $endif.powerfrac
 *========================================
 * Dump results
 *========================================
+
+execute_unload "outputs%ds%results.gdx"
+$include reeds%ds%core%ds%terminus%ds%report_data.csv
+;
 
 * The parameter list in the following file is read from report_params.csv
 * and parsed in copy_files.py

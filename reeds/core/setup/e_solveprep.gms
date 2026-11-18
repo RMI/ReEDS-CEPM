@@ -64,7 +64,7 @@ cost_co2_pipeline_fom(r,rr,t) =round(cost_co2_pipeline_fom(r,rr,t),2) ;
 cost_co2_pipeline_cap(r,rr,t) =round(cost_co2_pipeline_cap(r,rr,t),2) ;
 cost_co2_spurline_fom(r,cs,t) =  round(cost_co2_spurline_fom(r,cs,t),2) ;
 cost_co2_spurline_cap(r,cs,t) =  round(cost_co2_spurline_cap(r,cs,t),2) ;
-cost_co2_stor_bec(cs,t) = round(cost_co2_stor_bec(cs,t),2) ;
+cost_co2_stor_bec(cs) = round(cost_co2_stor_bec(cs),2) ;
 cost_fom(i,v,r,t)$cost_fom(i,v,r,t) = round(cost_fom(i,v,r,t),2) ;
 cost_fom_energy(i,v,r,t)$cost_fom_energy(i,v,r,t) = round(cost_fom_energy(i,v,r,t),2) ;
 cost_h2_storage_cap(h2_stor,t) = round(cost_h2_storage_cap(h2_stor,t), 2) ;
@@ -76,7 +76,7 @@ cost_upgrade(i,v,r,t)$cost_upgrade(i,v,r,t) = round(cost_upgrade(i,v,r,t),2) ;
 cost_vom(i,v,r,t)$cost_vom(i,v,r,t) = round(cost_vom(i,v,r,t),2) ;
 cost_vom_pvb_b(i,v,r,t)$cost_vom_pvb_b(i,v,r,t) = round(cost_vom_pvb_b(i,v,r,t),2) ;
 cost_vom_pvb_p(i,v,r,t)$cost_vom_pvb_p(i,v,r,t) = round(cost_vom_pvb_p(i,v,r,t),2) ;
-degrade(i,tt,t)$degrade(i,tt,t) = round(degrade(i,tt,t),3) ;
+degrade_new(i,tt,t)$degrade_new(i,tt,t) = round(degrade_new(i,tt,t),3) ;
 derate_geo_vintage(i,v)$derate_geo_vintage(i,v) = round(derate_geo_vintage(i,v),3) ;
 distance(r,rr,trtype)$distance(r,rr,trtype) = round(distance(r,rr,trtype),3) ;
 * non-CO2 emission/capture rates get small, here making sure accounting stays correct

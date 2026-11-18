@@ -2,10 +2,8 @@
 ignore,1,0,1,1,1,1,1,1,1,1
 GSw_Region,cendiv/Pacific,st/AZ.NM,st/AZ.NM,st/AZ.NM,st/MS.AL.GA,st/MS.AL.GA,st/MS.AL.GA,st/VA,st/VA,st/VA
 GSw_ZoneSet,,z132,z132,z132,z132,z132,z132,z132,z132,z132
-startyear,2010,,,,,,,,,
 endyear,2032,2032,2032,2032,2032,2032,2032,2032,2032,2032
-yearset,,2026..2032..3,2026..2032..3,2026..2032..3,2026..2032..3,2026..2032..3,2026..2032..3,2026..2032..3,2026..2032..3,2026..2032..3
-GSw_SkipRAyear,2020,,,,,,,,,
+yearset,2010_2026..2032..3,2010_2026..2032..3,2010_2026..2032..3,2010_2026..2032..3,2010_2026..2032..3,2010_2026..2032..3,2010_2026..2032..3,2010_2026..2032..3,2010_2026..2032..3,2010_2026..2032..3
 plantchar_gas,,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all,gas-ccgt_CEPM_all
 GSw_GasCurve,2,,,,,,,,,
 GSw_CCS,1,0,0,0,0,0,0,0,0,0
