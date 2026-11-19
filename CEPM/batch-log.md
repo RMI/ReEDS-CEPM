@@ -217,7 +217,7 @@ The final 2032 Baseline builds approximately **4.16 GW of DR**, compared with no
 - **Built from:** `v20261030gt_base`, with development through `v20261105gt_DRshed_1hr_PVB`, `20261105gt_AZNM_RA`, `20261105gt_1hrRep`, `20261106gt_AllHourDR`, and `20261106gt_DRConditionalPeak`
 - **Space and Time:** `st-AZNM, 2026–2032 every 3 years`
 - **Cases:** `baseline, limitre, optimized`
-- **Final default:** `20261106gt_DRConditionalPeak` configuration@'
+- **Final default:** `20261106gt_DRConditionalPeak` configuration
 
 
 ### Change log
