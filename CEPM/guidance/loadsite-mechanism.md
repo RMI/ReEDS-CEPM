@@ -93,21 +93,31 @@ new_switches[case]['GSw_LoadSiteReg'] = sw['GSw_LoadSiteTrajectory'].split('_')[
 
 `{level}` must be one of `nercr|transreg|transgrp|cendiv|st|interconnect|
 country|usda_region` (enforced by the regex in `cases.csv:217`). Everything
-after the first `_` — `epri_medium_extended_to_2032`, `NMtest1`, `test`,
+after the first `_` — `epri_medium_extended_to_2033`, `NMtest1`, `test`,
 `WCtest1` — is free text with **no programmatic role**; it only has to make
 the full string resolve to a real file. Existing files in `inputs/load/`:
 
 - `loadsite_country_test.csv` — default, single-region (`USA`) test fixture.
 - `loadsite_st_NMtest1.csv`, `loadsite_transreg_WCtest1.csv` — single-region
   test fixtures for New Mexico / WestConnect.
-- `loadsite_st_epri_{low,medium,high}_extended_to_2032.csv` — real
-  48-contiguous-state data-center peak-load forecasts derived from EPRI
-  Powering Intelligence data by
+- `loadsite_st_epri_{low,medium,high}_extended_to_2033.csv` — real
+  48-contiguous-state data-center peak-load forecasts, 2026-2033, derived from
+  EPRI Powering Intelligence data by
   [`CEPM/preprocessing/datacenter_load_forecast/`](../preprocessing/datacenter_load_forecast/README.md).
   CEPM's active cases select the `medium` variant.
+- `loadsite_st_epri_{low,medium,high}_extended_to_2032.csv` — the same
+  forecasts through 2032 only (identical 2026-2032 values), kept so runs made
+  before 2026-11-23 can be reproduced.
 
 All share the schema documented in their own header comments:
 `*loadsitereg,t,MW` — one row per (region, year).
+
+**The file must cover every solve year through `endyear`.** `loadsite_annual`
+is read as-is (`b_inputs.gms`), so a solve year missing from the file gets
+**zero** load-site MW, and `eq_loadsite_siting` requires zero sited load that
+year — silently, with no error. ReEDS's `forecast.py`, which extends inputs past
+their last year, only runs when `endyear` > 2050. When `endyear` moves later,
+extend the trajectory first (that is why the `_extended_to_2033` files exist).
 
 ### Pre-flight validation only checks the level, not the run's own scope
 

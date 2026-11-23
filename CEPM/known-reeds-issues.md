@@ -57,6 +57,7 @@ chasing a crash, start with them.
 | [Operating reserves effectively off by default](#operating-reserves-are-effectively-off-under-default-switches) | Expected | Reserve constraints have 0 rows under default switches (upstream design with stress periods), so the `opRes` outputs are empty and one bokehpivot section fails. |
 | [`reeds2pras` `BoundsError` for `hydud`/`hydund`](#reeds2pras-boundserror-for-hydudhydund-hydro-capacity--no-monthly-profile-data) | Open — non-fatal | Hydro-upgrade categories have no monthly profile data, so PRAS zeroes their contribution. Diagnostic layer only. |
 | [PRAS crashes on single-zone regions](#pras-crashes-on-single-zone-regions-boundserror--0-element-vectorline) | Open | A one-zone region has no lines, so `make_pras_interfaces()` throws after the solve. Use ≥ 2 zones. |
+| [CEPM inputs that end before `endyear`](#cepm-inputs-that-end-before-endyear-zero-load-sites-or-a-reverted-gas-capex-in-the-final-year) | Fixed for `endyear` 2033 | **Silent.** A solve year past an input's last year gets zero data-center load or ATB gas capex, with no error. Check input coverage whenever `endyear` moves. |
 | [pytest: hourlize tests lack data; two outdated tests](#pytest-hourlizetests-has-no-test-data-and-two-other-tests-are-out-of-date) | Open | `hourlize/tests` needs test data that has never been in the repo; `test_read_h5py_file` and hourlize's `test_main` fail because the tests are out of date. No effect on runs. |
 | [Cosmetic warnings safe to ignore](#cosmetic-warnings-safe-to-ignore) | Informational | Known-harmless warnings from `copy_files.py`, `hourly_repperiods.py`, the VRE-sites maps and bokeh "Firm Capacity". |
 
@@ -1253,6 +1254,39 @@ PR to upstream.
 
 **Fixed upstream?** No — identical at `2026.08.03`. Not in upstream's issue
 tracker. Inherited, not RMI-introduced.
+
+## CEPM inputs that end before `endyear`: zero load sites or a reverted gas capex in the final year
+
+**Symptom:** none at run time — the run completes normally. Found while planning
+the move from `endyear` 2032 to 2033 (the 2010/2026/2030/2033 yearset), by
+checking each CEPM input's last year:
+
+- **Data-center load sites.** `loadsite_st_epri_*_extended_to_2032.csv` stopped
+  at 2032. For a 2033 solve year, `loadsite_annual(*, 2033)` is missing, which
+  GAMS reads as zero, so `eq_loadsite_siting` requires **zero** sited
+  data-center load in 2033. That year's data-center demand would simply vanish.
+- **Gas capex.** `gas-ccgt_CEPM_all.csv` replaced ATB `capcost` for Gas-CC and
+  Gas-CT only through 2032, so 2033 fell back to ATB: Gas-CC 2,181.7 → 1,127.0
+  $/kW and Gas-CT 1,732.2 → 1,013.7 $/kW. That cost drop in the final solve year
+  would push gas builds into it.
+
+**Root cause:** ReEDS's `reeds/input_processing/forecast.py` extends inputs past
+their last data year, but only when `endyear` > 2050 (otherwise it logs
+"endyear = … <= 2050, so skip forecast.py" and exits). Below that, an input
+simply has no value for the missing year.
+
+**Impact:** results in the final solve year would be wrong without any error or
+warning — the same kind of silent failure as the onshore-wind entry above.
+
+**Status:** fixed for `endyear` 2033. Both forecasts were extended to 2033 with
+their existing methods (`loadsite_st_epri_*_extended_to_2033.csv`, now selected
+in `cases_cepm.csv`; gas capex regression projected through 2033). 2026-2032
+values are unchanged. **Whenever `endyear` moves later, check every CEPM input
+covers it first** — see the data-center and gas capex forecast READMEs under
+`CEPM/preprocessing/` for how to extend each.
+
+**Fixed upstream?** N/A — these are CEPM inputs. The `forecast.py` behavior is
+upstream's design.
 
 ## pytest: `hourlize/tests` has no test data, and two other tests are out of date
 

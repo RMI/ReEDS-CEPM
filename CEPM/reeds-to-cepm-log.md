@@ -46,6 +46,7 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/dollaryear.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/gas-ccgt_CEPM_all.csv` | Added | Updated CAPEX for gas resources |
+| `inputs/load/loadsite_st_epri_{low,medium,high}_extended_to_2033.csv` | Added | Updated load forecasts for data centers |
 | `inputs/load/loadsite_st_epri_{low,medium,high}_extended_to_2032.csv` | Added | Updated load forecasts for data centers |
 | `inputs/load/loadsite_st_NMtest1.csv`, `loadsite_transreg_WCtest1.csv` | Added | Updated load forecasts for data centers |
 | `.github/workflows/python-app.yaml` | Modified | ENABLE_GAMS_CI variable |
@@ -467,17 +468,19 @@ name.
 
 State-level data center load-site inputs for all 48 contiguous states, built from
 EPRI Powering Intelligence projections in three scenarios (Low / Medium / High),
-extended to 2032. These are the load-site inputs the national CEPM cases actually
+extended to 2033. These are the load-site inputs the national CEPM cases actually
 run with — `cases_cepm.csv` currently selects
-`st_epri_medium_extended_to_2032`.
+`st_epri_medium_extended_to_2033`.
 
 ### Input files created:
 
-- `inputs/load/loadsite_st_epri_low_extended_to_2032.csv`
-- `inputs/load/loadsite_st_epri_medium_extended_to_2032.csv`
-- `inputs/load/loadsite_st_epri_high_extended_to_2032.csv`
+- `inputs/load/loadsite_st_epri_{low,medium,high}_extended_to_2033.csv` —
+  current, 2026-2033 (added 2026-11-23 for the 2033 solve year).
+- `inputs/load/loadsite_st_epri_{low,medium,high}_extended_to_2032.csv` —
+  the earlier 2026-2032 versions, with identical values for those years; kept
+  so older runs can be reproduced.
 
-Long format (`*loadsitereg,t,MW`), 48 states, 2026-2032. Selected via
+Long format (`*loadsitereg,t,MW`), 48 states. Selected via
 `GSw_LoadSiteTrajectory`, and only staged when `GSw_LoadSiteCF > 0`.
 
 Also added as reference fixtures for the large-load-site feature:
@@ -511,6 +514,9 @@ load sites are MW, not monetary values.
   center loads? Check whether upstream's default load projection has absorbed
   data center growth, which would double-count against our load sites.
 - Is the expected long-format schema (`*loadsitereg,t,MW`) unchanged?
+- Does the selected trajectory still cover every solve year through `endyear`?
+  A missing year is silently read as zero load-site MW. See
+  [`guidance/loadsite-mechanism.md`](guidance/loadsite-mechanism.md).
 
 ## Cumulative tech-group investment caps (`GSw_CEPM_TgCap`)
 
