@@ -12,7 +12,6 @@ import sys
 import urllib
 ### Local imports
 import ferc_distadmin
-import calculate_historical_capex
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import reeds
 from reeds import plots
@@ -268,9 +267,6 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     """
     """
     print('Starting retail_rate_calculations.py')
-    # Run historical capex calculation
-    calculate_historical_capex.main(run_dir)
-
     # Get module directory for relative paths
     mdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -880,13 +876,13 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         on=['i', 't'], how='left')
     # Fill in any missing eval_period with the default 20 years
     # This should apply to upgrades only
-    df_gen_capex['eval_period'].fillna(20, inplace=True)
+    df_gen_capex['eval_period'] = df_gen_capex['eval_period'].fillna(20)
     df_gen_capex = df_gen_capex.merge(
         depreciation_sch[['i', 't', 'depreciation_sch']], 
         on=['i', 't'], how='left')
     # Fill in any missing eval_period with the default 20 years
     # This should also apply to upgrades only
-    df_gen_capex['depreciation_sch'].fillna('20', inplace=True)
+    df_gen_capex['depreciation_sch'] = df_gen_capex['depreciation_sch'].fillna('20')
     
 #%% # For historical capital expenditures, we use a pre-calculated result.
     #   The expenditures are based on a EIA-NEMS database of historical capacity 
@@ -923,11 +919,11 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         eval_period_init[['i', 'region', 't', 'eval_period']], 
         on=['i', 'region', 't'], how='left')
     # Fill in any missing eval_period with the default 20 years
-    df_gen_capex_init['eval_period'].fillna(20, inplace=True)
+    df_gen_capex_init['eval_period'] = df_gen_capex_init['eval_period'].fillna(20)
     df_gen_capex_init = df_gen_capex_init.merge(
         dep_sch_init[['i', 'region', 't', 'depreciation_sch']], 
         on=['i', 'region', 't'], how='left')
-    df_gen_capex_init['depreciation_sch'].fillna('20', inplace=True)
+    df_gen_capex_init['depreciation_sch'] = df_gen_capex_init['depreciation_sch'].fillna('20')
 
 #%% # Combine both new and historical capital expenditures
     df_gen_capex = pd.concat(

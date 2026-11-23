@@ -70,11 +70,11 @@ A good fix:
         a log, or run time?
       - **Status:** "not fixed" for now.
       - **Fixed upstream?** Check the upstream release we're synced to (the tag is
-        named at the top of `known-reeds-issues.md`, currently `2026.08.03`):
+        named at the top of `known-reeds-issues.md`, currently `2026.09.21`):
 
         ```
         git fetch upstream --tags
-        git show 2026.08.03:path/to/file.py
+        git show 2026.09.21:path/to/file.py
         ```
 
         If upstream has the same code, say so. That tells us the bug is

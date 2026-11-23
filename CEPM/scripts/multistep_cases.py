@@ -17,7 +17,7 @@ Two modes:
 
   --mode validate
       Fail loudly, before phase A burns an hour, if the cases file can't support
-      a two-step run. Prints the baseline's start year (from `yearset`) on
+      a two-step run. Prints the baseline's plotting start year (first `yearset` year after 2010) on
       stdout so run_cepm.ps1 can use it for compare_cases.py's --startyear and
       for locating the bootstraplog destination, replacing get_batch_info.py's
       first-non-ignored-case convention (which is wrong under -m, since -s
@@ -152,14 +152,19 @@ def validate(cases_filename, stem):
 
     # stdout line 1: the baseline case name (bootstraplog destination).
     print(names['baseline'])
-    # stdout line 2 (optional): the baseline's model start year, for --startyear.
+    # stdout line 2 (optional): the baseline's plotting start year, for --startyear
+    # (first yearset year after the required 2010 anchor year).
     yearset = str(df.loc['yearset', names['baseline']]).strip()
-    if yearset[:4].isdigit():
-        print(yearset[:4])
+    try:
+        plotyears = [y for y in reeds.inputs.parse_yearset(yearset) if y > 2010]
+    except ValueError:
+        plotyears = []
+    if plotyears:
+        print(plotyears[0])
     else:
         print(
-            f"[multistep_cases] WARNING: yearset '{yearset}' for {names['baseline']} does "
-            'not start with 4 digits; omitting start year',
+            f"[multistep_cases] WARNING: no year after 2010 in yearset '{yearset}' for "
+            f"{names['baseline']}; omitting start year",
             file=sys.stderr,
         )
     return 0

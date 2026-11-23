@@ -6,7 +6,7 @@ column, left to right, that is not marked ignore=1:
   - its name, to build the one run folder (runs/<BatchName>_<case>) that's
     guaranteed to exist regardless of which cases in the batch later succeed
     or fail, so bootstraplog.txt has somewhere to go; and
-  - its model start year (the `yearset` switch's first 4 digits), to pass as
+  - its plotting start year (the first year after 2010 in its `yearset`), to pass as
     compare_cases.py's --startyear, since that varies per cases file and
     compare_cases.py has no way to infer it on its own (falls back to a
     hardcoded 2020 otherwise).
@@ -15,7 +15,7 @@ Usage: python CEPM/scripts/get_batch_info.py <cases_filename>
     <cases_filename>: 'cases.csv' or 'cases_<suffix>.csv'
 
 Output (stdout): the case name on line 1, and -- only if that case's
-`yearset` switch starts with 4 digits -- the start year on line 2.
+`yearset` contains a year after 2010 -- that first year on line 2.
 
 Exit codes:
     0  a non-ignored case was found (line 2 may still be absent)
@@ -43,13 +43,18 @@ def main():
             continue
         print(case)
         yearset = str(df_cases.loc['yearset', case]).strip()
-        startyear = yearset[:4]
-        if startyear.isdigit():
-            print(startyear)
+        try:
+            # Upstream requires yearsets to start at 2010 (a historical anchor
+            # year), so plots start at the first modeled year after 2010
+            plotyears = [y for y in reeds.inputs.parse_yearset(yearset) if y > 2010]
+        except ValueError:
+            plotyears = []
+        if plotyears:
+            print(plotyears[0])
         else:
             print(
-                f"[get_batch_info] yearset '{yearset}' for case '{case}' does not start "
-                "with 4 digits; omitting start year", file=sys.stderr)
+                f"[get_batch_info] no year after 2010 in yearset '{yearset}' for case "
+                f"'{case}'; omitting start year", file=sys.stderr)
         return 0
 
     print(f'[get_batch_info] no non-ignored case found in {cases_filename}', file=sys.stderr)

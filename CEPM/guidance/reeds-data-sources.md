@@ -133,15 +133,14 @@ silently, with no error, since the copy itself succeeds.
 
 ## Companion registries that are also location-aware
 
-A file's path is not the only thing tied to its location. Two separate deflator
-mechanisms exist, and both are registries you have to update alongside a new
-input:
+A file's path is not the only thing tied to its location. The dollar year of any
+monetary input is a registry you have to update alongside a new input.
 
-**`docs/sources.csv`** — read by `get_source_deflator_map` (`copy_files.py:158`),
-keyed by `RelativeFilePath` (repo-root-relative, leading `/` stripped, e.g.
-`/inputs/plant_characteristics/battery_ATB_2024_advanced.csv`) with a
-`DollarYear` column. Files whose monetary values need deflating are looked up
-directly in that dict, so a missing entry is a `KeyError`.
+Before upstream `2026.09.21` there were two deflator mechanisms. The first,
+`docs/sources.csv` read by `copy_files.py`'s `get_source_deflator_map()` and
+keyed by repo-relative path, was removed by upstream #157, which moved source
+documentation into `inputs/*/README.md`. `docs/sources.csv` still exists but is
+no longer read for deflation. What remains:
 
 **Per-directory `dollaryear.csv`** — used by `plantcostprep.py`'s `deflate_func`,
 keyed by the **switch value** rather than a path:
@@ -155,6 +154,11 @@ The `.values[0]` means an unregistered scenario name raises `IndexError`, not a
 clear message. Note this reads the *staged* copies
 (`inputs_case/dollaryear_plant.csv` + `dollaryear_consume.csv`), which are
 themselves staged through the manifest.
+
+`copy_files.py`'s `get_deflator_from_dollaryear_file()` (added upstream in
+`2026.09.21`) reads the same kind of per-folder `inputs/<folder>/dollaryear.csv`
+for the files `copy_files.py` deflates itself (for example the biomass supply
+curve), and raises `KeyError` for an unregistered scenario.
 
 ## Worked example: `plantchar_gas`
 
@@ -215,8 +219,8 @@ checklist when adding one:
 - name it so it is recognizable as ours and matches the switch's documented
   prefix convention (`cases.csv` records the allowed pattern per switch)
 - add the option to the switch's documentation row in `cases.csv`
-- register the dollar year — `docs/sources.csv` and/or the directory's
-  `dollaryear.csv`, per the mechanisms above
+- register the dollar year in the directory's `dollaryear.csv`, per the
+  mechanism above, and document the source in the directory's `README.md`
 - if the file is genuinely new rather than an alternative, add a `runfiles.csv`
   row and keep the destination `filename` unique
 
@@ -236,8 +240,9 @@ It is not free, though. Verified prerequisites:
    reading `inputs_case/foo.csv` would then fail with a confusing missing-file
    error. Adding `'CEPM'` to that list is a one-line change, but it is a change to
    an upstream file, so it belongs in the divergence log.
-2. **Register deflators by the new path.** `docs/sources.csv` is keyed by
-   repo-relative path, so entries would need to read `/CEPM/inputs/…`.
+2. **Register deflators for the new location.** Dollar years are read from a
+   `dollaryear.csv` in the input's own folder, so a new folder needs its own
+   `dollaryear.csv` and the code that reads it pointed there.
 3. **Carry the `dollaryear.csv` convention** into any new directory whose files
    feed `plantcostprep.py`, and stage it through the manifest as the four
    existing ones are.

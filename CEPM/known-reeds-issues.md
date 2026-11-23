@@ -19,9 +19,12 @@ Entries are generalized from whatever run first surfaced them — treat script n
 and error text as the pattern to match, not a one-off.
 
 Each entry includes a **Fixed upstream?** note checked against
-[ReEDS-Model/ReEDS](https://github.com/ReEDS-Model/ReEDS) tag `2026.08.03` (the
-latest tagged release as of this writing, commit `1515f8ae`) — not the tip of
-upstream's `main` branch, which may have moved further.
+[ReEDS-Model/ReEDS](https://github.com/ReEDS-Model/ReEDS) at the time it was
+written, mostly tag `2026.08.03` — not the tip of upstream's `main` branch,
+which may have moved further. This fork is now based on tag `2026.09.21`
+(`8a157233`, Sync 2). Entries that sync resolved were moved to
+[Resolved upstream](#resolved-upstream) near the end of this file; the others'
+notes still name the tag they were checked against.
 
 ## Index
 
@@ -33,17 +36,13 @@ chasing a crash, start with them.
 
 | Issue | Status | What it does |
 |---|---|---|
-| [GAMS 44.4.0: `Error 579` on model compile](#gams-4440-compile-failure-error-579-in-autocodeb_load_setsgms-fixed) | Fixed | Blocked every run at model compile on our pinned GAMS. Fixed in `h5_to_gdx.py`. |
 | [`GSw_GrowthAbsCon=1`: final solve year infeasible](#gsw_growthabscon1-makes-the-final-solve-year-infeasible-eq_growthlimit_absolute) | Open — workaround | Last modeled year goes infeasible from a year-gap sign error. Use a sacrificial final year, or the cumulative caps instead. |
 | [`GSw_CEPM_TgCap=1`: Virginia 2029 infeasible](#gsw_cepm_tgcap1-makes-the-virginia-2029-solve-infeasible--root-cause-not-yet-found) | Open — cause unknown | VA `limitre` dies at 2029 with 1665 infeasible rows. Cap is the trigger; the colliding constraint is not yet identified. The 2026 solve spent the whole wind budget, the leading suspect. Disabling the RPS is **not** expected to help. |
 | [H2 infeasibility with `GSw_H2=2` (unverified)](#possible-h2-infeasibility-with-gsw_h22-in-national-runs-unverified) | Open — untested | A 2026-07 national run went infeasible in DE. Root cause never traced; every CEPM case sets `GSw_H2=0`. |
 | [`cendivweights.csv` domain violation at cendiv borders](#cendivweightscsv-domain-violation-near-census-division-borders-fixed) | Fixed — not on `main` | Sub-national runs near a census-division border fail GAMS compile. Fixed on `dev`; `main` still has it. |
 | [`recf.py` crashes when offshore wind is disabled](#recfpy-crashes-when-offshore-wind-is-disabled-fixed) | Fixed | `GSw_OfsWind=0` left `df_windofs` undefined before a concat. |
-| [Onshore wind supply curve dropped under pandas 3](#onshore-wind-supply-curve-silently-dropped-under-pandas-3x-when-a-sibling-supply-curve-is-empty-fixed) | Fixed | **Silent.** A landlocked region with `GSw_OfsWind=1` builds zero new onshore wind, with no error. Live upstream too. Four runs affected and still recurring. |
-| [`startyear` > 2022 crashes `hydcf.py`](#startyear--2022-crashes-hydcfpy-arange-cannot-compute-length) | Open — fixed in `2026.09.08` | A later `startyear` empties the historical hydro frame and dies at an unrelated `arange`. Resolves at the next sync. |
-| [`report_dump.py` crashes reading `df_capex_init.csv`](#postprocessing-report_dumppy-crashes-reading-df_capex_initcsv) | Open — fixed in `2026.09.08` | Postprocessing ordering bug: the system-cost CSV is never written. Run itself unaffected. |
+| [Onshore wind supply curve dropped under pandas 3](#onshore-wind-supply-curve-silently-dropped-under-pandas-3x-when-a-sibling-supply-curve-is-empty-fixed) | Fixed | **Silent.** A landlocked region with `GSw_OfsWind=1` builds zero new onshore wind, with no error. Still live upstream at `2026.09.21`. Four runs affected. |
 | [Retail-rate module crashes on single-BA runs](#retail_rate_calculationspy-crashes-on-single-ba-runs-keyerror-res_marg_ann_flow) | Open — fix identified | `KeyError: 'res_marg_ann_flow'`; `retail_rate_components.csv` is never written. Multi-region runs unaffected. |
-| [`report_dump.py` leaves GAMS sets out of `outputs.h5`](#report_dumppy-leaves-gams-sets-out-of-outputsh5-could-not-convert-string-to-float-) | Open — fixed in `2026.09.08` | **Silent.** `read_output()` returns an empty table for sets such as `hierarchy`; read `outputs/<set>.csv`. Solve unaffected. |
 | [`single_case_plots.py` plots fail on reduced-region cases](#single_case_plotspy-diagnostic-plots-fail-on-single-region--reduced-hierarchy-cases) | Open — partly by design | Several diagnostic maps fail on single-region or reduced-hierarchy runs. Each is caught; core outputs unaffected. |
 | [RA diagnostic plots: `plot_stressors()` never produces maps](#ra-diagnostic-plots-plot_stressors-never-produces-stress-day-maps) | Open — fix identified | `KeyError: '2021.0-6.0-18.0'` in the final year. `map_stressors()` expects a `new_stress_periods.csv` schema that `stress_periods.py` no longer writes, so no stress-day maps are made in any year. Other outputs unaffected. |
 | [bokehpivot: every map section fails on an aggregated zoneset](#bokehpivot-html-report-every-map-type-section-fails-on-an-aggregated-zoneset) | Open | No boundary file exists for aggregated zonesets, so all map sections of the HTML report are missing. |
@@ -58,71 +57,18 @@ chasing a crash, start with them.
 | [Operating reserves effectively off by default](#operating-reserves-are-effectively-off-under-default-switches) | Expected | Reserve constraints have 0 rows under default switches (upstream design with stress periods), so the `opRes` outputs are empty and one bokehpivot section fails. |
 | [`reeds2pras` `BoundsError` for `hydud`/`hydund`](#reeds2pras-boundserror-for-hydudhydund-hydro-capacity--no-monthly-profile-data) | Open — non-fatal | Hydro-upgrade categories have no monthly profile data, so PRAS zeroes their contribution. Diagnostic layer only. |
 | [PRAS crashes on single-zone regions](#pras-crashes-on-single-zone-regions-boundserror--0-element-vectorline) | Open | A one-zone region has no lines, so `make_pras_interfaces()` throws after the solve. Use ≥ 2 zones. |
+| [pytest: hourlize tests lack data; two outdated tests](#pytest-hourlizetests-has-no-test-data-and-two-other-tests-are-out-of-date) | Open | `hourlize/tests` needs test data that has never been in the repo; `test_read_h5py_file` and hourlize's `test_main` fail because the tests are out of date. No effect on runs. |
 | [Cosmetic warnings safe to ignore](#cosmetic-warnings-safe-to-ignore) | Informational | Known-harmless warnings from `copy_files.py`, `hourly_repperiods.py`, the VRE-sites maps and bokeh "Firm Capacity". |
 
-## GAMS 44.4.0 compile failure: `Error 579` in `autocode/b_load_sets.gms` (FIXED)
+**Resolved upstream** — kept for reference in
+[Resolved upstream](#resolved-upstream):
 
-**Symptom:** `a_createmodel.gms` fails to compile with 16x
-```
-*** Error 579 in .../autocode/b_load_sets.gms
-    Cannot clear a set used as a domain or used in lag/ord operations
-```
-followed by `*** Status: Compilation error(s)`, immediately after
-`copy_files.py`/`h5_to_gdx.py` finish input processing. Hit **every** case that
-reached the model-compile step — not specific to any one case's switches.
-
-**Root cause:** `h5_to_gdx.py` auto-generates GAMS snippets that declare every
-set/parameter first (`b_declare_sets.gms`), then `$loadDCR` every set afterward
-(`b_load_sets.gms`). By the time GAMS reaches `$loadDCR r = r`, `r` has already
-been referenced as a domain by a dependent subset (e.g. `offshore(r)`) declared
-earlier in the same declare-everything-first pass — and GAMS 44.4.0 refuses to
-`$loadDCR` a set once anything else depends on it as a domain. Affects every
-primary set with at least one dependent subset/parameter: `r`, `i`, `v`, `e`,
-`eall`, `f`, `p`, `wst`, `allt`, `geotech`, `h2_st`, `hintage_char`, `ofstype`,
-`pcat`, `pvb_config`, `trtype` — exactly the 16 sets that error.
-
-This is a **GAMS-version incompatibility**, not a logic bug: GAMS 45.6.0's release
-notes explicitly fixed `$loadDCR` to stop complaining about this exact case, but
-that fix never landed anywhere in the 44.x line, and this repo is pinned to GAMS
-44.4.0 (see [tech-limit-options.md](guidance/tech-limit-options.md) and this
-repo's GAMS-version policy — don't suggest upgrading GAMS as a fix).
-
-**Impact:** blocked every run before it could even start solving — this is a
-hard, total failure, not a degraded/partial one.
-
-**Status:** fixed, on `fix/GAMS-h5-bugfix`. `h5_to_gdx.py` now generates a single
-`autocode/b_sets.gms` that declares and `$loadDCR`s each set immediately, one at a
-time (primary sets first, then subsets), instead of declaring all sets before
-loading any of them; `b_inputs.gms` includes the new file in place of the old
-declare-all/load-all pair. Parameters are unaffected (a parameter can never be
-used as another symbol's domain) and keep the declare-then-load split. Full
-investigation and verification in
-[GAMS_ERROR_579_INVESTIGATION.md](guidance/GAMS_ERROR_579_INVESTIGATION.md).
-
-**Files changed:**
-- `reeds/input_processing/h5_to_gdx.py` — added `write_sets_declare_and_load()`;
-  `main()` now calls it for sets instead of the old declare-all/load-all
-  `write_declaration`/`write_gdxread` pair (still used for parameters). Also
-  cherry-picked `add v to special_keys` from upstream commit `066d8fe6` while in
-  this function (unrelated to the bug, but touches the same code).
-- `reeds/core/setup/b_inputs.gms` — includes the new `autocode/b_sets.gms` in
-  place of `b_declare_sets.gms`/`b_load_sets.gms`, with `$gdxin` opened first so
-  sets can be loaded inline as they're declared.
-
-**Fixed upstream?** N/A in the usual sense — this isn't a code bug upstream could
-fix, it's a GAMS-version compatibility gap. Upstream (`ReEDS-Model/ReEDS`) has the
-*identical* declare-all-then-load-all structure in `b_inputs.gms`/`h5_to_gdx.py`
-(confirmed at tag `2026.08.03` too) — it's not a fork-specific regression. Upstream
-just never hits the bug because they test on GAMS 49.6.0/51.3.0, both well past
-the 45.6.0 release where GAMS itself patched `$loadDCR`. Since this repo alone is
-pinned to 44.4.0, there's no upstream fix to pull — the incompatibility only
-exists on our GAMS version, and the fix has to live in this fork.
-
-No at `2026.08.03`. Upstream tag `2026.09.08` has its own fix
-(`write_declare_and_load()`); at that sync, confirm it compiles on GAMS 44.4.0,
-**Fixed upstream?** No at `2026.08.03`. Upstream tag `2026.09.08` has its own fix
-(`write_declare_and_load()`); at that sync, confirm it compiles on GAMS 44.4.0,
-then drop our patch and this entry.
+| Issue | Resolved in | What it did |
+|---|---|---|
+| [GAMS 44.4.0: `Error 579` on model compile](#gams-4440-compile-failure-error-579-in-autocodeb_load_setsgms-resolved-upstream) | Sync 2 (`2026.09.21`, upstream #181) | Blocked every run at model compile on our pinned GAMS. RMI's `h5_to_gdx.py` patch retired. |
+| [`startyear` > 2022 crashes `hydcf.py`](#startyear--2022-crashes-hydcfpy-arange-cannot-compute-length-resolved-upstream) | Sync 2 (`2026.09.21`, upstream #12) | A later `startyear` emptied the historical hydro frame. `startyear` must now be 2010. |
+| [`report_dump.py` crashes reading `df_capex_init.csv`](#postprocessing-report_dumppy-crashes-reading-df_capex_initcsv-resolved-upstream) | Sync 2 (`2026.09.21`, `1b3bba93`) | Postprocessing ordering bug: the system-cost CSV was never written. |
+| [`report_dump.py` leaves GAMS sets out of `outputs.h5`](#report_dumppy-leaves-gams-sets-out-of-outputsh5-could-not-convert-string-to-float--resolved-upstream) | Sync 2 (`2026.09.21`, `038dd8ed`) | **Silent.** `read_output()` returned an empty table for sets such as `hierarchy`. |
 
 ## `GSw_GrowthAbsCon=1` makes the **final** solve year infeasible (`eq_growthlimit_absolute`)
 
@@ -559,10 +505,10 @@ results are not usable.
 
 **Fixed upstream?** No — and, unlike most entries here, **the bug is live upstream right
 now, not latent.** `reeds/input_processing/writesupplycurves.py` has the identical bare
-`dfin['bin'] = []` at line 105 at tag `2026.08.03` and at line 121 on the current
-`upstream/main`, and upstream's `environment.yml` has pinned `pandas=3.0` since
-2026-05-08 (`2ff493b5`, "update all python packages and use conda-forge for everything")
-— four months before this fork moved to it. So upstream satisfies conditions 1 and 2
+`dfin['bin'] = []` at line 105 at tag `2026.08.03` and still at line 121 at tag
+`2026.09.21` (rechecked in Sync 2), and upstream's `environment.yml` has pinned
+`pandas=3.0` since 2026-05-08 (`2ff493b5`, "update all python packages and use
+conda-forge for everything"), first released in `2026.08.03`. So upstream satisfies conditions 1 and 2
 already; they simply have not hit conditions 3-4, because their default and test cases
 (`cendiv/Pacific`, `country/USA`) are coastal or national and always have a populated
 offshore curve. Any upstream user running a landlocked region with `GSw_OfsWind=1` on a
@@ -580,61 +526,6 @@ and contribute back — it is a one-line dtype correction that is a no-op under 
 `[c for c in alloutcap.columns if c.startswith("bin")]` drops non-matching columns
 silently. If this class of failure recurs, consider asserting that no `wsc*` columns
 survive the rename rather than letting the pivot quietly discard them.
-
-## `startyear` > 2022 crashes `hydcf.py` (`arange: cannot compute length`)
-
-**Symptom:** `ValueError: arange: cannot compute length` in `hydcf.py`'s
-`assemble_hydcf()`, right after `copy_files.py`, before model compile.
-
-**Root cause:** `calculate_historical_monthly_regional_cf()` keeps only
-`t >= startyear`, but the historical hydro data (`net_gen_existing_hydro.csv`,
-`cap_existing_hydro.csv`) covers 2007–2022. A later `startyear` empties the frame,
-`data_endyear` becomes `NaN`, and `np.arange` fails.
-
-**Status:** not fixed. Leave `startyear` at the 2010 default. Other `startyear`
-traps: [interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
-§5.3.
-
-**Fixed upstream?** No at `2026.08.03`; fixed in `2026.09.08` — resolves at the
-next sync.
-
-## Postprocessing: `report_dump.py` crashes reading `df_capex_init.csv`
-
-**Symptom:**
-```
-FileNotFoundError: [Errno 2] No such file or directory: '...\inputs_case\df_capex_init.csv'
-```
-raised from `reeds/results.py`'s `calc_systemcost()`, called from `report_dump.py`'s
-`postprocess_outputs()`.
-
-**Root cause:** pipeline ordering bug. `df_capex_init.csv` is generated by
-`retail_rate_calculations.py` (via `calculate_historical_capex.py`), but
-`report_dump.py` — which needs that file for `calc_systemcost()` — runs *before*
-`retail_rate_calculations.py` in the postprocessing sequence.
-
-**Impact:** `postprocess_outputs()` aborts partway through, so
-`outputs/post_systemcost_annualized.csv` (the `calc_systemcost()` output) and
-`outputs/post_tech_transmission.csv` (the next call in the same function) are not
-written for the run. The GAMS-reported `systemcost.csv` and `systemcost_ba.csv`
-come from `report.gms` and are unaffected. Earlier report_dump outputs (e.g. `error_check.csv`,
-`error_gen.csv`) are unaffected since they're saved before the crash. The rest of
-the postprocessing pipeline (retail rate calcs, health damage calcs, reV handoff,
-plotting) still runs — this doesn't stop the run overall.
-
-This hits **every** run, not just reduced-region cases. It was found on a single-BA
-run (`runs/v20260707_213749_ND_small`) and reproduced identically on an 11-BA
-multi-region run (`runs/v20260708_143931_Pacific`). In both logs the crash comes
-about 10 seconds before `calculate_historical_capex.py` reports writing
-`df_capex_init.csv`, and the file is present in `inputs_case/` once the run
-finishes. That is why inspecting the finished run folder doesn't reveal the problem.
-
-**Status:** not fixed. Fix would be reordering the postprocessing call sequence (run
-`retail_rate_calculations.py` before `report_dump.py`, or have `report_dump.py`
-generate/depend on `df_capex_init.csv` itself) — not yet implemented.
-
-**Fixed upstream?** No at `2026.08.03`; fixed in `2026.09.08` (`1b3bba93`:
-`calculate_historical_capex` moved into `report_dump.py`) — resolves at the next
-sync.
 
 ## `retail_rate_calculations.py` crashes on single-BA runs (`KeyError: 'res_marg_ann_flow'`)
 
@@ -677,28 +568,6 @@ reproduce on the 11-BA `runs/v20260708_143931_Pacific`, where the module logged
 **Fixed upstream?** No. `retail_rate_calculations.py` at tag `2026.08.03` has the
 same two guards (lines 521 and 527), the same unguarded `res_marg_ann_flow` call
 (line 535), and the same `df.empty`-only early return (line 107). Not RMI-introduced.
-
-## `report_dump.py` leaves GAMS sets out of `outputs.h5` (`could not convert string to float: ''`)
-
-**Symptom:** one caught traceback per set (`r`, `hierarchy`, `valcap_i`, `cendiv`,
-`e`, `fuel2tech`, `h_szn`, `szn_stress_t`, `v`) from `reeds/io.py`'s
-`write_output_to_h5`:
-`ValueError: could not convert string to float: '': Error while type casting for column 'Value'`.
-The run continues.
-
-**Root cause:** gdxpds 4.0 returns a set's `Value` as `''` instead of
-`ctypes.c_bool`, so the drop-`Value` check misses it. Introduced by the August
-2026 sync.
-
-**Impact:** solve results are unaffected. The sets are only in
-`outputs/<set>.csv` (kept at CEPM's `cleanup_level=0`). The trap is silent:
-`reeds.io.read_output(case, '<set>')` returns an **empty** table instead of
-raising, so read the CSV instead.
-
-**Status:** not fixed.
-
-**Fixed upstream?** No at `2026.08.03`; fixed in `2026.09.08` (`038dd8ed`) —
-resolves at the next sync.
 
 ## `single_case_plots.py` diagnostic plots fail on single-region / reduced-hierarchy cases
 
@@ -871,7 +740,7 @@ region boundary polygons from `postprocessing/bokehpivot/in/gis_rb.csv` — keye
 raw, un-aggregated BA IDs (`p1`, `p2`, ...) — then filters it to
 `region_boundaries['id'].isin(full_rgs)`, where `full_rgs` are the region labels
 actually present in this run's output data. Under an aggregated zoneset
-(`GSw_ZoneSet=z48/z54/z69/z90/z132` with `GSw_RegionResolution=aggreg`), those
+(`GSw_ZoneSet=z48/z54/z70/z90/z132` with `GSw_RegionResolution=aggreg`), those
 labels are the zoneset's own aggregated zone names, not `p1`...`p134` — none of
 them match anything in `gis_rb.csv`, so the filter empties `region_boundaries`.
 `.max()`/`.min()` on the empty frame return `NaN`, which propagates through
@@ -1385,6 +1254,45 @@ PR to upstream.
 **Fixed upstream?** No — identical at `2026.08.03`. Not in upstream's issue
 tracker. Inherited, not RMI-introduced.
 
+## pytest: `hourlize/tests` has no test data, and two other tests are out of date
+
+**Symptom:** `uv run python -m pytest tests/test_read_h5_files.py hourlize/tests`
+reports about 19 failures and 15 errors:
+
+- Most of `hourlize/tests/test_reeds_to_rev.py` and
+  `test_reeds_to_rev_cli.py` fail with `FileNotFoundError` for paths under
+  `hourlize/tests/data/` (`r2r_integration/reeds`, `r2r_from_config/...json`,
+  `r2r_expanded/.../config.json`).
+- `tests/test_read_h5_files.py::test_read_h5py_file` fails with
+  `ValueError: Length mismatch: Expected axis has 0 elements, new values have 10 elements`.
+- `hourlize/tests/test_reeds_to_rev_cli.py::test_main` fails with `assert 2 == 0`.
+
+**Root cause:**
+
+- **Missing data.** `hourlize/tests/data/` has never been tracked in this repo
+  or in upstream's release tags, is not covered by `.gitignore`, and is not in
+  `inputs/remote_files.csv`, so nothing downloads it. The tests came with the
+  fork's first commit (`2cfcb127`, upstream tag `2026.04.15`). Upstream likely
+  keeps the data elsewhere.
+- **`test_read_h5py_file` is out of date.** The test writes datasets named by
+  year (`2022`, `2023`, ...), but `reeds.io.read_h5py_file()` only reads the
+  `data`/`cf`/`load`/`evload` keys, so it builds an empty frame and fails when
+  assigning 10 column names.
+- **`test_main`** invokes the `reeds_to_rev` CLI with no arguments, and click
+  exits with code 2 (usage error).
+
+**Impact:** none on model runs. CI only runs `tests/test_outputs.py` against a
+completed case, so these tests never run in CI and the failures went unnoticed.
+`tests/test_read_h5_files.py::test_read_file`, which covers the HDF5 reading the
+model uses, passes.
+
+**Status:** not fixed. Confirmed in Sync 2 that all of these fail identically at
+`pre-sync-2026-09` and on the merged branch, so they are not sync regressions.
+Run `pytest tests/test_read_h5_files.py::test_read_file` for a quick IO check.
+
+**Fixed upstream?** No at `2026.09.21`: the test files, the missing data and
+`read_h5py_file()` are unchanged.
+
 ## Cosmetic warnings safe to ignore
 
 - **`copy_files.py`** — pandas `DtypeWarning: Columns (N) have mixed types` while
@@ -1407,13 +1315,182 @@ tracker. Inherited, not RMI-introduced.
   and pandas 3 no longer tolerates the resulting mixed dtypes. No effect on
   results.
 
+## Resolved upstream
+
+Issues that a later upstream release fixed, kept here for reference rather than
+deleted. Each says which sync brought in the fix; see
+[`sync-log.md`](sync-log.md) for that sync's details. If one of these comes
+back, move it up into the main list.
+
+### GAMS 44.4.0 compile failure: `Error 579` in `autocode/b_load_sets.gms` (RESOLVED UPSTREAM)
+
+**Resolved in Sync 2 (`2026.09.21`).** Upstream #181 ("Add backwards
+compatibility for older versions of GAMS") declares and loads each set and
+parameter together, the same approach as our fix, and upstream's setup docs
+state compatibility without modification for GAMS ≥ 44.2.0. We took upstream's
+`h5_to_gdx.py` and `b_inputs.gms` lines and removed RMI's patch. A GAMS 44.4.0
+model run confirming this is part of the Sync 2 validation; if Error 579
+returns, restore the patch from tag `pre-sync-2026-09`. The original entry
+follows.
+
+**Symptom:** `a_createmodel.gms` fails to compile with 16x
+```
+*** Error 579 in .../autocode/b_load_sets.gms
+    Cannot clear a set used as a domain or used in lag/ord operations
+```
+followed by `*** Status: Compilation error(s)`, immediately after
+`copy_files.py`/`h5_to_gdx.py` finish input processing. Hit **every** case that
+reached the model-compile step — not specific to any one case's switches.
+
+**Root cause:** `h5_to_gdx.py` auto-generates GAMS snippets that declare every
+set/parameter first (`b_declare_sets.gms`), then `$loadDCR` every set afterward
+(`b_load_sets.gms`). By the time GAMS reaches `$loadDCR r = r`, `r` has already
+been referenced as a domain by a dependent subset (e.g. `offshore(r)`) declared
+earlier in the same declare-everything-first pass — and GAMS 44.4.0 refuses to
+`$loadDCR` a set once anything else depends on it as a domain. Affects every
+primary set with at least one dependent subset/parameter: `r`, `i`, `v`, `e`,
+`eall`, `f`, `p`, `wst`, `allt`, `geotech`, `h2_st`, `hintage_char`, `ofstype`,
+`pcat`, `pvb_config`, `trtype` — exactly the 16 sets that error.
+
+This is a **GAMS-version incompatibility**, not a logic bug: GAMS 45.6.0's release
+notes explicitly fixed `$loadDCR` to stop complaining about this exact case, but
+that fix never landed anywhere in the 44.x line, and this repo is pinned to GAMS
+44.4.0 (see [tech-limit-options.md](guidance/tech-limit-options.md) and this
+repo's GAMS-version policy — don't suggest upgrading GAMS as a fix).
+
+**Impact:** blocked every run before it could even start solving — this is a
+hard, total failure, not a degraded/partial one.
+
+**Status:** fixed, on `fix/GAMS-h5-bugfix`. `h5_to_gdx.py` now generates a single
+`autocode/b_sets.gms` that declares and `$loadDCR`s each set immediately, one at a
+time (primary sets first, then subsets), instead of declaring all sets before
+loading any of them; `b_inputs.gms` includes the new file in place of the old
+declare-all/load-all pair. Parameters are unaffected (a parameter can never be
+used as another symbol's domain) and keep the declare-then-load split. Full
+investigation and verification in
+[GAMS_ERROR_579_INVESTIGATION.md](guidance/GAMS_ERROR_579_INVESTIGATION.md).
+
+**Files changed:**
+- `reeds/input_processing/h5_to_gdx.py` — added `write_sets_declare_and_load()`;
+  `main()` now calls it for sets instead of the old declare-all/load-all
+  `write_declaration`/`write_gdxread` pair (still used for parameters). Also
+  cherry-picked `add v to special_keys` from upstream commit `066d8fe6` while in
+  this function (unrelated to the bug, but touches the same code).
+- `reeds/core/setup/b_inputs.gms` — includes the new `autocode/b_sets.gms` in
+  place of `b_declare_sets.gms`/`b_load_sets.gms`, with `$gdxin` opened first so
+  sets can be loaded inline as they're declared.
+
+**Fixed upstream?** N/A in the usual sense — this isn't a code bug upstream could
+fix, it's a GAMS-version compatibility gap. Upstream (`ReEDS-Model/ReEDS`) has the
+*identical* declare-all-then-load-all structure in `b_inputs.gms`/`h5_to_gdx.py`
+(confirmed at tag `2026.08.03` too) — it's not a fork-specific regression. Upstream
+just never hits the bug because they test on GAMS 49.6.0/51.3.0, both well past
+the 45.6.0 release where GAMS itself patched `$loadDCR`. Since this repo alone is
+pinned to 44.4.0, there's no upstream fix to pull — the incompatibility only
+exists on our GAMS version, and the fix has to live in this fork.
+
+Upstream tag `2026.09.08` later added its own fix (`write_declare_and_load()`,
+#181), which this fork adopted in Sync 2 (see the note at the top of this entry).
+
+### `startyear` > 2022 crashes `hydcf.py` (`arange: cannot compute length`) (RESOLVED UPSTREAM)
+
+**Resolved in Sync 2 (`2026.09.21`).** Upstream #12 removed the `startyear`
+switch: it is now the first `yearset` year, and `runreeds.py` requires it to be
+2010, so a later start year can no longer reach `hydcf.py`. (Upstream also
+changed this code in `2026.09.08`.) The original entry follows.
+
+**Symptom:** `ValueError: arange: cannot compute length` in `hydcf.py`'s
+`assemble_hydcf()`, right after `copy_files.py`, before model compile.
+
+**Root cause:** `calculate_historical_monthly_regional_cf()` keeps only
+`t >= startyear`, but the historical hydro data (`net_gen_existing_hydro.csv`,
+`cap_existing_hydro.csv`) covers 2007–2022. A later `startyear` empties the frame,
+`data_endyear` becomes `NaN`, and `np.arange` fails.
+
+**Status:** not fixed. Leave `startyear` at the 2010 default. Other `startyear`
+traps: [interconnection-queue-and-prescribed-builds.md](guidance/interconnection-queue-and-prescribed-builds.md)
+§5.3.
+
+**Fixed upstream?** No at `2026.08.03`; fixed in `2026.09.08` — resolves at the
+next sync.
+
+### Postprocessing: `report_dump.py` crashes reading `df_capex_init.csv` (RESOLVED UPSTREAM)
+
+**Resolved in Sync 2 (`2026.09.21`).** Upstream `1b3bba93` (first released in
+`2026.09.08`) moved the `calculate_historical_capex` call into
+`report_dump.py`, so the file exists before it is read. The original entry
+follows.
+
+**Symptom:**
+```
+FileNotFoundError: [Errno 2] No such file or directory: '...\inputs_case\df_capex_init.csv'
+```
+raised from `reeds/results.py`'s `calc_systemcost()`, called from `report_dump.py`'s
+`postprocess_outputs()`.
+
+**Root cause:** pipeline ordering bug. `df_capex_init.csv` is generated by
+`retail_rate_calculations.py` (via `calculate_historical_capex.py`), but
+`report_dump.py` — which needs that file for `calc_systemcost()` — runs *before*
+`retail_rate_calculations.py` in the postprocessing sequence.
+
+**Impact:** `postprocess_outputs()` aborts partway through, so
+`outputs/post_systemcost_annualized.csv` (the `calc_systemcost()` output) and
+`outputs/post_tech_transmission.csv` (the next call in the same function) are not
+written for the run. The GAMS-reported `systemcost.csv` and `systemcost_ba.csv`
+come from `report.gms` and are unaffected. Earlier report_dump outputs (e.g. `error_check.csv`,
+`error_gen.csv`) are unaffected since they're saved before the crash. The rest of
+the postprocessing pipeline (retail rate calcs, health damage calcs, reV handoff,
+plotting) still runs — this doesn't stop the run overall.
+
+This hits **every** run, not just reduced-region cases. It was found on a single-BA
+run (`runs/v20260707_213749_ND_small`) and reproduced identically on an 11-BA
+multi-region run (`runs/v20260708_143931_Pacific`). In both logs the crash comes
+about 10 seconds before `calculate_historical_capex.py` reports writing
+`df_capex_init.csv`, and the file is present in `inputs_case/` once the run
+finishes. That is why inspecting the finished run folder doesn't reveal the problem.
+
+**Status:** not fixed. Fix would be reordering the postprocessing call sequence (run
+`retail_rate_calculations.py` before `report_dump.py`, or have `report_dump.py`
+generate/depend on `df_capex_init.csv` itself) — not yet implemented.
+
+**Fixed upstream?** No at `2026.08.03`; fixed in `2026.09.08` (`1b3bba93`:
+`calculate_historical_capex` moved into `report_dump.py`) — resolves at the next
+sync.
+
+### `report_dump.py` leaves GAMS sets out of `outputs.h5` (`could not convert string to float: ''`) (RESOLVED UPSTREAM)
+
+**Resolved in Sync 2 (`2026.09.21`).** Upstream `038dd8ed` (first released in
+`2026.09.08`) added gdxpds fallbacks to `io.write_output_to_h5()`. The original
+entry follows.
+
+**Symptom:** one caught traceback per set (`r`, `hierarchy`, `valcap_i`, `cendiv`,
+`e`, `fuel2tech`, `h_szn`, `szn_stress_t`, `v`) from `reeds/io.py`'s
+`write_output_to_h5`:
+`ValueError: could not convert string to float: '': Error while type casting for column 'Value'`.
+The run continues.
+
+**Root cause:** gdxpds 4.0 returns a set's `Value` as `''` instead of
+`ctypes.c_bool`, so the drop-`Value` check misses it. Introduced by the August
+2026 sync.
+
+**Impact:** solve results are unaffected. The sets are only in
+`outputs/<set>.csv` (kept at CEPM's `cleanup_level=0`). The trap is silent:
+`reeds.io.read_output(case, '<set>')` returns an **empty** table instead of
+raising, so read the CSV instead.
+
+**Status:** not fixed.
+
+**Fixed upstream?** No at `2026.08.03`; fixed in `2026.09.08` (`038dd8ed`) —
+resolves at the next sync.
+
 ## Related documents
 
 - [batch-log.md](batch-log.md) — the other half of the pair. Where this file
   records defects in the machinery, that one records what each batch ran and
   showed, including issues with *results* rather than with the code.
 - [GAMS_ERROR_579_INVESTIGATION.md](guidance/GAMS_ERROR_579_INVESTIGATION.md) — GAMS 44.4.0
-  `$loadDCR`/domain-set compile failure in `autocode/b_load_sets.gms` (fixed).
+  `$loadDCR`/domain-set compile failure in `autocode/b_load_sets.gms` (resolved
+  upstream in Sync 2; kept for reference).
 - [two-step-re-limited-runs.md](guidance/two-step-re-limited-runs.md) — design for the
   two-phase `*_baseline` → `*_limitre`/`*_optimized` runs, including the
   `eq_growthlimit_absolute` final-year infeasibility (finding F1, entry above) and

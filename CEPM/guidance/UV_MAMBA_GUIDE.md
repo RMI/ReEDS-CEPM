@@ -1,5 +1,5 @@
 # Translating between `environment.yml` (mamba/conda) and `pyproject.toml`/`uv.lock` (uv)
-Written Date: 2026-09-10
+Written Date: 2026-09-10 (updated 2026-11-23 for Sync 2, upstream `2026.09.21`)
 
 This repo keeps both, per the decision to keep `environment.yml` as the
 upstream-compatible fallback and `pyproject.toml`/`uv.lock` as RMI's primary
@@ -28,8 +28,8 @@ stay in agreement.
 
 | environment.yml | pyproject.toml | Notes |
 |---|---|---|
-| `name: reeds2` | `[project] name = "ReEDS"` | Names don't have to match; conda's is the env name, uv's is the package/distribution name. |
-| `dependencies: - python=3.14` | `[project] requires-python = "==3.14.*"` | Also mirrored in `.python-version` (`3.14`) and `run_cepm.ps1`'s Step 4 pin-check — all three must move together. |
+| `name: reeds` | `[project] name = "ReEDS"` | Names don't have to match; conda's is the env name, uv's is the package/distribution name. `run_cepm.ps1` sets `CONDA_DEFAULT_ENV=reeds` to match, since `runreeds.py` checks it. |
+| `dependencies: - python=3.14` | `[project] requires-python = "==3.14.*"` | `.python-version` (`3.14`) must match too. `run_cepm.ps1`'s Step 4 reads `requires-python` from `pyproject.toml` and re-pins `.python-version` when they disagree, so the script itself has no version to edit. |
 | `dependencies:` (conda channel packages, no `pip:` block) | `[project] dependencies = [...]` | Top-level conda deps → top-level uv deps. |
 | `dependencies: - pip: - ...` (the nested pip list) | `[project] dependencies = [...]` | Conda draws a line between conda-channel and pip-installed packages; uv doesn't — everything just goes in one `dependencies` list. |
 | Comment-delimited "optional" blocks (`## vvv ... ## ^^^`) | `[project.optional-dependencies]` groups (`interactive`, `maps`, `reporting`, `network`, `testing`, `dev`) | conda has no native optional-group syntax, so mvp used a comment convention. uv has real extras — prefer putting new optional packages in the right extras group instead of a top-level comment block. |
@@ -67,16 +67,22 @@ Same as above in reverse — pull it from both files, then `uv lock` to drop it 
 
 ## Things that don't map 1:1
 
-- **Non-Python packages.** `environment.yml` has `git-lfs=2.13` and `mscorefonts=0.0` — these aren't pip-installable and have no uv equivalent. They just don't appear in `pyproject.toml`; document them in setup docs instead.
-- **`pip` itself and its version.** conda pins `pip=23.2` as a bootstrap tool; uv manages its own resolver, so this has no uv equivalent either.
-- **Exact vs. fuzzy pins.** conda's `package=X.Y` conventionally means "X.Y.* is fine"; the uv side in this repo mostly uses explicit `==X.Y.*` to match that intent, but a few packages (`tables`, `gdxpds`, `geopandas`, `pulp`, `shapely`, `cmocean`) are pinned to an exact patch version in `pyproject.toml` where conda only pins minor. If you tighten/loosen a pin on one side, consider whether the other side should match.
+- **Non-Python packages.** `environment.yml` has `git-lfs=3.7` and `mscorefonts=0.0` — these aren't pip-installable and have no uv equivalent. They just don't appear in `pyproject.toml`; document them in setup docs instead.
+- **`pip` itself and its version.** conda pins `pip=26.1` as a bootstrap tool; uv manages its own resolver, so this has no uv equivalent either.
+- **Exact vs. fuzzy pins.** conda's `package=X.Y` conventionally means "X.Y.* is fine"; the uv side uses explicit `==X.Y.*` to match that intent for almost everything. The exact pins in `pyproject.toml` are:
+  - copied from `environment.yml`'s `pip:` block, which pins them exactly too: `gdxpds==4.0.0`, `pulp==3.3.2`, `gamsapi[transfer]==53.5.0`, `gamspy-base==53.5.0`;
+  - tighter than conda on purpose: `tables==3.11.1` (conda `pytables=3.11`);
+  - uv-only: `pyproj==3.8.0` (see below).
+
+  If you tighten or loosen a pin on one side, consider whether the other side should match.
+- **`fiona`.** Pinned `1.10.*` on both sides, but `pyproject.toml` adds the marker `sys_platform != 'win32' or python_full_version != '3.14.*'`, so it is skipped on Windows with Python 3.14: there is no Windows wheel for that combination yet (building it needs GDAL). Nothing in the repo imports `fiona` (`geopandas` uses `pyogrio`). Re-check each sync whether a wheel has shipped, and drop the marker when it has.
 - **PyTables naming.** conda's package is `pytables`, but its importable/pip name is `tables`, so it appears as `pytables=3.11` in `environment.yml` and `tables==3.11.1` in `pyproject.toml` — same version, different name, handled by `NAME_ALIASES` in `check_env_sync.py`. No longer a version drift as of the August 2026 sync (previously conda pinned `3.8`).
 - **Git-sourced packages.** None currently declared. `rmi.etoolbox @ git+https://github.com/rmi/etoolbox.git` used to live here, but was removed in the August 2026 sync — it pins `pandas<2.4`, which is incompatible with the `pandas==3.0.*` now required by `runreeds.py`, and it wasn't imported anywhere in this repo. If a future need re-adds a git-sourced package, conda's `pip:` block *can* take a `git+https://...` URL the same way, so add a matching line in `environment.yml` too if it needs to stay fully equivalent.
 - **`pyproj` and `networkx`.** Both are declared only in `pyproject.toml`'s `maps`/`network`/`dev` groups, with no `environment.yml` line. Neither is currently imported anywhere in `reeds/`, `postprocessing/`, `CEPM/`, or any tracked notebook — kept intentionally anyway (not removed) in case they're needed for planned work; allowlisted in `check_env_sync.py`'s `UV_ONLY_OK` rather than flagged as drift.
 - **`pillow`.** Declared only in `pyproject.toml` (`reporting`/`dev`), no `environment.yml` line. Added explicitly to force a Python 3.14-compatible release, overriding `python-pptx`'s own old floor — see the August 2026 sync entry in `reeds-to-cepm-log.md`. Allowlisted in `UV_ONLY_OK`.
 - **`myst-parser`, `sphinx`, `sphinx-design`, `sphinx-rtd-theme`, `sphinxcontrib-bibtex`.** Declared only in `environment.yml` as of the August 2026 sync — the `docs` extra was removed from `pyproject.toml` entirely, since the real docs build bypasses `uv`/`pyproject.toml` (see the "Removed as of the August 2026 sync" note above). Allowlisted in `CONDA_ONLY_OK`.
 - **`python-abi`.** Appears in `environment.yml` as conda's ABI-tagging metadata, not a real installable package — has no `pyproject.toml` equivalent by nature, allowlisted in `CONDA_ONLY_OK`.
-- **`gamsapi[transfer]`.** Added explicitly to `pyproject.toml`'s `testing`/`dev` groups alongside the `gdxpds==4.0.0` bump, even though nothing in this repo imports it directly — `environment.yml` lists it right next to `gdxpds`, suggesting it may be one of `gdxpds` 4.0.0's own transitive dependencies. Added defensively rather than relying on that being confirmed; if `uv lock` shows it resolving transitively on its own, this explicit entry can be dropped later.
+- **`gamsapi[transfer]` and `gamspy-base`.** Both are in `environment.yml`'s `pip:` block (installed by default) but only in `pyproject.toml`'s `testing`/`dev` groups, so a plain `uv sync` skips them; `run_cepm.ps1` always runs `uv sync --extra dev`, so they are installed in practice. `gamsapi` was added alongside the `gdxpds==4.0.0` bump even though nothing in this repo imports it directly — it may be one of `gdxpds` 4.0.0's own dependencies. If `uv lock` shows it resolving on its own, the explicit entry can be dropped. Both are GAMS **53.5** Python bindings while the engine we run is GAMS **44.4**; the GDX round-trip test in Sync 1 passed, but re-check if either side changes.
 
 ## Known pre-existing gaps (not introduced by this cleanup, not yet fixed)
 
@@ -84,8 +90,19 @@ A few packages are imported directly in `postprocessing/` (`jinja2`, `loguru`, `
 
 ## Known current drift between the two files
 
-None as of the August 2026 sync — `check_env_sync.py`'s `KNOWN_DRIFT_*` sets
-were emptied out when `pyyaml`, `proj`, and the old `pytables`/`tables` version
-gap all resolved (see the PyTables note above). If new drift shows up here in
-the future, add it both here and to the matching allowlist set in
+None as of Sync 2 (upstream `2026.09.21`): `check_env_sync.py` reports the two
+files aligned, and its `KNOWN_DRIFT_*` sets are empty. Upstream's
+`environment.yml` did not change between `2026.08.03` and `2026.09.21`, so
+`pyproject.toml`/`uv.lock` needed no changes in that sync. If new drift shows up
+here in the future, add it both here and to the matching allowlist set in
 `CEPM/scripts/check_env_sync.py` — don't let this section go stale again.
+
+## Coming at the next sync
+
+Upstream `main` has already changed `environment.yml` after the `2026.09.21`
+tag. When a release includes these, mirror them in `pyproject.toml`:
+
+- `geopandas=1.1` → `1.2` (`147cd67f`): change `geopandas==1.1.*` in the core
+  dependencies.
+- `adjustText=1.4` added as an optional package, for avoiding map label overlaps
+  (#170): add `adjustText==1.4.*` to the `maps` and `dev` groups.
