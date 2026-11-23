@@ -5,8 +5,12 @@ Tracks how this repo diverges from upstream
 upstream file that CEPM changed and what to re-check when we rebase onto a new
 upstream release.
 
-**Current ReEDS base:** upstream tag `2026.08.03` (`1515f8ae`), also the merge
-base with `upstream/main`.
+**Current ReEDS base:** upstream tag `2026.09.21` (`8a157233`), merged in
+Sync 2 (see [`sync-log.md`](sync-log.md)).
+
+Patches that upstream later made unnecessary are moved to
+[Resolved upstream](#resolved-upstream) at the end of this file rather than
+deleted, so the history stays findable.
 
 Most bug-fix entries below have a matching symptom-level entry in
 [`known-reeds-issues.md`](known-reeds-issues.md); that file is the "my run failed, what is
@@ -28,8 +32,6 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 
 | Path | Change | Section |
 |---|---|---|
-| `reeds/input_processing/h5_to_gdx.py` | Modified | GAMS compatibility |
-| `reeds/core/setup/b_inputs.gms` | Modified | GAMS compatibility |
 | `reeds/input_processing/fuelcostprep.py` | Modified | Census divisions in fuelcostprep.py |
 | `reeds/input_processing/recf.py` | Modified | recf.py when offshore wind is disabled |
 | `reeds/input_processing/writesupplycurves.py` | Modified | Empty supply curve drops onshore wind under pandas 3 |
@@ -87,55 +89,6 @@ Add new CEPM GAMS code inside an existing pair or a new one, and don't edit
 upstream lines outside them. (Added 2026-11-11. The markers are three
 characters, so they can't be mistaken for git's seven-character conflict
 markers.)
-
-## GAMS compatibility
-
-### Description of issue:
-
-Our GAMS install is pinned to **44.4.0**. Upstream's h5-to-GDX pipeline generates
-GAMS code that declares *every* set (`b_declare_sets.gms`) before `$loadDCR`-ing
-*any* set (`b_load_sets.gms`). On 44.4.0 that ordering is illegal: once a set has
-been referenced as another set's domain, GAMS refuses to load it, raising
-`Error 579` ("Cannot clear a set used as a domain or used in lag/ord
-operations"). The result was 16x Error 579 and `*** Status: Compilation error(s)`
-in `a_createmodel.gms`, hitting **every** case that reached model compile,
-regardless of switches. GAMS 45.6.0 lifted the restriction, so upstream does not
-see this on its own toolchain.
-
-### Files changed:
-
-- `reeds/input_processing/h5_to_gdx.py` — new `write_sets_declare_and_load()`
-  emits a single `autocode/b_sets.gms` that declares and loads each set one at a
-  time (primary sets first, then domain-dependent subsets), replacing the
-  separate `b_declare_sets.gms` / `b_load_sets.gms` pair.
-- `reeds/core/setup/b_inputs.gms` — includes `autocode/b_sets.gms` inside the
-  `$gdxin` block instead of the old declare-then-load pair, with a comment
-  recording the version constraint. Wrapped in `BEGIN/END CEPM CHANGE` markers
-  whose comment lists the four upstream lines it replaces.
-- `reeds/input_processing/h5_to_gdx.py` also carries `special_keys = ['r', 'v']`
-  and a test-path comment from upstream `a09865ec` (post-tag). These are not RMI
-  changes and should vanish at the next sync.
-
-### Reference:
-
-[`guidance/GAMS_ERROR_579_INVESTIGATION.md`](guidance/GAMS_ERROR_579_INVESTIGATION.md),
-[`known-reeds-issues.md`](known-reeds-issues.md)
-
-### What to test in new releases:
-
-- Does upstream's `h5_to_gdx.py` still generate `b_declare_sets.gms` +
-  `b_load_sets.gms`? If upstream restructures that codegen, this patch will
-  conflict and should be re-derived rather than merged.
-- Has any new primary set or domain-dependent subset been added upstream? The
-  fix orders sets by dependency, so a new set with an unnoticed domain
-  dependency can reintroduce the error.
-- If the GAMS install moves to **45.6.0 or newer**, this patch is no longer
-  required — consider dropping it and returning to upstream's codegen to shrink
-  the diff.
-- Upstream tag `2026.09.08` replaced `write_declaration`/`write_gdxread` with
-  `write_declare_and_load()` (declare and load each set in turn, primary sets
-  first). It is likely upstream's own Error 579 fix; at the next sync, confirm it
-  compiles on GAMS 44.4.0, then drop this patch.
 
 ## Resolving census divisions in fuelcostprep.py
 
@@ -238,9 +191,10 @@ un-pin pandas.
 ### What to test in new releases:
 
 - Does upstream still assign a bare `dfin['bin'] = []` in `agg_supplycurve()`'s empty
-  branch? It does at tag `2026.08.03` (line 105) and on `upstream/main` (line 121).
-  Note that upstream has pinned `pandas=3.0` since 2026-05-08 (`2ff493b5`) — four months
-  before this fork did — so **the bug is live upstream, not latent**. They have not hit
+  branch? It does at tag `2026.08.03` (line 105) and still at `2026.09.21` (line 121).
+  Upstream's `environment.yml` has pinned `pandas=3.0` since 2026-05-08 (`2ff493b5`),
+  first released in `2026.08.03` — the same release this fork synced to in Sync 1 —
+  so **the bug is live upstream, not latent**. They have not hit
   it only because their default and test cases (`cendiv/Pacific`, `country/USA`) are
   coastal or national and always have a populated offshore curve. Not raised on their
   issue tracker as of 2026-09-25 (all 86 issues searched). Worth reporting and
@@ -1006,10 +960,11 @@ green check. And the comparison is a case-sensitive string match against
   where the variable actually lives. (An earlier revision also set
   `ENABLE_GAMS_CI: 'false'` as a workflow `env:` value; that had no effect,
   since `env:` populates the `env` context and not `vars`, and it has been
-  replaced by the comment.) Also, three
-  `uses: ./.github/actions/setup-reeds-env` lines carry
-  `# zizmor: ignore[self-repository]` (`11efac87`); drop these once actionlint
-  accepts the `$/...` syntax.
+  replaced by the comment.) The three `# zizmor: ignore[self-repository]`
+  comments RMI added in `11efac87` were dropped in Sync 2: upstream #208
+  switched actionlint to `kjanat/actionlint` v1.13.0 (a third-party fork that
+  upstream calls temporary), which accepts the `$/...` syntax, and we now use
+  upstream's `$/.github/actions/setup-reeds-env` lines.
 
 ### Reference:
 
@@ -1024,6 +979,9 @@ value via `gh variable list --repo RMI/ReEDS-CEPM`
   upstream's side restores unconditional execution and turns CI red.
 - Does the variable still exist at the repo level? It is not version-controlled,
   so it can be deleted without leaving any trace in the repo.
+- Is `.github/workflows/workflow-quality.yaml` still on `kjanat/actionlint`, or
+  has upstream moved back to `rhysd/actionlint`? The `actionlint` check on a PR
+  that touches `.github/` is the test that `$/` still parses.
 
 ## Using uv instead of mamba for environment/package management
 
@@ -1215,6 +1173,12 @@ section of the [root README](../README.md)
   that could collide with `-y`, `-q`, `-u`, `-x`, `-o`, or `-m`?
 - Is `runreeds.py` still the entry point, still at the repo root, still under
   that name?
+- Is `startyear` still derived from the first `yearset` year and required to be
+  2010 (upstream #12, `reeds/inputs.py` and `runreeds.py`'s
+  `check_compatibility()`)? `CEPM/scripts/get_batch_info.py` and
+  `multistep_cases.py` pass `compare_cases.py --startyear` as the first
+  `yearset` year **after** 2010, which depends on that rule. Dry-run
+  `cases_cepm.csv` with `runreeds.py -t` to confirm every case still passes.
 
 ## CEPM documentation
 
@@ -1382,3 +1346,55 @@ affected cells.
   or removed switches and values that are no longer valid. Fix only the cells
   that break. Blank cells inherit defaults, so an upstream default change can
   also quietly change these cases.
+
+# Resolved upstream
+
+Patches this fork once carried that a later upstream release made unnecessary.
+They are no longer in the code and are kept here for history. The sync that
+retired each one is recorded in [`sync-log.md`](sync-log.md).
+
+## GAMS compatibility (Error 579) — retired in Sync 2 (`2026.09.21`)
+
+**Resolved by:** upstream #181, "Add backwards compatibility for older versions
+of GAMS" (first released in `2026.09.08`). Upstream's `h5_to_gdx.py` now writes
+`autocode/b_declare_load_sets.gms` / `b_declare_load_parameters.gms`, declaring
+and loading each symbol together with primary sets first, and upstream's setup
+docs state compatibility without modification for GAMS ≥ 44.2.0. In Sync 2 we
+took upstream's `h5_to_gdx.py` (now identical to upstream) and its
+`b_inputs.gms` include lines, and deleted `write_sets_declare_and_load()` and
+the `CEPM CHANGE` block. A GAMS 44.4.0 model run confirming the upstream fix is
+part of the Sync 2 validation; if it fails with Error 579, the RMI patch can be
+restored from `pre-sync-2026-09`.
+
+### Description of issue:
+
+Our GAMS install is pinned to **44.4.0**. Upstream's h5-to-GDX pipeline generated
+GAMS code that declared *every* set (`b_declare_sets.gms`) before `$loadDCR`-ing
+*any* set (`b_load_sets.gms`). On 44.4.0 that ordering is illegal: once a set has
+been referenced as another set's domain, GAMS refuses to load it, raising
+`Error 579` ("Cannot clear a set used as a domain or used in lag/ord
+operations"). The result was 16x Error 579 and `*** Status: Compilation error(s)`
+in `a_createmodel.gms`, hitting **every** case that reached model compile,
+regardless of switches. GAMS 45.6.0 lifted the restriction, so upstream did not
+see this on its own toolchain.
+
+### Files changed (before Sync 2):
+
+- `reeds/input_processing/h5_to_gdx.py` — new `write_sets_declare_and_load()`
+  emitted a single `autocode/b_sets.gms` that declared and loaded each set one at
+  a time (primary sets first, then domain-dependent subsets), replacing the
+  separate `b_declare_sets.gms` / `b_load_sets.gms` pair.
+- `reeds/core/setup/b_inputs.gms` — included `autocode/b_sets.gms` inside the
+  `$gdxin` block instead of the old declare-then-load pair, wrapped in
+  `BEGIN/END CEPM CHANGE` markers.
+
+### Reference:
+
+[`guidance/GAMS_ERROR_579_INVESTIGATION.md`](guidance/GAMS_ERROR_579_INVESTIGATION.md),
+[`known-reeds-issues.md`](known-reeds-issues.md#resolved-upstream)
+
+### What to test in new releases:
+
+- If a future release changes how `h5_to_gdx.py` writes the declare/load code,
+  check that it still loads each set before any later set uses it as a domain;
+  otherwise Error 579 returns on GAMS 44.4.0.

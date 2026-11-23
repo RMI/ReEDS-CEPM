@@ -6,7 +6,7 @@ and why, how it was fixed, and whether each entry in
 [`reeds-to-cepm-log.md`](reeds-to-cepm-log.md)'s "what to test in new
 releases" lists actually needed attention.
 
-This is different from the other two logs. `known-issues.md` is the
+This is different from the other two logs. `known-reeds-issues.md` is the
 symptom-level "my run failed, what is this" index. `reeds-to-cepm-log.md` is
 the standing "what does this fork change vs. upstream, and what to re-check"
 index — it describes the *current* divergence, and gets edited in place as
@@ -16,11 +16,144 @@ so the next sync has a worked example instead of starting from zero. Add a new
 `## Sync N` section at the top for each future sync; don't edit past entries
 except to fix an error.
 
+## Sync 2: August 2026 → September 2026 (`2026.08.03` → `2026.09.21`)
+
+**Status:** In progress. Merge and CEPM adaptations are on PR #80
+(`temp_dev` ← `temp_upstream_09.21.26`). The baseline-vs-merged validation
+runs, `temp_dev` → `dev`, and `dev` → `main` are still to come.
+
+### Timeline
+
+| Step | Ref | Date |
+|---|---|---|
+| Starting upstream release (also the merge base) | tag `2026.08.03` (`1515f8ae`) | — |
+| Intermediate upstream release (no release notes) | tag `2026.09.08` (`6f70abd9`) | 2026-09-08 |
+| Ending upstream release | tag `2026.09.21` (`8a157233`; `sync/september-26`) | 2026-09-17 |
+| Pre-sync baseline: `dev` tip, tagged and pushed | tag `pre-sync-2026-09` → `ba6fc3df` | 2026-11-16 |
+| Integration branch cut from the tag | `temp_dev` | 2026-11-16 |
+| Upstream branch for the PR head (`sync/september-26` kept untouched) | `temp_upstream_09.21.26` | 2026-11-16 |
+| Conflicts resolved in the GitHub UI | `c65795b7` | 2026-11-17 |
+| CEPM adaptations | `139d8bea`, `17ed65fb`, `e727784e` | 2026-11-18 |
+| Sync documentation (this entry and related docs) | PR #80 | 2026-11 |
+
+`dev` did not move between the tag and the merge, so unlike Sync 1 there was
+no parallel work stream to reconcile.
+
+### Upstream release contents that mattered to CEPM
+
+The 33 PRs in `2026.09.21` are listed on its
+[release page](https://github.com/ReEDS-Model/ReEDS/releases/tag/2026.09.21).
+The ones that touched CEPM directly:
+
+| Upstream PR | Change | Effect on CEPM |
+|---|---|---|
+| #181 | Declare and load each GAMS set/parameter together | Same fix as RMI's GAMS Error 579 patch; works unmodified on GAMS ≥ 44.2.0 (we run 44.4.0). RMI patch retired |
+| #12 | `startyear` removed from `cases.csv`; derived from the first `yearset` year and must equal 2010 | `cases_cepm.csv` failed setup until fixed; plotting start year logic rewritten |
+| #221 | `this_year` 2025 → 2026; `GSw_StartMarkets` 2026 → 2027 | 2026 becomes a fixed year: no endogenous builds, relaxed load balance, no stress-period iteration, RPS/mandates not enforced. Every `firstyear` shifts a year later (offshore wind 2029 → 2030). Drove the yearset change (separate PR) |
+| #190, #221 | Generator database moves to AEO-NEMS 2026 | Large expected changes in existing/planned capacity |
+| #172 | Default `yearset` 3-year → 5-year steps | No effect on cases with an explicit `yearset` |
+| #164 | `retscen` → `nukeretscen` (integer years, default 80) | No CEPM case set it; docs updated |
+| #182, #111 | `GSw_CurtMarket` removed; `GSw_FuelCell` split into gas and H2 fuel cells | No CEPM case used them |
+| #157 | Input documentation moved from `docs/sources.csv` to `inputs/*/README.md`; `get_source_deflator_map()` removed | Dollar years now come only from each folder's `dollaryear.csv` (our gas rows already use it); docs updated |
+| #208, #165 | actionlint → `kjanat/actionlint` v1.13.0 (third-party fork, "temporary"), `$/` action syntax; checkout v7.0.1 | `python-app.yaml` conflict |
+| #176, #87, #191, #197, #199, #200, #206, #167 | Battery lifetime, 2025 NERC regions and PRM, daily gas prices, gas-cc start costs, Clean Air Act adjustment, degradation, distributed PV losses, Canada trade | Expected result changes, to attribute during validation |
+
+`environment.yml` is byte-identical between `2026.08.03` and `2026.09.21`, so
+`pyproject.toml`/`uv.lock` needed no changes. Upstream `main` has since bumped
+`geopandas` to 1.2 and added `adjustText`; those arrive next sync.
+
+### Conflict resolutions (`c65795b7`)
+
+| File | Resolution |
+|---|---|
+| `reeds/core/setup/b_inputs.gms` | Took upstream; removed the `CEPM CHANGE` block |
+| `reeds/input_processing/h5_to_gdx.py` | Took upstream; also deleted RMI's `write_sets_declare_and_load()`, which sat outside the conflict block. File now identical to upstream |
+| `inputs/plant_characteristics/dollaryear.csv` | Kept RMI's 3 `gas-ccgt_CEPM_*` rows and upstream's `h2fuelcell_*` rows. Dropped RMI's copies of the two `fuelcell_ATB_2024_*` rows, which upstream moved further down the file |
+| `.github/workflows/python-app.yaml` | Took upstream's `$/` syntax and dropped RMI's `zizmor: ignore` comments. The `ENABLE_GAMS_CI` guard merged cleanly and stays |
+
+All other files merged without conflicts. The `actionlint`, `zizmor` and
+labeler checks passed on the PR. `python-app` only runs on PRs into `main`.
+
+### CEPM adaptations
+
+| Commit | Change |
+|---|---|
+| `139d8bea` | `cases_cepm.csv`: removed the `startyear` row; yearsets → `2010_2026..2032..3`. Same solve years as before, because `dev` already added `startyear` (2010) to the yearset |
+| `17ed65fb` | `get_batch_info.py` / `multistep_cases.py`: `--startyear` is now the first `yearset` year after 2010 (via `reeds.inputs.parse_yearset`); comments in `run_cepm.ps1` and `CEPM/README.md` |
+| `e727784e` | `h5_to_gdx.py` whitespace aligned with upstream; dropped `cases_cepm.csv`'s `GSw_SkipRAyear` override so CEPM follows upstream's default (2020 → 2024; no effect on CEPM solves) |
+
+### Validation performed so far
+
+- No conflict markers or leftover RMI GAMS-fix code; `dollaryear.csv` has no
+  duplicate rows; `h5_to_gdx.py` is identical to upstream.
+- `uv sync --extra dev`, `check_env_sync.py` and the `run_cepm.ps1` bootstrap
+  pass (GAMS 44.4.0, Julia 1.12.1, Python 3.14).
+- `runreeds.py -t` (switch and compatibility checks) passes for all 9
+  `cases_cepm.csv` cases and for `cases_RMI-test.csv`.
+- pytest: no new failures. `hourlize/tests` (its test data has never been in
+  the repo), `test_read_h5py_file` and hourlize's `test_main` fail identically
+  at `pre-sync-2026-09`. See `known-reeds-issues.md`.
+- **Not yet done:** a GAMS 44.4 model run confirming upstream's #181 replaces
+  the Error 579 patch, and the baseline (`pre-sync-2026-09`) vs. merged
+  comparison across national, cendiv, regional and state cases.
+
+### Implications for `reeds-to-cepm-log.md`'s "what to test in new releases" items
+
+| RMI patch | Still needed at `2026.09.21`? | Verified |
+|---|---|---|
+| GAMS Error 579 (`h5_to_gdx.py`/`b_inputs.gms`) | **No** — retired, replaced by upstream #181 | Moved to the log's "Resolved upstream" section; model-run confirmation pending |
+| Census divisions in `fuelcostprep.py` | Yes | `val_cendiv` restriction present |
+| `recf.py` offshore wind | Yes | `else` branch assigning an empty `df_windofs` present |
+| Onshore wind pandas 3 fix (`writesupplycurves.py`) | Yes — upstream still has the bare `[]` | Fix merged cleanly (now line 125) |
+| `compare_cases.py` "Flexibly Sited Demand" | Yes | `reeds.report_utils.add_to_pptx` call site present |
+| `report_utils.py` `parse_caselist` | Yes | `_caselist[0]` fix present |
+| `compare_cases.py` hard-coded `2020` | Yes | No literal `2020` left at the 5 sites |
+| `dollaryear.csv` gas rows, `ENABLE_GAMS_CI` guard | Yes | Present after conflict resolution |
+| RA plot fixes, minor/cosmetic, data-center load sites, TgCap and queue additions | Yes | Merged cleanly; details to re-check during validation |
+
+Known issues resolved by this sync (moved to `known-reeds-issues.md`'s
+"Resolved upstream" section): GAMS Error 579; `startyear` > 2022 crashing
+`hydcf.py` (`startyear` must now be 2010); `report_dump.py` reading
+`df_capex_init.csv` (`1b3bba93`); `report_dump.py` dropping sets from
+`outputs.h5` (`038dd8ed`).
+
+### Open items / carried forward
+
+- **Validation runs** (baseline vs. merged), then `temp_dev` → `dev` and
+  `dev` → `main`.
+- **Yearset change** to `2010_2026_2030_2033` (`endyear` 2033), agreed in
+  response to #221; separate PR with a `CEPM/decisions/` entry.
+- **Data that stops at 2032** (separate PR): the data-center load-site
+  trajectories (`*_extended_to_2032`) would silently give zero load in 2033,
+  because `forecast.py` only extends inputs when `endyear` > 2050; the CEPM gas
+  capex forecast reverts to ATB after 2032 (Gas-CC 2,181.7 → 1,127.0).
+- **Next sync, upstream `main`:** `geopandas` 1.2 and `adjustText` in
+  `environment.yml`; `GSw_QueueConstraintYears` (`0dc01add`) keeps queue
+  limits only through `this_year + 3`, which may drop the queue constraint from
+  a 2030 first decision year; `cap_limit` renamed to `queue_limit` (`7c39fc98`).
+- `fiona`'s Windows/Python 3.14 platform marker: still needed.
+- Report the onshore-wind pandas 3 bug upstream.
+
+### Lessons for the next sync
+
+- **Read the diff, not just the release notes.** `startyear`'s removal came in
+  #12 ("Adding technology classes") and the `this_year`/`StartMarkets` shift in
+  #221 ("Update years to endogenous…"); neither title says so.
+- **Dry-run the merge first** (`git merge-tree --write-tree`). It showed 4
+  conflicts before any branch existed and made the plan concrete.
+- **Resolving in the GitHub UI works for small conflicts**, with two cautions:
+  the resolution commit lands on the PR's head branch (so keep a separate
+  untouched copy of upstream), and the editor only shows the conflict block,
+  not related code that merged cleanly around it.
+- **`runreeds.py -t` is a cheap gate.** It validates every case's switches
+  against the new `cases.csv` in seconds.
+- **Check each CEPM input's last year whenever `endyear` changes.**
+
 ## Sync 1: June 2026 → August 2026 (`2026.06.18` → `2026.08.03`)
 
 **Status:** Merged to `dev` via PR #52 (2026-09-22), reconciling with
 `mvp/two-step-runs` (already merged to `dev` via PR #49) along the way.
-Not yet merged to `main`.
+Merged to `main` via PR #78 (2026-11-04).
 
 ### Timeline
 

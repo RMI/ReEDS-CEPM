@@ -76,7 +76,8 @@ Example, AZNM (`v20261026drshed`):
 
 **Caveats on `state_lpf`:**
 
-- `docs/sources_documentation.md` lists `county_state_lpf.csv` with no
+- Upstream's source documentation (formerly `docs/sources_documentation.md`,
+  now `inputs/disaggregation/README.md`) lists `county_state_lpf.csv` with no
   description, so its vintage is unknown.
 - Counties without a high-voltage load bus have a share of 0. That doesn't
   matter at zone resolution, but at county resolution (`z3109`) some regions

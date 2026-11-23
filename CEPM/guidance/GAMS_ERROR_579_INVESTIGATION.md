@@ -1,7 +1,10 @@
 # GAMS Error 579 in the h5-to-gdx input pipeline
 Written Date: 2026-08-18
 
-**Status:** Fixed on `fix/GAMS-h5-bugfix`
+**Status:** Resolved upstream. Upstream #181 (in `2026.09.08` and `2026.09.21`)
+declares and loads each set together, so RMI's patch described here was retired
+in Sync 2 (see [`../sync-log.md`](../sync-log.md)). Kept for reference.
+Originally fixed on `fix/GAMS-h5-bugfix`.
 **Affected versions:** GAMS 44.4.0 (this repo's pinned version)
 **Symptom:** `a_createmodel.gms` fails to compile with 16x `*** Error 579` in
 `autocode/b_load_sets.gms`, immediately after `copy_files.py`/`h5_to_gdx.py`

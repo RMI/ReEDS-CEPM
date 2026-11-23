@@ -5,7 +5,7 @@ This note summarizes how ReEDS treats generator retirements and prescribed build
 
 ## Retirement switches
 
-The following are the main retirement-related switches in the ReEDS `2026.08.03` base.
+The following are the main retirement-related switches in the ReEDS `2026.09.21` base. (In Sync 2 the only change among these was `retscen` becoming `nukeretscen`; see below.)
 
 | Switch | Default | Options / meaning |
 |---|---:|---|
@@ -14,7 +14,7 @@ The following are the main retirement-related switches in the ReEDS `2026.08.03`
 | `GSw_RetirePenalty` | `1` | `0`/`1`. Applies a penalty for retiring a plant early to represent retirement friction. |
 | `GSw_RetireYears_Coal` | `0` | Integer adjustment to retirement years for currently operating coal plants. `0` uses retirement years from the EIA unit database; negative values shorten lifetime and positive values extend it. Ignored when `GSw_RetireYears_Thermal` is nonzero. |
 | `GSw_RetireYears_Thermal` | `0` | Integer adjustment to retirement years for currently operating thermal plants. `0` uses retirement years from the EIA unit database; negative values shorten lifetime and positive values extend it. |
-| `retscen` | `Nuke80RetireYear` | Nuclear exogenous-retirement scenario: `Nuke60RetireYear`, `Nuke80RetireYear`, `NukeEarlyRetireYear`, or `NukeRefRetireYear`. |
+| `nukeretscen` | `80` | Nuclear exogenous-retirement lifetime, in years after the unit's online year (`process_unitdata.py` sets `RetireYear = StartYear + nukeretscen` for operating nuclear units). Replaced `retscen` (`Nuke60RetireYear`, `Nuke80RetireYear`, `NukeEarlyRetireYear`, `NukeRefRetireYear`; default `Nuke80RetireYear`) in upstream #164, so a cases file that still sets `retscen` now fails setup. |
 | `GSw_NukeNoRetire` | `1` | `0`/`1`. Prevents nuclear units from retiring before the year set by `GSw_NukeNoRetireYear`. |
 | `GSw_NukeNoRetireYear` | `2032` | With `GSw_NukeNoRetire=1`, nuclear cannot retire through the end of this year. |
 
@@ -26,7 +26,7 @@ ReEDS distinguishes between **exogenous retirement dates** supplied with the gen
 
 For existing generators, `writecapdat.py` primarily uses the unit's online year and retirement year to determine whether capacity is available. A unit is treated as retired at the **beginning of its `RetireYear`**. Plant-status fields are useful when comparing the database with EIA, but they are not the primary rule ReEDS uses to determine availability.
 
-The exogenous retirement date therefore sets the outside limit on how long existing capacity remains available. `GSw_RetireYears_Coal` and `GSw_RetireYears_Thermal` can shift those dates before the model solves, while `retscen` selects the nuclear retirement-date assumption.
+The exogenous retirement date therefore sets the outside limit on how long existing capacity remains available. `GSw_RetireYears_Coal` and `GSw_RetireYears_Thermal` can shift those dates before the model solves, while `nukeretscen` sets the nuclear retirement-date assumption.
 
 When endogenous retirement is enabled through `GSw_Retire`, eligible capacity may retire **earlier** if the model finds that economical. Endogenous retirement does not extend an existing unit beyond its exogenous retirement date. `GSw_RetireYear`, retirement penalties, minimum-age requirements, and the nuclear no-retirement settings further restrict when early retirement can occur.
 

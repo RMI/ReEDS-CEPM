@@ -26,8 +26,9 @@ Use this file as the first stop for agent orientation. Deeper references:
   outputs, and common workflows.
 - @docs/source/developer_best_practices.md: coding conventions, testing
   expectations, and GAMS development guidance.
-- @docs/sources_documentation.md: data-source documentation expectations and
-  input provenance notes.
+- `inputs/*/README.md`: data-source documentation and input provenance notes,
+  one per input folder (upstream moved these out of the former
+  `docs/sources_documentation.md` in `2026.09.21`).
 
 ## Project Structure
 
@@ -100,7 +101,8 @@ Use this file as the first stop for agent orientation. Deeper references:
   `git diff` against upstream for an authoritative answer).
   `CEPM/guidance/` holds `UV_MAMBA_GUIDE.md` (uv/mamba dependency mapping),
   `internal-ci-testing.md` (on-prem CI runbook), and
-  `GAMS_ERROR_579_INVESTIGATION.md` (GAMS 44.4.0 compatibility investigation).
+  `GAMS_ERROR_579_INVESTIGATION.md` (GAMS 44.4.0 compatibility investigation;
+  resolved upstream in `2026.09.21`, kept for reference).
   `CEPM/scripts/` holds `check_env_sync.py` (environment.yml vs pyproject.toml
   drift check). The CEPM setup-and-run helper is `run_cepm.ps1` at repo root.
 
@@ -159,8 +161,13 @@ download large files, and write substantial data under `runs/`.
 
 - Lightweight Python IO tests:
   `uv run python -m pytest tests/test_read_h5_files.py`
+  (`test_read_h5py_file` currently fails because the test itself is out of
+  date; `test_read_file` is the meaningful check. See
+  `CEPM/known-reeds-issues.md`.)
 - Hourlize tests:
   `uv run python -m pytest hourlize/tests`
+  (most fail with `FileNotFoundError`: the test data under `hourlize/tests/data/`
+  is not in the repo. See `CEPM/known-reeds-issues.md`.)
 - Completed-run output validation:
   `uv run python -m pytest tests/test_outputs.py --casepath runs/<case>`
 - Julia ReEDS2PRAS tests from `reeds/resource_adequacy/reeds2pras/test/`:
@@ -258,7 +265,11 @@ Inputs and CSVs:
   comment.
 - Raw inputs belong under topical `inputs/` subdirectories.
 - Large or optional data should not be committed casually; use the remote-file
-  mechanism and document sources in `sources.csv` / `sources_documentation.md`.
+  mechanism and document sources in the input folder's `README.md`
+  (`inputs/*/README.md`; upstream moved source documentation there from
+  `docs/sources.csv` and the deleted `sources_documentation.md`).
+- Dollar years for monetary inputs are registered in the input folder's
+  `dollaryear.csv`; `docs/sources.csv` is no longer read for deflation.
 - Costs read into `reeds/core/setup/b_inputs.gms` should already be in 2004
   dollars unless the surrounding code clearly says otherwise; use `deflator.csv`
   rather than hard-coded conversions.
@@ -320,8 +331,9 @@ Inputs and CSVs:
   paths, logs, and intermediate model data.
 - Do not delete, move, or overwrite run artifacts unless explicitly asked.
 - Ask before downloading large remote inputs or launching long solves.
-- Preserve source documentation when adding or changing data: update
-  `sources.csv`, `sources_documentation.md`, and relevant docs when applicable.
+- Preserve source documentation when adding or changing data: update the input
+  folder's `README.md` (and `dollaryear.csv` for monetary inputs) and relevant
+  docs when applicable.
 
 ## Git Workflow For Agents
 

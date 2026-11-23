@@ -84,9 +84,11 @@ The year columns ramp: a county/tech cell rises linearly to its full queue
 position by 2030. For example `pv` in `z28` after aggregation runs
 6,083 → 12,166 → 28,313 → 44,460 → 60,606 MW.
 
-**Provenance is thin in `sources.csv`.** `docs/sources.csv` has a row for this
-file (`/inputs/capacity_exogenous/interconnection_queues.csv`) but every
-descriptive field — description, vintage, citation, dollar year — is **empty**.
+**Provenance is thin in upstream's source documentation.**
+`inputs/capacity_exogenous/README.md` (which replaced `docs/sources.csv` as the
+source documentation in upstream `2026.09.21`) lists `interconnection_queues.csv`
+with an **empty** description, and the old `docs/sources.csv` row had every
+descriptive field — description, vintage, citation, dollar year — empty too.
 Upstream's model documentation (`docs/source/model_documentation.md`,
 "Interconnection queues"; found 2026-10-19) does describe it:
 
@@ -296,8 +298,10 @@ noncumulative_prescriptions(pcat,r,t)$tmodel_new(t)
 A solve year absorbs **every prescription since the previous solve year**. That
 is sensible when solve years are 2 years apart. It is dramatic for CEPM.
 
-CEPM cases use `startyear=2010` (inherited from `cases.csv`) and
-`yearset=2026..2032..3`, giving solve years **2010, 2026, 2029, 2032**. The gap
+CEPM cases use `yearset=2010_2026..2032..3`, giving solve years
+**2010, 2026, 2029, 2032**. (Since upstream `2026.09.21`, `startyear` is the
+first `yearset` year and must be 2010; before that it was a separate switch
+defaulting to 2010.) The gap
 between the first two is **16 years**. So the 2026 solve is required to build
 everything prescribed for **2011 through 2026** — sixteen years of committed
 projects, landing in a single model year.
@@ -683,8 +687,9 @@ So report the two-step result as a range, and say which end assumes what.
 
 ### 5.2 Close the provenance gap on the queue data
 
-`docs/sources.csv` records nothing about `interconnection_queues.csv` — no
-vintage, no citation, no method. Upstream's model documentation partly closes
+Upstream's source documentation (`inputs/capacity_exogenous/README.md`,
+formerly `docs/sources.csv`) records nothing about `interconnection_queues.csv`
+— no vintage, no citation, no method. Upstream's model documentation partly closes
 this (§2.1: end-2024 LBNL snapshot, signed agreements for 2026, full queue for
 2030), and that is what ruled out `GSw_CEPM_QueueExempt=2` as the default (§5.8). §2.1
 now records the vintages of the queue and both prescription sources. Still
@@ -692,66 +697,23 @@ open: why the 2026 column is half of 2027 everywhere (§2.1), and whether SunZia
 is in the LBNL data at all (§5.8). Checking that needs the LBNL project-level
 workbook, which isn't in the repo.
 
-### 5.3 Shortening the prescription pile-up — and the traps around `startyear`
+### 5.3 Shortening the prescription pile-up
 
-The 16-year accumulation (§3.2) exists because CEPM jumps 2010 → 2026. The
-obvious response is to raise `startyear`. **Don't reach for it first** — it is
-the most trap-laden switch in this area, and there is a cleaner lever (§5.3d).
+The 16-year accumulation (§3.2) exists because CEPM jumps 2010 → 2026. Raising
+`startyear` is **no longer an option**: since upstream `2026.09.21` (#12),
+`startyear` is the first `yearset` year and `runreeds.py` rejects any value other
+than 2010. (Earlier versions of this section covered why raising it was a bad
+idea anyway: the hydro data ending in 2022, which crashed `hydcf.py`, and the
+existing/new capacity boundary in `writecapdat.py`. See this file's git history
+and the resolved `hydcf.py` entry in
+[`../known-reeds-issues.md`](../known-reeds-issues.md#resolved-upstream).)
+The lever that remains is an extra early solve year (§5.3d).
 
-#### 5.3a Hard ceiling: `startyear` cannot exceed **2022**
+#### 5.3d Restore an early solve year
 
-The historical hydro capacity-factor data bundled in this repo covers
-**2007-2022** — verified directly on both source files staged into a run:
-
-```
-inputs_case/net_gen_existing_hydro.csv   min t 2007, max t 2022
-inputs_case/cap_existing_hydro.csv       min t 2007, max t 2022
-```
-
-`hydcf.py:166-169` filters that data to `t >= startyear`. At `startyear = 2023`
-or later the frame empties, `data_endyear = hydcf.index.max()` returns `NaN`
-(pandas does not raise on an empty numeric index), and
-`np.arange(data_endyear+1, model_endyear+1)` fails with
-`ValueError: arange: cannot compute length`. This is the already-logged failure
-in [`../known-reeds-issues.md`](../known-reeds-issues.md) that killed `USA_optimized_mvp` at
-`startyear=2026`, and it happens in input processing — before model compile,
-let alone a solve.
-
-**That entry's open question is now answered: the cutoff is 2022.** `startyear`
-must be ≤ 2022 or `hydcf.py` crashes, full stop.
-
-#### 5.3b Practical ceiling is well below 2022
-
-At `startyear = 2022` exactly one year of hydro data survives the filter. The run
-would not crash, but every hydro capacity factor would be derived from a single
-year's generation rather than sixteen — a silent quality loss, not an error. Any
-value approaching 2022 trades one problem for a worse, quieter one.
-
-#### 5.3c `startyear` also redraws the existing/new capacity boundary
-
-This is the part that reaches beyond hydro. `writecapdat.py` splits the unit
-database on `startyear` in several places:
-
-- `create_rsc_wsc` (`writecapdat.py:51-52`) and `poi_cap_init`
-  (`writecapdat.py:306-326`) treat `onlineyear < startyear & RetireYear > startyear`
-  as **existing capacity**.
-- Units with `onlineyear >= startyear` become **prescribed builds** instead.
-- hydro techs are reclassified `hydEND`/`hydED` on the same test
-  (`writecapdat.py:253-256`).
-
-So raising `startyear` moves units from "prescribed build" into "initial fleet".
-That does reduce the pile-up — but it also removes those MW from `cap_new_out`,
-which is exactly what the two-step workflow harvests its ceiling from
-([`two-step-re-limited-runs.md`](two-step-re-limited-runs.md) §5.3), and what
-every "new capacity" plot reports. **Two runs with different `startyear` values
-are not comparable on new-capacity metrics.** Not a free knob.
-
-#### 5.3d The better lever: restore an early solve year, leave `startyear` alone
-
-Solve years come from `yearset` and are independent of `startyear` except that
-`startyear` is appended to the list and used as a lower bound
-(`copy_files.py:1301-1305`). So an **extra early solve year** can split the
-prescription window without touching any of the traps above.
+Solve years come from `yearset`, and its first year (2010) is the start year.
+An **extra early solve year** between 2010 and 2026 splits the prescription
+window.
 
 **This is not an invention — it is what upstream already does.** ReEDS' default
 `yearset` is `2010_2015_2020..2050..3`, which resolves to solve years
