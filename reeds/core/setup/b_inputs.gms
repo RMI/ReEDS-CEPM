@@ -1957,14 +1957,14 @@ cap_penalty(tg) = cap_penalty(tg) * Sw_CapPenaltyMult ;
 * cap_limit to queue_limit in Sep 2026; the name is picked at compile time.
 * See CEPM/guidance/interconnection-queue-and-prescribed-builds.md §5.8.
 *---------------------------------------------------------------------------
-set tg_pcat(tg,pcat) "prescribed categories whose technologies belong in tech group tg" ;
-tg_pcat(tg,pcat)$sum{i$[prescriptivelink(pcat,i)$tg_i(tg,i)], 1 } = yes ;
-
-* each pcat must map to a single tech group, or its prescriptions are exempted twice
-parameter tg_pcat_count(pcat) "number of tech groups a prescribed category maps to" ;
-tg_pcat_count(pcat) = sum{tg$tg_pcat(tg,pcat), 1 } ;
-abort$[Sw_CEPM_QueueExempt and (smax{pcat, tg_pcat_count(pcat) } > 1)]
-    "Sw_CEPM_QueueExempt: a prescribed category maps to more than one tech group", tg_pcat_count ;
+* Prescriptions are indexed by tech and vintage (upstream removed the pcat
+* categories in Sep 2026), so they map to tech groups directly through tg_i.
+* each prescribed tech must map to a single tech group, or its prescriptions are exempted twice
+parameter queue_i_tg_count(i) "number of tech groups a prescribed tech maps to" ;
+queue_i_tg_count(i)$sum{(v,r,allt), prescribednonrsc(i,v,r,allt) + prescribedrsc(i,v,r,allt) }
+    = sum{tg$tg_i(tg,i), 1 } ;
+abort$[Sw_CEPM_QueueExempt and (smax{i, queue_i_tg_count(i) } > 1)]
+    "Sw_CEPM_QueueExempt: a prescribed tech maps to more than one tech group", queue_i_tg_count ;
 
 scalar last_prequeue_year "last solve year before interconnection_start (already excluded from eq_interconnection_queues)" ;
 last_prequeue_year = smax{tt$[tmodel_new(tt)$(yeart(tt) < interconnection_start)], yeart(tt) } ;
@@ -1987,17 +1987,17 @@ parameter
     queue_exempt_prescrip(tg,r,t) "--MW-- cumulative prescribed capacity exempted from eq_interconnection_queues"
 ;
 queue_prescrip_pre(tg,r,t)$[tmodel_new(t)$(yeart(t) >= interconnection_start)$Sw_CEPM_QueueExempt]
-    = sum{(tt,pcat)$[tg_pcat(tg,pcat)
-                     $(yeart(tt) > last_prequeue_year)
-                     $(yeart(tt) < interconnection_start)],
-          prescribednonrsc(tt,pcat,r,"value") + prescribedrsc(tt,pcat,r,"value") } ;
+    = sum{(i,v,tt)$[tg_i(tg,i)
+                    $(yeart(tt) > last_prequeue_year)
+                    $(yeart(tt) < interconnection_start)],
+          prescribednonrsc(i,v,r,tt) + prescribedrsc(i,v,r,tt) } ;
 
 queue_prescrip_post(tg,r,t)$[tmodel_new(t)$(yeart(t) >= interconnection_start)$Sw_CEPM_QueueExempt]
-    = sum{(tt,pcat)$[tg_pcat(tg,pcat)
-                     $(yeart(tt) > last_prequeue_year)
-                     $(yeart(tt) >= interconnection_start)
-                     $(yeart(tt) <= yeart(t))],
-          prescribednonrsc(tt,pcat,r,"value") + prescribedrsc(tt,pcat,r,"value") } ;
+    = sum{(i,v,tt)$[tg_i(tg,i)
+                    $(yeart(tt) > last_prequeue_year)
+                    $(yeart(tt) >= interconnection_start)
+                    $(yeart(tt) <= yeart(t))],
+          prescribednonrsc(i,v,r,tt) + prescribedrsc(i,v,r,tt) } ;
 
 * mode 3 compares against the limit before this block adjusts it
 queue_exempt_prescrip(tg,r,t)$Sw_CEPM_QueueExempt
@@ -4542,20 +4542,19 @@ $offImplicitAssign
 *---------------------------------------------------------------------------
 * CEPM ADDITION -- not present upstream.
 * Data for the "built + owed" cap equations in c_model.gms
-* (eq_cepm_tgcap_owed, eq_cepm_tg_cap_sys_owed, eq_cepm_tg_cap_reg_owed).
+* (eq_cepm_tg_cap_sys_owed, eq_cepm_tg_cap_reg_owed, and the mandate equations).
 *
-* A prescription is a cumulative minimum per region, and builds in one region
-* don't count toward another region's prescriptions. A myopic solve doesn't
-* see later prescriptions, so it can spend its cap budget in one region and
-* later be forced to build a prescription elsewhere that no longer fits: an
-* infeasible solve. The owed equations make each solve year also count
-* prescriptions due by each later cap year that its builds don't yet cover,
-* so a prescription can never force the cap over. Prescriptions are exogenous,
-* so this needs no foresight. See CEPM/guidance/tgcap-built-plus-owed.md.
+* A prescription forces a build of a specific tech, vintage, and region in a
+* specific modeled year. A myopic solve doesn't see later prescriptions, so it
+* can spend its cap budget now and later be forced to build a prescription that
+* no longer fits: an infeasible solve. The owed equations make each solve year
+* also count the prescriptions due in later years up to each cap year, so a
+* prescription can never force the cap over. Prescriptions are exogenous, so
+* this needs no foresight. See CEPM/guidance/tgcap-built-plus-owed.md.
 *
 * "Prescriptions" here means two kinds of forced build:
-*   1. noncumulative_prescriptions, forced by eq_forceprescription_power
-*      (per region, every tech group).
+*   1. prescribed_build, forced by eq_forceprescription_power
+*      (per tech, vintage, region, and year; every tech group).
 *   2. State capacity mandates (set cepm_mand below), per state:
 *      ofs: offshore wind requirement, offshore_cap_req, forced by eq_RPS_OFSWind
 *      bat: battery mandate, batterymandate, forced by eq_batterymandate
@@ -4573,21 +4572,29 @@ cepm_tg_capped(tg)$[Sw_CEPM_TgCap
                       or sum{t, cepm_tg_cap_sys_t(tg,t) }
                       or sum{(r,t), cepm_tg_cap_reg_t(tg,r,t) })] = yes ;
 
-* prescription categories whose (buildable) techs belong to each capped group
-set cepm_tg_pcat(tg,pcat) "CEPM: prescription categories whose techs belong to capped tech group tg" ;
-cepm_tg_pcat(tg,pcat)$[cepm_tg_capped(tg)
-                       $sum{i$[prescriptivelink(pcat,i)$tg_i(tg,i)$valcap_i(i)], 1 }] = yes ;
+* Prescriptions are per tech and vintage (upstream removed the pcat categories
+* in Sep 2026) and are summed here to the capped tech group. They are in the
+* units of INV (MW_dc for UPV); the caps are MW_ac, so each tech's prescriptions
+* are divided by its own ilr.
+*
+* eq_forceprescription_power forces each year's prescribed_build in that year
+* only, so a build in an earlier year never counts toward a later prescription.
+* The prescriptions owed at solve year t toward cap year tt are therefore
+* exactly those due in the modeled years after t through tt: a parameter, with
+* no variable needed.
+parameter cepm_presc_owed(tg,r,t,tt) "--MW_ac-- CEPM: prescriptions in capped tech group tg due in modeled years after t through tt" ;
+cepm_presc_owed(tg,r,t,tt)$[cepm_tg_capped(tg)$Sw_ForcePrescription
+                            $tmodel_new(t)$tmodel_new(tt)$(yeart(tt)>yeart(t))]
+    = sum{(i,newv,ttt)$[tg_i(tg,i)$valcap_i(i)$tmodel_new(ttt)
+                        $(yeart(ttt)>yeart(t))$(yeart(ttt)<=yeart(tt))],
+          prescribed_build(i,newv,r,ttt) / ilr(i) } ;
 
-* prescriptions are in the units of INV (MW_dc for UPV); the caps are MW_ac
-parameter cepm_pcat_ilr(pcat) "--unitless-- CEPM: inverter loading ratio putting pcat prescriptions in MW_ac" ;
-cepm_pcat_ilr(pcat)$sum{tg, cepm_tg_pcat(tg,pcat) }
-    = smax{i$[prescriptivelink(pcat,i)$valcap_i(i)], ilr(i) } ;
-
-* cumulative prescriptions through each modeled year, summed as on the
-* right-hand side of eq_forceprescription_power
-parameter cepm_presc_cum(pcat,r,t) "--MW-- CEPM: cumulative prescribed capacity through year t" ;
-cepm_presc_cum(pcat,r,t)$[tmodel_new(t)$sum{tg, cepm_tg_pcat(tg,pcat) }]
-    = sum{tt$[tmodel_new(tt)$(yeart(tt)<=yeart(t))], noncumulative_prescriptions(pcat,r,tt) } ;
+* cumulative prescriptions through each modeled year; only gates which owed
+* equations are generated, as before the pcat removal
+parameter cepm_presc_cum(tg,r,t) "--MW_ac-- CEPM: cumulative prescribed capacity in capped tech group tg through year t" ;
+cepm_presc_cum(tg,r,t)$[cepm_tg_capped(tg)$tmodel_new(t)]
+    = sum{(i,newv,tt)$[tg_i(tg,i)$valcap_i(i)$tmodel_new(tt)$(yeart(tt)<=yeart(t))],
+          prescribed_build(i,newv,r,tt) / ilr(i) } ;
 
 * the cap in force at each modeled year, as seen from an earlier solve year:
 * the per-year path under GSw_CEPM_TgCap=2, and the horizon total at the last
@@ -4655,29 +4662,28 @@ set cepm_mand_r(cepm_mand,tg,st,r,t) "CEPM: regions of state st where capped gro
 cepm_mand_r(cepm_mand,tg,st,r,t)$[cepm_mand_req(cepm_mand,st,t)$cepm_mand_k(cepm_mand,tg)$r_st(r,st)
                                   $sum{(i,v)$[tg_i(tg,i)$cepm_mand_w(cepm_mand,i)], valcap(i,v,r,t) }] = yes ;
 
-* Prescription categories whose builds also count toward a mandate, and how
-* much (as cepm_mand_w, in INV units). Their owed prescriptions are subtracted
-* in eq_cepm_tgcap_mand_owed so they aren't counted twice.
-parameter cepm_mand_pcat_w(cepm_mand,pcat) "--unitless-- CEPM: share of a prescription category's builds that counts toward a state mandate" ;
-cepm_mand_pcat_w(cepm_mand,pcat)$[sum{tg, cepm_tg_pcat(tg,pcat) }
-                                  $sum{i$[prescriptivelink(pcat,i)$valcap_i(i)$cepm_mand_w(cepm_mand,i)], 1 }]
-    = smax{i$[prescriptivelink(pcat,i)$valcap_i(i)], cepm_mand_w(cepm_mand,i) } ;
+* Owed prescriptions that also count toward a mandate, weighted as on the
+* mandate's left-hand side (cepm_mand_w, in INV units). Subtracted in
+* eq_cepm_tgcap_mand_owed so they aren't counted twice. Only in regions
+* eq_cepm_tg_cap_st_mand_owed counts for the tech's group (cepm_mand_r) and
+* where that group has a cap at tt; a prescription elsewhere just gets no credit.
+parameter cepm_mand_presc_owed(cepm_mand,st,t,tt) "--MW-- CEPM: owed prescriptions in state st that also count toward a state mandate at tt" ;
+cepm_mand_presc_owed(cepm_mand,st,t,tt)$[cepm_mand_req(cepm_mand,st,tt)$Sw_ForcePrescription
+                                         $tmodel_new(t)$(yeart(tt)>yeart(t))]
+    = sum{(tg,i,newv,r,ttt)$[tg_i(tg,i)$valcap_i(i)$cepm_mand_w(cepm_mand,i)
+                             $cepm_mand_r(cepm_mand,tg,st,r,tt)
+                             $(cepm_tg_cap_sys_at(tg,tt) + cepm_tg_cap_reg_at(tg,r,tt))
+                             $tmodel_new(ttt)$(yeart(ttt)>yeart(t))$(yeart(ttt)<=yeart(tt))],
+          cepm_mand_w(cepm_mand,i) * prescribed_build(i,newv,r,ttt) } ;
 
-* Guardrails: each category must belong to one capped group, and its techs must
-* share one ilr, or the owed term would be double-counted or mis-scaled.
-parameter cepm_pcat_multi_tg(pcat) "--unitless-- CEPM: pcats in more than one capped tech group (must always be empty)" ;
-cepm_pcat_multi_tg(pcat)$[sum{tg$cepm_tg_pcat(tg,pcat), 1 } > 1] = 1 ;
-abort$[Sw_CEPM_TgCap$sum{pcat, cepm_pcat_multi_tg(pcat) }]
-    "CEPM: a prescription category belongs to more than one capped tech group, so the built + owed caps would double-count it. See CEPM/guidance/tgcap-built-plus-owed.md.",
-    cepm_pcat_multi_tg ;
-
-parameter cepm_pcat_mixed_ilr(pcat) "--unitless-- CEPM: pcats whose techs have different ilr (must always be empty)" ;
-cepm_pcat_mixed_ilr(pcat)$[sum{tg, cepm_tg_pcat(tg,pcat) }
-                          $(smax{i$[prescriptivelink(pcat,i)$valcap_i(i)], ilr(i) }
-                            <> smin{i$[prescriptivelink(pcat,i)$valcap_i(i)], ilr(i) })] = 1 ;
-abort$[Sw_CEPM_TgCap$sum{pcat, cepm_pcat_mixed_ilr(pcat) }]
-    "CEPM: a prescription category mixes techs with different ilr, so its owed MW_ac is ambiguous. See CEPM/guidance/tgcap-built-plus-owed.md.",
-    cepm_pcat_mixed_ilr ;
+* Guardrail: each prescribed tech must belong to one capped group, or the owed
+* term would be double-counted.
+parameter cepm_i_multi_tg(i) "--unitless-- CEPM: prescribed techs in more than one capped tech group (must always be empty)" ;
+cepm_i_multi_tg(i)$[sum{(newv,r,t), prescribed_build(i,newv,r,t) }
+                    $(sum{tg$[tg_i(tg,i)$cepm_tg_capped(tg)], 1 } > 1)] = 1 ;
+abort$[Sw_CEPM_TgCap$sum{i, cepm_i_multi_tg(i) }]
+    "CEPM: a prescribed tech belongs to more than one capped tech group, so the built + owed caps would double-count it. See CEPM/guidance/tgcap-built-plus-owed.md.",
+    cepm_i_multi_tg ;
 
 $offImplicitAssign
 *<<< END CEPM ADDITION ========================================================

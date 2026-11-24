@@ -1,5 +1,20 @@
 # Keeping `GSw_CEPM_TgCap` feasible at prescribed builds: "built + owed" accounting
-Written Date: 2026-10-19
+Written Date: 2026-10-19 (updated 2026-11-24 for upstream `2026.09.21`)
+
+> **Update, Sync 2 (upstream `2026.09.21`):** upstream #12 removed the
+> prescription categories (`pcat`, `prescriptivelink`). A prescription is now a
+> forced build of one tech, vintage and region *in one modeled year*
+> (`prescribed_build(i,v,r,t)`, forced by `eq_forceprescription_power(i,v,r,t)`).
+> Builds in earlier years no longer count toward it. So the amount owed no
+> longer depends on what the run has built: it is just the prescriptions due
+> after `t` through `t′`, a fixed input. The variable `CEPM_TGCAP_OWED` and
+> `eq_cepm_tgcap_owed` were replaced by the parameter `cepm_presc_owed(tg,r,t,tt)`,
+> summed by tech group in MW_ac. Sections 1–3 describe the rule as designed
+> under the old cumulative prescriptions; the tables in section 4 are current.
+> Under `GSw_CEPM_TgCap=2` with a system-scope path harvested from a baseline on
+> the same code, the rule shouldn't bind (the baseline's path already includes
+> every later prescription as its own build); it still matters under `=1` and
+> for regional caps.
 
 **Scope:** why a cumulative tech-group cap (`GSw_CEPM_TgCap`) can make a capped
 run infeasible when it meets a prescribed build, and the change to the cap's
@@ -161,9 +176,8 @@ enforces what the cap already means.
 | Symbol | What |
 |---|---|
 | `cepm_tg_capped(tg)` | Tech groups with any cap loaded |
-| `cepm_tg_pcat(tg,pcat)` | Prescription categories whose buildable techs (`valcap_i`) are in a capped group, through `prescriptivelink` and `tg_i` |
-| `cepm_pcat_ilr(pcat)` | `ilr` of the category's buildable techs. Prescriptions are in `INV` units (MW_dc for UPV); the caps are MW_ac. |
-| `cepm_presc_cum(pcat,r,t)` | Cumulative `noncumulative_prescriptions` through `t`, the right-hand side of `eq_forceprescription_power` |
+| `cepm_presc_owed(tg,r,t,tt)` | MW_ac: `prescribed_build` of the group's buildable techs (`valcap_i`, through `tg_i`) in `r`, in modeled years after `t` through `tt`, each divided by its own `ilr`. Prescriptions are in `INV` units (MW_dc for UPV); the caps are MW_ac. Zero when `Sw_ForcePrescription` is off. |
+| `cepm_presc_cum(tg,r,t)` | MW_ac: cumulative `prescribed_build` through `t`. Only gates which owed equations are generated. |
 | `cepm_tg_cap_sys_at(tg,t)`, `cepm_tg_cap_reg_at(tg,r,t)` | The cap in force at `t`: the per-year path under `=2`, plus the horizon total at the last modeled year |
 | `cepm_mand` | The state mandates counted: `ofs` (`offshore_cap_req`, `eq_RPS_OFSWind`) and `bat` (`batterymandate`, `eq_batterymandate`) |
 | `cepm_mand_w(cepm_mand,i)` | How much of a tech's capacity counts toward a mandate, as on its equation's left-hand side: 1 for `ofswind`, `bcr(i)` for `battery` (= 1) and `pvb` |
@@ -171,8 +185,8 @@ enforces what the cap already means.
 | `cepm_mand_lvl(cepm_mand,st,t)` | Each mandate's level, gated exactly as its equation is (offshore: `Sw_StateRPS`, `stfeas`, `firstyear_RPS`, offshore buildable in the state; battery: `Sw_BatteryMandate`, `stfeas`, `firstyear_battery`) |
 | `cepm_mand_req(cepm_mand,st,t)` | The level, except in a state where a counting tech can be built in an *uncapped* group: the run can always meet it there |
 | `cepm_mand_r(cepm_mand,tg,st,r,t)` | Regions of `st` where capped group `tg` can build toward the mandate at `t` |
-| `cepm_mand_pcat_w(cepm_mand,pcat)` | `cepm_mand_w` of a prescription category whose builds also count toward the mandate |
-| Two `abort`s | A category in two capped groups (it would be double-counted), or a category mixing `ilr` values (MW_ac would be ambiguous) |
+| `cepm_mand_presc_owed(cepm_mand,st,t,tt)` | Owed prescriptions in the state that also count toward the mandate, weighted by `cepm_mand_w` (`INV` units), only in regions in `cepm_mand_r` for the tech's group and where that group has a cap at `tt` |
+| `abort` | A prescribed tech in two capped groups (it would be double-counted). The old mixed-`ilr` abort is gone: each tech now uses its own `ilr`. |
 
 The block is wrapped in `$onImplicitAssign`, because whichever cap files a run
 doesn't use are legitimately empty. The filter to buildable techs matters:
@@ -183,9 +197,7 @@ by zero.
 
 | Symbol | What |
 |---|---|
-| `CEPM_TGCAP_OWED(pcat,r,t,tt)` | Positive variable: prescriptions due by `tt` not covered by builds through `t` |
-| `eq_cepm_tgcap_owed(pcat,r,t,tt)` | `OWED ≥ cumulative prescriptions through tt − the category's builds in r through t` |
-| `eq_cepm_tg_cap_sys_owed(tg,t,tt)` | `cap_at(tt) ≥ new investment through t + Σ_(pcat,r) OWED / ilr` |
+| `eq_cepm_tg_cap_sys_owed(tg,t,tt)` | `cap_at(tt) ≥ new investment through t + Σ_r cepm_presc_owed` |
 | `eq_cepm_tg_cap_reg_owed(tg,r,t,tt)` | The same for a region, counting only that region's owed prescriptions |
 | `CEPM_TGCAP_MAND_OWED(cepm_mand,tg,st,t,tt)` | Positive variable, MW_ac: group `tg`'s share of a state mandate at `tt` not covered by existing capacity, builds through `t`, or owed prescriptions |
 | `eq_cepm_tgcap_mand_owed(cepm_mand,st,t,tt)` | `Σ_tg k × MAND_OWED ≥ mandate(tt) − w × existing at tt − w × builds through t still online at tt − w × owed prescriptions in the state`, over the capped groups that can build toward it in the state at `tt` |
@@ -248,9 +260,8 @@ split is trivial.
 toward the mandate. Subtracting the owed prescriptions inside
 `eq_cepm_tgcap_mand_owed` makes prescriptions + `MAND_OWED` = max(owed
 prescriptions, mandate shortfall), which is the least the state is forced to
-build. That subtraction only uses `OWED` terms whose own equation is generated,
-in the same regions the state-level regional equation counts. Otherwise the
-solver could raise an unbounded `OWED` to cancel `MAND_OWED`.
+build. That subtraction only uses owed prescriptions where the group has a cap
+at `tt`, in the same regions the state-level regional equation counts.
 
 **Why the regional check is by state.** A mandate can't be charged to one
 regional cap. If every region where a group can build toward it is capped, the
@@ -272,7 +283,7 @@ solve, every historical prescription from 2011–2025 would count as owed agains
 a cap that only counts investment from 2026, and the run would be infeasible
 straight away.
 
-`OWED` and `MAND_OWED` have no cost and are only bounded below, so a solve can
+`MAND_OWED` has no cost and is only bounded below, so a solve can
 put them anywhere between the true amount owed and whatever the cap leaves. They
 don't settle at `max(0, …)`. The constraint is right either way, because the
 cap holds at the lower bound. But **a solved level isn't the amount owed**. In a
@@ -287,12 +298,12 @@ To report owed amounts, compute them from each equation's right-hand side
 
 ### Not added
 
-- **Reporting.** The owed amounts aren't written to `outputs/`. If they're
-  needed, compute them in `report.gms` from each owed equation's right-hand side,
-  e.g. `max(0, cepm_presc_cum(pcat,r,tt) − builds through t)`, not from
-  `CEPM_TGCAP_OWED.l`, whose level isn't unique (see above). Add a row to
-  `report_params.csv`. The name needs a suffix such as `_out`, because GAMS names
-  aren't case-sensitive and `cepm_tgcap_owed` would clash with the variable.
+- **Reporting.** The owed amounts aren't written to `outputs/`. Owed
+  prescriptions are the input `cepm_presc_owed`. Owed mandates need computing
+  from `eq_cepm_tgcap_mand_owed`'s right-hand side, not from
+  `CEPM_TGCAP_MAND_OWED.l`, whose level isn't unique (see above). Add a row to
+  `report_params.csv`, with a suffix such as `_out` on the name, because GAMS
+  names aren't case-sensitive and would clash with the variable.
 - **Energy prescriptions** (`eq_forceprescription_energy`, MWh for batteries).
   The caps are in MW, so only power prescriptions matter.
 
@@ -325,6 +336,14 @@ To report owed amounts, compute them from each equation's right-hand side
   and side effects, not the guarantee itself. **Not tested with hybrids on**
   (`GSw_PVB=1`), which needs a run whose inputs were built with them, and **not
   tested in a multi-state run with a mandate**.
+
+- After the `pcat` port (2026-11-24, upstream `2026.09.21`): Virginia
+  (`v20261123_valC_VA_baseline`'s inputs, `=2`, test caps on `pv`, `battery`,
+  `gas`, `wind-ons` and `wind-ofs`) completed normally. `cepm_presc_owed`
+  matches a hand sum of `prescribed_build / ilr`: for example, wind-ofs owes
+  2,640 MW (CVOW) from 2026 toward 2029, and PV owes 247 MW_ac toward 2029 and
+  414 toward 2032. `cepm_mand_presc_owed` credits the same 2,640 MW against the
+  offshore requirement (2,599 MW at 2029).
 
 **Not yet tested: a solve.** Setup doesn't generate equations, so these haven't
 been exercised yet: equation generation (domains, the `/ ilr` division), the
