@@ -45,7 +45,8 @@ Every upstream-owned path this fork has modified or added, as of the base above.
 | `CONTRIBUTING.md` | Modified | CEPM documentation |
 | `cases.csv` | Modified | Updated CAPEX for gas resources |
 | `inputs/plant_characteristics/dollaryear.csv` | Modified | Updated CAPEX for gas resources |
-| `inputs/plant_characteristics/gas-ccgt_CEPM_{all,low,high}.csv` | Added | Updated CAPEX for gas resources |
+| `inputs/plant_characteristics/gas-ccgt_CEPM_all.csv` | Added | Updated CAPEX for gas resources |
+| `inputs/load/loadsite_st_epri_{low,medium,high}_extended_to_2033.csv` | Added | Updated load forecasts for data centers |
 | `inputs/load/loadsite_st_epri_{low,medium,high}_extended_to_2032.csv` | Added | Updated load forecasts for data centers |
 | `inputs/load/loadsite_st_NMtest1.csv`, `loadsite_transreg_WCtest1.csv` | Added | Updated load forecasts for data centers |
 | `.github/workflows/python-app.yaml` | Modified | ENABLE_GAMS_CI variable |
@@ -410,28 +411,32 @@ in [`preprocessing/input-requirements.md`](preprocessing/input-requirements.md).
 
 ### Description:
 
-Regression-based 2026-2032 capex forecast for CCGT and CT gas plants built from
+Regression-based 2026-2033 capex forecast for CCGT and CT gas plants built from
 the Halcyon Gas Power Plant Tracker (August 2026), replacing ATB's cost
 trajectory with one drawn from the current project pipeline. `capcost` is
-overwritten for `Gas-CC` and `Gas-CT` in 2026-2032 only; all other gas
+overwritten for `Gas-CC` and `Gas-CT` in 2026-2033 only; all other gas
 technologies and years keep their ATB values, and `gas_ATB_2024_moderate.csv` is
-left unmodified.
+left unmodified. The forecast originally stopped at 2032 and was extended to
+2033 (2026-11-23) for the 2033 solve year; 2026-2032 values did not change.
 
 ### Input files created:
 
-- `inputs/plant_characteristics/gas-ccgt_CEPM_low.csv` — CCGT low-cost scenario
-- `inputs/plant_characteristics/gas-ccgt_CEPM_all.csv` — CCGT all-data (mid /
-  reference) scenario
+- `inputs/plant_characteristics/gas-ccgt_CEPM_all.csv` — single scenario
+  (regression on all plants) for both CCGT and CT. Selected via
+  `plantchar_gas`.
 
-Gas-CT uses the same CT forecast in all three. Selected via `plantchar_gas`.
+Earlier `gas-ccgt_CEPM_low.csv` / `_high.csv` clustering variants were removed
+on 2026-09-04 (`69eb595b`) when the clustering approach was dropped; see the
+forecast folder's README.
 
 ### Underlying ReEDS files changed:
 
 - `cases.csv` — `plantchar_gas` description and `Choices` amended to accept
   `gas-ccgt_CEPM_all`. Upstream's explicit list would reject our
   files, so this edit is load-bearing.
-- `inputs/plant_characteristics/dollaryear.csv` — three new rows registering all
-  three files as `2022` dollars.
+- `inputs/plant_characteristics/dollaryear.csv` — three new rows registering
+  `gas-ccgt_CEPM_all`, `_low` and `_high` as `2022` dollars. Only `_all` still
+  exists; the `_low`/`_high` rows are harmless leftovers.
 
 `runfiles.csv` needed no change: its
 `inputs/plant_characteristics/{plantchar_gas}.csv` template resolves these by
@@ -453,6 +458,9 @@ name.
   `gas_ATB_2024_moderate.csv`? Our files are derived from that shape, so a schema
   change means regenerating them.
 - Confirm the notebooks still run and reproduce the committed CSVs.
+- Does the forecast still cover the last solve year (`endyear`)? After its last
+  year `gas-ccgt_CEPM_all.csv` reverts to ATB, so a later `endyear` reintroduces
+  a cost drop in the final year. See the forecast folder's README.
 
 ## Updated load forecasts for data centers
 
@@ -460,17 +468,19 @@ name.
 
 State-level data center load-site inputs for all 48 contiguous states, built from
 EPRI Powering Intelligence projections in three scenarios (Low / Medium / High),
-extended to 2032. These are the load-site inputs the national CEPM cases actually
+extended to 2033. These are the load-site inputs the national CEPM cases actually
 run with — `cases_cepm.csv` currently selects
-`st_epri_medium_extended_to_2032`.
+`st_epri_medium_extended_to_2033`.
 
 ### Input files created:
 
-- `inputs/load/loadsite_st_epri_low_extended_to_2032.csv`
-- `inputs/load/loadsite_st_epri_medium_extended_to_2032.csv`
-- `inputs/load/loadsite_st_epri_high_extended_to_2032.csv`
+- `inputs/load/loadsite_st_epri_{low,medium,high}_extended_to_2033.csv` —
+  current, 2026-2033 (added 2026-11-23 for the 2033 solve year).
+- `inputs/load/loadsite_st_epri_{low,medium,high}_extended_to_2032.csv` —
+  the earlier 2026-2032 versions, with identical values for those years; kept
+  so older runs can be reproduced.
 
-Long format (`*loadsitereg,t,MW`), 48 states, 2026-2032. Selected via
+Long format (`*loadsitereg,t,MW`), 48 states. Selected via
 `GSw_LoadSiteTrajectory`, and only staged when `GSw_LoadSiteCF > 0`.
 
 Also added as reference fixtures for the large-load-site feature:
@@ -504,6 +514,9 @@ load sites are MW, not monetary values.
   center loads? Check whether upstream's default load projection has absorbed
   data center growth, which would double-count against our load sites.
 - Is the expected long-format schema (`*loadsitereg,t,MW`) unchanged?
+- Does the selected trajectory still cover every solve year through `endyear`?
+  A missing year is silently read as zero load-site MW. See
+  [`guidance/loadsite-mechanism.md`](guidance/loadsite-mechanism.md).
 
 ## Cumulative tech-group investment caps (`GSw_CEPM_TgCap`)
 
