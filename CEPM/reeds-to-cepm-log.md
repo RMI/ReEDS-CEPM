@@ -573,8 +573,9 @@ and deleted afterwards, so they are deliberately not committed.
 ### Underlying ReEDS files changed:
 
 - `reeds/core/setup/c_model.gms` — +9 equation declarations (after
-  `eq_interconnection_queues`' declaration), +2 positive variables
-  (`CEPM_TGCAP_OWED` and `CEPM_TGCAP_MAND_OWED`, after `CAP_ABOVE_LIM`), and
+  `eq_interconnection_queues`' declaration; 8 since Sync 2), +1 positive
+  variable (`CEPM_TGCAP_MAND_OWED`, after `CAP_ABOVE_LIM`; `CEPM_TGCAP_OWED`
+  was removed in Sync 2), and
   three equation-definition blocks immediately after `eq_interconnection_queues`:
   the totals, the per-year path, and the "built + owed" equations (including the
   state-mandate ones). Each of the three places is wrapped in CEPM markers.
@@ -676,6 +677,15 @@ infeasibility is not a prescription overflow. Setup-tested on copies of the
 AZNM and VA `_limitre` inputs under `=0`, `=1` and `=2` (system and region
 scope). **Not yet tested in a solve.** Design, evaluation and test plan:
 [`guidance/tgcap-built-plus-owed.md`](guidance/tgcap-built-plus-owed.md).
+
+**Ported off `pcat` in Sync 2 (2026-11-24).** Upstream `2026.09.21` (#12)
+removed the prescription categories, and prescriptions became forced builds of
+one tech, vintage, region and year (`prescribed_build(i,v,r,t)`). Builds no
+longer count toward later prescriptions, so the owed amount is now a fixed
+input: `cepm_presc_owed(tg,r,t,tt)`, the prescriptions due after `t` through
+`tt`, summed to the tech group in MW_ac. `CEPM_TGCAP_OWED` and
+`eq_cepm_tgcap_owed` were removed, and the other owed equations use the
+parameter.
 
 **State mandates (added 2026-11-11).** Prescriptions weren't the only forced
 builds. State offshore-wind requirements (`offshore_cap_req`, forced by
@@ -896,7 +906,8 @@ the block.
 ### Underlying ReEDS files changed:
 
 - `reeds/core/setup/b_inputs.gms` — one block just after the
-  `Sw_CapPenaltyMult` block: `tg_pcat`, the double-mapping `abort`,
+  `Sw_CapPenaltyMult` block: the double-mapping `abort` (per tech since Sync 2;
+  `tg_pcat` before),
   `last_prequeue_year`, `queue_years`, `queue_prescrip_pre` /
   `queue_prescrip_post`, `queue_exempt_prescrip`, and the limit adjustment.
 - `cases.csv` — one row, `GSw_CEPM_QueueExempt`, default `0`.
@@ -913,8 +924,8 @@ the block.
 ### What to test in new releases:
 
 - Does `eq_interconnection_queues` still filter on `yeart(tt) >=
-  interconnection_start`, and does `noncumulative_prescriptions` still compress
-  gap-year prescriptions into the next solve year? If upstream starts filtering
+  interconnection_start`, and does `prescribed_build` (`noncumulative_prescriptions`
+  before Sync 2) still compress gap-year prescriptions into the next solve year? If upstream starts filtering
   by online year, mode `1` becomes redundant. Mode `3`'s overage-only part
   still applies, so keep the block, but the pre-2025 half can go.
 - Is the queue limit still loaded before this block, and still named
@@ -925,10 +936,11 @@ the block.
   copies it.
 - Mode `3` compares against the limit *before* the block adjusts it. Keep the
   `queue_exempt_prescrip` assignment above the limit adjustment.
-- Is prescribed `INV` still pinned to `noncumulative_prescriptions` by
+- Is prescribed `INV` still pinned to `prescribed_build` by
   `eq_forceprescription_power`? The exemption relies on that being a constant.
-- Do `prescribednonrsc` / `prescribedrsc` still carry the online year in their
-  first index, and does the `abort` still pass (each `pcat` in one `tg`)?
+- Do `prescribednonrsc(i,v,r,allt)` / `prescribedrsc(i,v,r,allt)` still carry
+  the online year in their last index, and does the `abort` still pass (each
+  prescribed tech in one `tg`)?
 - With switch `0`, the queue limit should be identical to upstream.
 
 # CEPM documentation and functionality

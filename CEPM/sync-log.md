@@ -18,7 +18,7 @@ except to fix an error.
 
 ## Sync 2: August 2026 → September 2026 (`2026.08.03` → `2026.09.21`)
 
-**Status:** In progress. Merge and CEPM adaptations are on PR #80
+**Status:** In progress. Merge and CEPM adaptations merged to `temp_dev` via PR #80
 (`temp_dev` ← `temp_upstream_09.21.26`). The baseline-vs-merged validation
 runs, `temp_dev` → `dev`, and `dev` → `main` are still to come.
 
@@ -35,6 +35,7 @@ runs, `temp_dev` → `dev`, and `dev` → `main` are still to come.
 | Conflicts resolved in the GitHub UI | `c65795b7` | 2026-11-17 |
 | CEPM adaptations | `139d8bea`, `17ed65fb`, `e727784e` | 2026-11-18 |
 | Sync documentation (this entry and related docs) | PR #80 | 2026-11 |
+| GAMS compile failure found by validation (after #80 merged); `pcat` port | follow-up PR into `temp_dev` | 2026-11-24 |
 
 `dev` did not move between the tag and the merge, so unlike Sync 1 there was
 no parallel work stream to reconcile.
@@ -49,6 +50,7 @@ The ones that touched CEPM directly:
 |---|---|---|
 | #181 | Declare and load each GAMS set/parameter together | Same fix as RMI's GAMS Error 579 patch; works unmodified on GAMS ≥ 44.2.0 (we run 44.4.0). RMI patch retired |
 | #12 | `startyear` removed from `cases.csv`; derived from the first `yearset` year and must equal 2010 | `cases_cepm.csv` failed setup until fixed; plotting start year logic rewritten |
+| #12 | Prescription categories (`pcat`, `prescriptivelink`, `noncumulative_prescriptions`) removed; prescriptions are now `prescribed_build(i,v,r,t)`, forced in their own year only | CEPM's queue-exemption and TgCap GAMS blocks failed to compile (16 errors) until ported. Not visible in the release notes or `runreeds.py -t` |
 | #221 | `this_year` 2025 → 2026; `GSw_StartMarkets` 2026 → 2027 | 2026 becomes a fixed year: no endogenous builds, relaxed load balance, no stress-period iteration, RPS/mandates not enforced. Every `firstyear` shifts a year later (offshore wind 2029 → 2030). Drove the yearset change (separate PR) |
 | #190, #221 | Generator database moves to AEO-NEMS 2026 | Large expected changes in existing/planned capacity |
 | #172 | Default `yearset` 3-year → 5-year steps | No effect on cases with an explicit `yearset` |
@@ -81,6 +83,7 @@ labeler checks passed on the PR. `python-app` only runs on PRs into `main`.
 | `139d8bea` | `cases_cepm.csv`: removed the `startyear` row; yearsets → `2010_2026..2032..3`. Same solve years as before, because `dev` already added `startyear` (2010) to the yearset |
 | `17ed65fb` | `get_batch_info.py` / `multistep_cases.py`: `--startyear` is now the first `yearset` year after 2010 (via `reeds.inputs.parse_yearset`); comments in `run_cepm.ps1` and `CEPM/README.md` |
 | `e727784e` | `h5_to_gdx.py` whitespace aligned with upstream; dropped `cases_cepm.csv`'s `GSw_SkipRAyear` override so CEPM follows upstream's default (2020 → 2024; no effect on CEPM solves) |
+| `pcat` port (follow-up PR into `temp_dev`; #80 had merged before validation found the break) | `b_inputs.gms`/`c_model.gms`: queue exemption sums prescriptions by tech group through `tg_i`; TgCap "owed" prescriptions became the fixed input `cepm_presc_owed(tg,r,t,tt)` (prescriptions due after `t` through `tt`, MW_ac), replacing `CEPM_TGCAP_OWED` and `eq_cepm_tgcap_owed`. See `guidance/tgcap-built-plus-owed.md` |
 
 ### Validation performed so far
 
@@ -93,9 +96,16 @@ labeler checks passed on the PR. `python-app` only runs on PRs into `main`.
 - pytest: no new failures. `hourlize/tests` (its test data has never been in
   the repo), `test_read_h5py_file` and hourlize's `test_main` fail identically
   at `pre-sync-2026-09`. See `known-reeds-issues.md`.
-- **Not yet done:** a GAMS 44.4 model run confirming upstream's #181 replaces
-  the Error 579 patch, and the baseline (`pre-sync-2026-09`) vs. merged
-  comparison across national, cendiv, regional and state cases.
+- **First GAMS run failed to compile** (2026-11-23): 16 errors in
+  `b_inputs.gms`, all from CEPM blocks using `pcat`. Fixed by the `pcat` port.
+  After it, model setup (`a_createmodel.gms`) completes with no errors on
+  VA inputs, with TgCap off and with test caps under `GSw_CEPM_TgCap=2`; the new
+  owed-prescription values match a hand calculation.
+- **Baseline runs (A, `pre-sync-2026-09`)** for `st-AZNM_baseline` and
+  `VA_baseline` completed; every solve year optimal.
+- **Not yet done:** the merged runs (B: `this_year` 2025/`StartMarkets` 2026
+  overridden back; C: upstream defaults) and their comparison with A; a TgCap
+  solve on the merged code; national and cendiv cases.
 
 ### Implications for `reeds-to-cepm-log.md`'s "what to test in new releases" items
 
@@ -145,8 +155,13 @@ Known issues resolved by this sync (moved to `known-reeds-issues.md`'s
   the resolution commit lands on the PR's head branch (so keep a separate
   untouched copy of upstream), and the editor only shows the conflict block,
   not related code that merged cleanly around it.
-- **`runreeds.py -t` is a cheap gate.** It validates every case's switches
-  against the new `cases.csv` in seconds.
+- **`runreeds.py -t` is a cheap gate, but not a compile check.** It validates
+  every case's switches against the new `cases.csv` in seconds, but never runs
+  GAMS. A model setup run (or one short case) is the minimum check before
+  asking for review: here, `-t` passed while the model didn't compile.
+- **Grep CEPM GAMS blocks for every symbol upstream removes.** The `pcat`
+  removal was buried in #12; `git diff` of `b_inputs.gms` declarations against
+  the CEPM blocks would have found it before the PR.
 - **Check each CEPM input's last year whenever `endyear` changes.**
 
 ## Sync 1: June 2026 → August 2026 (`2026.06.18` → `2026.08.03`)
