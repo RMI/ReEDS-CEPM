@@ -84,6 +84,7 @@ labeler checks passed on the PR. `python-app` only runs on PRs into `main`.
 | `17ed65fb` | `get_batch_info.py` / `multistep_cases.py`: `--startyear` is now the first `yearset` year after 2010 (via `reeds.inputs.parse_yearset`); comments in `run_cepm.ps1` and `CEPM/README.md` |
 | `e727784e` | `h5_to_gdx.py` whitespace aligned with upstream; dropped `cases_cepm.csv`'s `GSw_SkipRAyear` override so CEPM follows upstream's default (2020 → 2024; no effect on CEPM solves) |
 | `pcat` port (follow-up PR into `temp_dev`; #80 had merged before validation found the break) | `b_inputs.gms`/`c_model.gms`: queue exemption sums prescriptions by tech group through `tg_i`; TgCap "owed" prescriptions became the fixed input `cepm_presc_owed(tg,r,t,tt)` (prescriptions due after `t` through `tt`, MW_ac), replacing `CEPM_TGCAP_OWED` and `eq_cepm_tgcap_owed`. See `guidance/tgcap-built-plus-owed.md` |
+| `e31e5e21` (cherry-pick of upstream `c750cf7e`) | `c_model.gms`: `eq_prescribed_transmission` skips interfaces with no "possible" future capacity. Without it, every AZNM case is infeasible in 2026 under `this_year` = 2026: SunZia (3,000 MW VSC, "certain", online 2026) is forced by `eq_invtran_exog` but limited to 0 MW by this equation. Upstream fixed it after `2026.09.21`; it's in `2026.11.22`, so the next sync merges it as identical |
 
 ### Validation performed so far
 
@@ -101,6 +102,9 @@ labeler checks passed on the PR. `python-app` only runs on PRs into `main`.
   After it, model setup (`a_createmodel.gms`) completes with no errors on
   VA inputs, with TgCap off and with test caps under `GSw_CEPM_TgCap=2`; the new
   owed-prescription values match a hand calculation.
+- **Merged run C (upstream defaults), AZNM: infeasible in 2026** from the
+  SunZia transmission conflict above; fixed by cherry-picking upstream
+  `c750cf7e`. Run B (`this_year` 2025) didn't hit it.
 - **Baseline runs (A, `pre-sync-2026-09`)** for `st-AZNM_baseline` and
   `VA_baseline` completed; every solve year optimal.
 - **Not yet done:** the merged runs (B: `this_year` 2025/`StartMarkets` 2026
